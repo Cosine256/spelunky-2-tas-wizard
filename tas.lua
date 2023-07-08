@@ -202,38 +202,13 @@ function Tas:to_raw(is_serial_format)
     return copy
 end
 
--- Create a TAS from a raw object.
+-- Create a TAS class instance from a raw object.
 -- is_serial_format: The raw object is formatted for serialization.
-function Tas:from_raw(o, is_serial_format)
+function Tas:from_raw(raw, is_serial_format)
+    raw = common.deep_copy(raw)
     if is_serial_format then
-        persistence.update_format(o, CURRENT_FORMAT, FORMAT_UPDATERS)
-    end
-
-    -- TODO: Why not deep copy the entire object? Do I care about blindly copying an unvalidated object? A user could easily provide trash to this object since I don't validate it, but I don't think it's worth dealing with input validation right now. The updaters should handle all of the cases that would arise from proper use of the script. If I deep copy the whole thing, do it before the updaters run.
-    local raw = {
-        seed_type = o.seed_type,
-        seeded_seed = o.seeded_seed,
-        adventure_seed = o.adventure_seed,
-        custom_start = o.custom_start,
-        world_start = o.world_start,
-        level_start = o.level_start,
-        theme_start = o.theme_start,
-        shortcut = o.shortcut,
-        tutorial_race = o.tutorial_race,
-        tutorial_race_referee = o.tutorial_race_referee,
-        player_count = o.player_count,
-        players = common.deep_copy(o.players),
-        levels = common.deep_copy(o.levels),
-        olmec_cutscene_skip_frame = o.olmec_cutscene_skip_frame,
-        olmec_cutscene_skip_input = o.olmec_cutscene_skip_input,
-        tiamat_cutscene_skip_frame = o.tiamat_cutscene_skip_frame,
-        tiamat_cutscene_skip_input = o.tiamat_cutscene_skip_input,
-        transition_exit_frame = o.transition_exit_frame,
-        tagged_frames = common.deep_copy(o.tagged_frames),
-        save_player_positions = o.save_player_positions,
-        save_level_snapshots = o.save_level_snapshots
-    }
-    if is_serial_format then
+        persistence.update_format(raw, CURRENT_FORMAT, FORMAT_UPDATERS)
+        raw.format = nil
         -- Convert the 128-bit adventure seed hex string back into a 64-bit integer pair.
         if raw.adventure_seed then
             raw.adventure_seed = common.string_to_adventure_seed(raw.adventure_seed)
