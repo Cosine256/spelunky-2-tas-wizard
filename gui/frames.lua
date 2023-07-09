@@ -84,16 +84,7 @@ function module:draw_panel(ctx, is_window)
     ctx:win_section("Options##frames_panel_options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         ctx:win_separator_text("Frames window")
-        -- TODO: Share code for all tool GUIs that have this option.
-        if is_window then
-            if ctx:win_button("Reset window position") then
-                self:reset_window_position()
-            end
-        else
-            if ctx:win_button("Detach into window") then
-                options[self.option_id].visible = true
-            end
-        end
+        self:draw_window_options(ctx, is_window)
         ctx:win_separator_text("Input viewer")
         options.frames_shown_past = common.clamp(ctx:win_drag_int("Past frames shown", options.frames_shown_past, 0, 100), 0, 100)
         options.frames_shown_future = common.clamp(ctx:win_drag_int("Future frames shown", options.frames_shown_future, 0, 100), 0, 100)

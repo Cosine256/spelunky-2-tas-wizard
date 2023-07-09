@@ -75,16 +75,7 @@ function module:draw_panel(ctx, is_window)
     -- TODO: This panel feels messy. How could I reorganize it to be easier to use?
     ctx:win_section("Options##playback_recording_panel_options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
-        -- TODO: Share code for all tool GUIs that have this option.
-        if is_window then
-            if ctx:win_button("Reset window position") then
-                self:reset_window_position()
-            end
-        else
-            if ctx:win_button("Detach into window") then
-                options[self.option_id].visible = true
-            end
-        end
+        self:draw_window_options(ctx, is_window)
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
 

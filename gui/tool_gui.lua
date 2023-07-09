@@ -19,6 +19,18 @@ function Tool_GUI:reset_window_position()
     self._skip_draw = true
 end
 
+function Tool_GUI:draw_window_options(ctx, is_window)
+    if is_window then
+        if ctx:win_button("Reset window position") then
+            self:reset_window_position()
+        end
+    else
+        if ctx:win_button("Detach into window") then
+            options[self.option_id].visible = true
+        end
+    end
+end
+
 function Tool_GUI:draw_window(ctx)
     if self._skip_draw then
         self._skip_draw = false
