@@ -7,6 +7,8 @@ local GAME_TYPES = introspection.register_types({}, require("raw_game_types"))
 local TasSession = require("tas_session")
 
 local POSITION_DESYNC_EPSILON = 0.0000000001
+-- Vanilla frames used to fade into and out of the transition screen.
+local TRANSITION_FADE_FRAMES = 18
 local WARP_FADE_OUT_FRAMES = 5
 
 local SCREEN_WARP_HANDLER
@@ -658,12 +660,15 @@ local function on_post_level_gen()
 end
 
 local function on_transition()
-    if options.debug_print_load then
-        print("on_transition")
-    end
-    -- TODO: I could probably do this in a better spot, such as in on_pre_screen_change. Try just setting screen_next there instead of warping.
+    -- The transition screen can't be skipped entirely. It needs to run its unload behavior in order for things like pet health to be applied to players.
     if options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled) then
-        warp(state.world_next, state.level_next, state.theme_next)
+        if options.debug_print_load then
+            print("on_pre_screen_change: Skipping transition screen.")
+        end
+        state.screen_next = SCREEN.LEVEL
+        state.fadeout = 1 -- The fade-out will finish on the next update and the transition screen will unload.
+        state.fadein = TRANSITION_FADE_FRAMES
+        state.loading = 1
     end
 end
 
