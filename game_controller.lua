@@ -757,15 +757,15 @@ local function on_pre_update_transition()
         end
     end
     if module.current.tas.transition_exit_frame ~= -1 then
+        for player_index = 1, module.current.tas.player_count do
+            -- By default, suppress inputs from every player.
+            state.player_inputs.player_slots[player_index].buttons = INPUTS.NONE
+            state.player_inputs.player_slots[player_index].buttons_gameplay = INPUTS.NONE
+        end
         if transition_frame >= module.current.tas.transition_exit_frame then
-            -- The transition is exited on the first frame that the button is held.
-            -- TODO: Prevent inputs from everybody except the player providing the exit input.
+            -- Have player 1 provide the transition exit input. The exit is triggered on the first frame that the input is seen, not when it's released.
             state.player_inputs.player_slots[1].buttons = INPUTS.JUMP
             state.player_inputs.player_slots[1].buttons_gameplay = INPUTS.JUMP
-        else
-            -- Prevent the player from pressing any buttons and interfering with the automatic input.
-            state.player_inputs.player_slots[1].buttons = INPUTS.NONE
-            state.player_inputs.player_slots[1].buttons_gameplay = INPUTS.NONE
         end
     end
 end
