@@ -673,9 +673,8 @@ local function on_transition()
 end
 
 local function get_cutscene_input(player_index, logic_cutscene, last_frame, skip_frame, skip_input_id)
-    -- TODO: Which player actually has to do this input? Is it the leader?
-    if player_index ~= 1 then
-        -- This player can't skip the cutscene.
+    if player_index ~= state.items.leader then
+        -- Only the leader player can skip the cutscene.
         return INPUTS.NONE
     elseif logic_cutscene.timer == last_frame then
         -- The cutscene will end naturally during this update. Defer to normal input handling.
