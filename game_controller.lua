@@ -68,7 +68,7 @@ module.PLAYBACK_FROM = {
 module.CUTSCENE_SKIP_FIRST_FRAME = 2
 module.OLMEC_CUTSCENE_LAST_FRAME = 809
 module.TIAMAT_CUTSCENE_LAST_FRAME = 379
-module.TRANSITION_EXIT_FIRST_FRAME = 2
+module.TRANSITION_EXIT_FIRST_FRAME = 1
 
 -- TODO: Rename to active_tas_session?
 module.current = nil
@@ -95,9 +95,8 @@ Index of the current frame in a run, or -1 if undefined. The "current frame" is 
     The current TAS contains frame data for this index.
 ]]
 module.current_frame_index = nil
--- TODO: Reuse current_frame_index.
+-- The number of frames that have executed on the transition screen, based on `get_frame()`.
 local transition_frame
--- TODO: Rename to pre_update_get_frame? Can I remove this somehow?
 local transition_last_get_frame_seen
 
 local pre_update_loading
@@ -130,7 +129,7 @@ local function reset_frame_vars()
     pre_update_cutscene_active = false
 end
 
--- Reset variables with the scope of a single level.
+-- Reset variables with the scope of a single level, camp, or transition.
 local function reset_level_vars()
     if module.current then
         module.current:clear_current_level_index()
@@ -139,8 +138,8 @@ local function reset_level_vars()
         module.ghost_tas_session:clear_current_level_index()
     end
     module.current_frame_index = -1
-    transition_frame = 0
-    transition_last_get_frame_seen = -1
+    transition_frame = nil
+    transition_last_get_frame_seen = nil
     reset_frame_vars()
 end
 
@@ -507,17 +506,6 @@ function module.validate_playback_target()
     end
 end
 
--- Called right before unloading a playable level or the camp.
-local function on_pre_unload_level()
-    if not module.current then
-        return
-    end
-    if options.debug_print_load then
-        print("on_pre_unload_level: current_level_index="..module.current.current_level_index)
-    end
-    reset_level_vars()
-end
-
 -- Called right before the game updates the adventure seed and PRNG in order to generate a playable level or the camp.
 local function on_pre_update_adventure_seed()
     if options.debug_print_load then
@@ -537,10 +525,12 @@ end
 
 -- Called right before an update which is going to load a screen. The screen value itself might not change, since the game may be loading the same type of screen.
 local function on_pre_screen_change()
-    if ((state.screen == SCREEN.LEVEL or state.screen == SCREEN.CAMP) and state.screen_next ~= SCREEN.OPTIONS and state.screen_next ~= SCREEN.DEATH)
+    if ((state.screen == SCREEN.LEVEL or state.screen == SCREEN.CAMP or state.screen == SCREEN.TRANSITION)
+        and state.screen_next ~= SCREEN.OPTIONS and state.screen_next ~= SCREEN.DEATH)
         or state.screen == SCREEN.DEATH
     then
-        on_pre_unload_level()
+        -- This update is going to unload the current level, camp, or transition screen.
+        reset_level_vars()
     end
     if state.screen ~= SCREEN.OPTIONS and (state.screen_next == SCREEN.LEVEL or state.screen_next == SCREEN.CAMP) then
         on_pre_update_adventure_seed()
@@ -660,15 +650,18 @@ local function on_post_level_gen()
 end
 
 local function on_transition()
-    -- The transition screen can't be skipped entirely. It needs to run its unload behavior in order for things like pet health to be applied to players.
     if options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled) then
+        -- The transition screen can't be skipped entirely. It needs to run its unload behavior in order for things like pet health to be applied to players.
         if options.debug_print_load then
-            print("on_pre_screen_change: Skipping transition screen.")
+            print("on_transition: Skipping transition screen.")
         end
         state.screen_next = SCREEN.LEVEL
         state.fadeout = 1 -- The fade-out will finish on the next update and the transition screen will unload.
         state.fadein = TRANSITION_FADE_FRAMES
         state.loading = 1
+    else
+        transition_frame = 0
+        transition_last_get_frame_seen = get_frame()
     end
 end
 
@@ -741,18 +734,17 @@ end
 
 -- Called before every game update in a transition while a current TAS exists.
 local function on_pre_update_transition()
-    if module.mode == common_enums.MODE.FREEPLAY then
+    if state.loading == 1 or state.loading == 2 or module.mode == common_enums.MODE.FREEPLAY then
         return
     end
-    -- TODO: Since I have no level frame counter, I have to use get_frame(). Based on this counting system, frame 2 is the earliest I can initiate the exit. When told to exit on frame 2, the TAS holds it down for the entire duration of the fade-in (loading=3) since get_frame() doesn't increment during that phase. The input is detected on the update that finishes the fade-in, and immediately starts the fade-out (loading=1) in that same update, entirely skipping loading=0. The character visually appears to step forward for one frame. This is the same behavior I've observed from manually holding jump the entire time, so I think this is correct behavior for a TAS.
+    -- Transitions have no dedicated frame counter, so `get_frame()` has to be used. `get_frame()` increments at some point between updates, not during updates like most state memory variables. Based on this counting system, the frame increments to 1 after the first fade-in update, and then doesn't change for the entire remainder of the fade-in. Inputs are processed during the final update of the fade-in, which is still frame 1. If an exit input is seen during this final update, then the fade-out is started in that same update. The frame increments one more time after the update that starts the fade-out, and the character can be seen stepping forward for that one frame. This is the same behavior that occurs in normal gameplay by holding an exit input as the transition screen loads. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
     -- TODO: Test for entering sunken city, entering/exiting duat, and CO transitions.
-    -- get_frame() increments at some point before PRE_UPDATE, not during an update.
     local this_frame = get_frame()
     if transition_last_get_frame_seen ~= this_frame then
         transition_last_get_frame_seen = this_frame
         transition_frame = transition_frame + 1
         if options.debug_print_frame then
-            prinspect("on_pre_update_transition", transition_last_get_frame_seen, transition_frame)
+            print("on_pre_update_transition: transition_frame="..transition_frame)
         end
     end
     if module.current.tas.transition_exit_frame ~= -1 then
@@ -762,7 +754,10 @@ local function on_pre_update_transition()
             state.player_inputs.player_slots[player_index].buttons_gameplay = INPUTS.NONE
         end
         if transition_frame >= module.current.tas.transition_exit_frame then
-            -- Have player 1 provide the transition exit input. The exit is triggered on the first frame that the input is seen, not when it's released.
+            -- Have player 1 provide the transition exit input. The exit is triggered during the first update where the input is seen, not when it's released.
+            if options.debug_print_input then
+                print("on_pre_update_transition: Submitting transition exit input.")
+            end
             state.player_inputs.player_slots[1].buttons = INPUTS.JUMP
             state.player_inputs.player_slots[1].buttons_gameplay = INPUTS.JUMP
         end
