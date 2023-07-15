@@ -25,7 +25,9 @@ tool_guis = {
 local CURRENT_SCRIPT_DATA_FORMAT = 1
 
 default_options = {
-    file_name = "tas.json",
+    tas_file_name = "tas.json",
+    tas_file_history = {},
+    tas_file_history_max_size = 10,
     playback_from = game_controller.PLAYBACK_FROM.NOW_OR_LEVEL,
     playback_target_pause = true,
     playback_target_mode = "playback",

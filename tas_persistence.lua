@@ -39,4 +39,27 @@ function module.load_tas(file_name)
     end
 end
 
+function module.trim_tas_file_history()
+    for i = #options.tas_file_history, options.tas_file_history_max_size + 1, -1 do
+        options.tas_file_history[i] = nil
+    end
+end
+
+function module.add_tas_file_history(new_file_name, new_name)
+    if options.tas_file_history_max_size <= 0 then
+        return
+    end
+    for i, item in ipairs(options.tas_file_history) do
+        if item.file_name == new_file_name then
+            table.remove(options.tas_file_history, i)
+            break
+        end
+    end
+    table.insert(options.tas_file_history, 1, {
+        file_name = new_file_name,
+        name = new_name
+    })
+    module.trim_tas_file_history()
+end
+
 return module

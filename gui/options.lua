@@ -2,6 +2,7 @@ local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
 local game_controller = require("game_controller")
+local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("Options", "options_window")
@@ -44,6 +45,19 @@ function module:draw_panel(ctx, is_window)
     ctx:win_separator_text("Presentation mode")
     ctx:win_text("Presentation mode hides the TAS Tool GUI and paths, and disables speed tweaks.")
     options.presentation_enabled = ctx:win_check("Activate during playback", options.presentation_enabled)
+
+    ctx:win_separator_text("TAS file history")
+    local new_tas_file_history_max_size = ctx:win_input_int("Max size", options.tas_file_history_max_size)
+    if new_tas_file_history_max_size < 0 then
+        new_tas_file_history_max_size = 0
+    end
+    if options.tas_file_history_max_size ~= new_tas_file_history_max_size then
+        options.tas_file_history_max_size = new_tas_file_history_max_size
+        tas_persistence.trim_tas_file_history()
+    end
+    if ctx:win_button("Clear history") then
+        options.tas_file_history = {}
+    end
 
     ctx:win_separator_text("Tools")
     -- TODO: These are shown in an arbitrary order. Give them some meaningful order, such as alphabetical, or the order they appear in the root GUI.
