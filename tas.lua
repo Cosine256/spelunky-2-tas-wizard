@@ -21,7 +21,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 7
+local CURRENT_FORMAT = 8
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -121,7 +121,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [6] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 7,
         update = function(o)
             if o.levels then
                 for _, level in ipairs(o.levels) do
@@ -132,6 +132,13 @@ local FORMAT_UPDATERS = {
                 end
             end
         end
+    },
+    [7] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            o.name = ""
+            o.description = ""
+        end
     }
 }
 
@@ -139,6 +146,8 @@ local FORMAT_UPDATERS = {
 -- is_serial_format: Format the raw copy for serialization.
 function Tas:to_raw(is_serial_format)
     local copy = {
+        name = self.name,
+        description = self.description,
         seed_type = self.seed_type,
         seeded_seed = self.seeded_seed,
         adventure_seed = common.deep_copy(self.adventure_seed),

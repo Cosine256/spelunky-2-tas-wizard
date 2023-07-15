@@ -9,6 +9,10 @@ local module = Tool_GUI:new("TAS settings", "tas_settings_window")
 local SKIP_INPUT_COMBO = ComboInput:new(common_enums.SKIP_INPUT)
 
 local function draw_tas_settings(ctx, tas)
+    tas.name = ctx:win_input_text("Name", tas.name)
+    -- TODO: Use a multi-line text input.
+    tas.description = ctx:win_input_text("Description", tas.description)
+
     ctx:win_separator_text("Cutscenes and transitions")
     local olmec_cutscene_skip = ctx:win_check("Skip Olmec cutscene", tas.olmec_cutscene_skip_frame ~= -1)
     if olmec_cutscene_skip then

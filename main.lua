@@ -58,6 +58,8 @@ default_options = {
     -- Adventure seed 0,0 generates runs with unusual similarity between levels. This default adventure seed has better behavior.
     new_adventure_seed = { 0x0000000000000001, 0x0000000000000000 },
     new_tas = {
+        name = "New TAS",
+        description = "",
         seed_type = "seeded",
         seeded_seed = 0x00000000,
         adventure_seed = nil,
