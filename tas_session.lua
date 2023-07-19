@@ -20,7 +20,7 @@ end
 
 function TasSession:update_current_level_index(can_create)
     self:clear_current_level_index()
-    if self.tas.tutorial_race then
+    if self.tas.start.tutorial_race then
         if state.screen == SCREEN.CAMP or (state.screen_last == SCREEN.CAMP and state.screen == SCREEN.OPTIONS) then
             self.current_level_index = 1
         end

@@ -60,20 +60,23 @@ default_options = {
     -- Adventure seed 0,0 generates runs with unusual similarity between levels. This default adventure seed has better behavior.
     new_adventure_seed = { 0x0000000000000001, 0x0000000000000000 },
     new_tas = {
-        name = "New TAS",
+        name = "Unnamed TAS",
         description = "",
-        seed_type = "seeded",
-        seeded_seed = 0x00000000,
-        adventure_seed = nil,
-        custom_start = false,
-        world_start = 1,
-        level_start = 1,
-        theme_start = THEME.DWELLING,
-        shortcut = false,
-        tutorial_race = false,
-        tutorial_race_referee = "margaret",
-        player_count = 1,
-        players = { "ana", "margaret", "colin", "roffy" },
+        start = {
+            type = "simple",
+            seed_type = "seeded",
+            seeded_seed = 0x00000000,
+            adventure_seed = nil,
+            is_custom_area_choice = false,
+            world = 1,
+            level = 1,
+            theme = THEME.DWELLING,
+            shortcut = false,
+            tutorial_race = false,
+            tutorial_race_referee = "margaret",
+            player_count = 1,
+            players = { "ana", "margaret", "colin", "roffy" },
+        },
         levels = {},
         olmec_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME,
         olmec_cutscene_skip_input = "jump",
@@ -99,8 +102,8 @@ local function save_script_data(save_ctx)
         options = common.deep_copy(options)
     }
     save_data.options.new_adventure_seed = common.adventure_seed_to_string(save_data.options.new_adventure_seed)
-    if save_data.options.new_tas.adventure_seed then
-        save_data.options.new_tas.adventure_seed = common.adventure_seed_to_string(save_data.options.new_tas.adventure_seed)
+    if save_data.options.new_tas.start.adventure_seed then
+        save_data.options.new_tas.start.adventure_seed = common.adventure_seed_to_string(save_data.options.new_tas.start.adventure_seed)
     end
     local save_json = json.encode(save_data)
     local success, err = pcall(function()
@@ -128,8 +131,8 @@ local function load_script_data(load_ctx)
             load_data = result
             persistence.update_format(load_data, CURRENT_SCRIPT_DATA_FORMAT, {})
             load_data.options.new_adventure_seed = common.string_to_adventure_seed(load_data.options.new_adventure_seed)
-            if load_data.options.new_tas.adventure_seed then
-                load_data.options.new_tas.adventure_seed = common.string_to_adventure_seed(load_data.options.new_tas.adventure_seed)
+            if load_data.options.new_tas.start.adventure_seed then
+                load_data.options.new_tas.start.adventure_seed = common.string_to_adventure_seed(load_data.options.new_tas.start.adventure_seed)
             end
         end
     end

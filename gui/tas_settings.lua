@@ -63,7 +63,7 @@ local function draw_tas_settings(ctx, tas)
 
     ctx:win_separator_text("Start settings")
     ctx:win_text("Warning: Modifying the start settings can change level generation and RNG, which may cause the TAS to desynchronize if it has any inputs recorded.")
-    common_gui.draw_tas_start_settings(ctx, tas, 2)
+    common_gui.draw_tas_start_settings(ctx, tas)
     if ctx:win_button("Reset TAS") then
         game_controller.reset_session_vars()
         tool_guis.frames.reset_vars()
@@ -89,7 +89,9 @@ end
 
 function module:draw_panel(ctx, is_window)
     if game_controller.current then
+        ctx:win_pushid("current_tas_settings")
         draw_tas_settings(ctx, game_controller.current.tas)
+        ctx:win_popid()
     else
         ctx:win_text("No TAS loaded.")
     end

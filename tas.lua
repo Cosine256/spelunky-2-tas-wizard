@@ -21,7 +21,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 8
+local CURRENT_FORMAT = 9
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -134,10 +134,30 @@ local FORMAT_UPDATERS = {
         end
     },
     [7] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 8,
         update = function(o)
             o.name = ""
             o.description = ""
+        end
+    },
+    [8] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            o.start = {
+                type = "simple",
+                seed_type = o.seed_type,
+                seeded_seed = o.seeded_seed,
+                adventure_seed = o.adventure_seed,
+                is_custom_area_choice = o.custom_start,
+                world = o.world_start,
+                level = o.level_start,
+                theme = o.theme_start,
+                shortcut = o.shortcut,
+                tutorial_race = o.tutorial_race,
+                tutorial_race_referee = o.tutorial_race_referee,
+                player_count = o.player_count,
+                players = o.players
+            }
         end
     }
 }
@@ -148,18 +168,21 @@ function Tas:to_raw(is_serial_format)
     local copy = {
         name = self.name,
         description = self.description,
-        seed_type = self.seed_type,
-        seeded_seed = self.seeded_seed,
-        adventure_seed = common.deep_copy(self.adventure_seed),
-        custom_start = self.custom_start,
-        world_start = self.world_start,
-        level_start = self.level_start,
-        theme_start = self.theme_start,
-        shortcut = self.shortcut,
-        tutorial_race = self.tutorial_race,
-        tutorial_race_referee = self.tutorial_race_referee,
-        player_count = self.player_count,
-        players = common.deep_copy(self.players),
+        start = {
+            type = self.start.type,
+            seed_type = self.start.seed_type,
+            seeded_seed = self.start.seeded_seed,
+            adventure_seed = common.deep_copy(self.start.adventure_seed),
+            is_custom_area_choice = self.start.is_custom_area_choice,
+            world = self.start.world,
+            level = self.start.level,
+            theme = self.start.theme,
+            shortcut = self.start.shortcut,
+            tutorial_race = self.start.tutorial_race,
+            tutorial_race_referee = self.start.tutorial_race_referee,
+            player_count = self.start.player_count,
+            players = common.deep_copy(self.start.players),
+        },
         levels = {},
         olmec_cutscene_skip_frame = self.olmec_cutscene_skip_frame,
         olmec_cutscene_skip_input = self.olmec_cutscene_skip_input,
@@ -172,9 +195,9 @@ function Tas:to_raw(is_serial_format)
     }
     if is_serial_format then
         copy.format = CURRENT_FORMAT
-        if copy.adventure_seed then
+        if copy.start.adventure_seed then
             -- The JSON serializer doesn't handle the 64-bit integer pair correctly and converts it into lossy floats. Save it as a 128-bit hex string instead.
-            copy.adventure_seed = common.adventure_seed_to_string(copy.adventure_seed)
+            copy.start.adventure_seed = common.adventure_seed_to_string(copy.start.adventure_seed)
         end
     end
     for level_index, self_level in ipairs(self.levels) do
@@ -219,8 +242,8 @@ function Tas:from_raw(raw, is_serial_format)
         persistence.update_format(raw, CURRENT_FORMAT, FORMAT_UPDATERS)
         raw.format = nil
         -- Convert the 128-bit adventure seed hex string back into a 64-bit integer pair.
-        if raw.adventure_seed then
-            raw.adventure_seed = common.string_to_adventure_seed(raw.adventure_seed)
+        if raw.start.adventure_seed then
+            raw.start.adventure_seed = common.string_to_adventure_seed(raw.start.adventure_seed)
         end
     end
     return Tas:new(raw, false)
@@ -231,7 +254,7 @@ function Tas:create_level_data()
         players = {},
         frames = {}
     }
-    for player_index = 1, self.player_count do
+    for player_index = 1, self.start.player_count do
         level_data.players[player_index] = {}
     end
     return level_data
@@ -241,7 +264,7 @@ function Tas:create_frame_data()
     local frame_data = {
         players = {}
     }
-    for player_index = 1, self.player_count do
+    for player_index = 1, self.start.player_count do
         frame_data.players[player_index] = {}
     end
     return frame_data
@@ -349,7 +372,7 @@ end
 -- Compute the adventure seed that would exist right before the given level initializes PRNG and advances the adventure seed.
 function Tas:compute_level_adventure_seed(level_index)
     -- Right before the game generates a level, it uses the adventure seed to initialize PRNG, and it advances the adventure seed to its next value. This advancement is very simple, and just increases the adventure seed's second part by its first part, allowing integer overflow. Thanks to two's complement arithmetic, this calculation works even with Lua's signed integers.
-    return { self.adventure_seed[1], self.adventure_seed[2] + (self.adventure_seed[1] * (level_index - 1)) }
+    return { self.start.adventure_seed[1], self.start.adventure_seed[2] + (self.start.adventure_seed[1] * (level_index - 1)) }
 end
 
 return Tas
