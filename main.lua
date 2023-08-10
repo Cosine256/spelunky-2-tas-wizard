@@ -9,6 +9,7 @@ local common_enums = require("common_enums")
 local drawing = require("drawing")
 local game_controller = require("game_controller")
 local persistence = require("persistence")
+local Tas = require("tas")
 tool_guis = {
     frames = require("gui/frames"),
     ghost = require("gui/ghost"),
@@ -102,9 +103,7 @@ local function save_script_data(save_ctx)
         options = common.deep_copy(options)
     }
     save_data.options.new_adventure_seed = common.adventure_seed_to_string(save_data.options.new_adventure_seed)
-    if save_data.options.new_tas.start.adventure_seed then
-        save_data.options.new_tas.start.adventure_seed = common.adventure_seed_to_string(save_data.options.new_tas.start.adventure_seed)
-    end
+    save_data.options.new_tas = options.new_tas:to_raw(true)
     local save_json = json.encode(save_data)
     local success, err = pcall(function()
         save_ctx:save(save_json)
@@ -129,17 +128,16 @@ local function load_script_data(load_ctx)
             print("Warning: Failed to load script data: "..result)
         elseif result then
             load_data = result
-            persistence.update_format(load_data, CURRENT_SCRIPT_DATA_FORMAT, {})
-            load_data.options.new_adventure_seed = common.string_to_adventure_seed(load_data.options.new_adventure_seed)
-            if load_data.options.new_tas.start.adventure_seed then
-                load_data.options.new_tas.start.adventure_seed = common.string_to_adventure_seed(load_data.options.new_tas.start.adventure_seed)
-            end
         end
     end
     if load_data then
+        persistence.update_format(load_data, CURRENT_SCRIPT_DATA_FORMAT, {})
         options = load_data.options
+        options.new_adventure_seed = common.string_to_adventure_seed(options.new_adventure_seed)
+        options.new_tas = Tas:from_raw(options.new_tas, true)
     else
         options = common.deep_copy(default_options)
+        options.new_tas = Tas:from_raw(options.new_tas, false)
     end
 end
 
