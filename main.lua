@@ -103,7 +103,7 @@ local function save_script_data(save_ctx)
         options = common.deep_copy(options)
     }
     save_data.options.new_adventure_seed = common.adventure_seed_to_string(save_data.options.new_adventure_seed)
-    save_data.options.new_tas = options.new_tas:to_raw(true)
+    save_data.options.new_tas = options.new_tas:to_raw(Tas.SERIAL_MODS.OPTIONS)
     local save_json = json.encode(save_data)
     local success, err = pcall(function()
         save_ctx:save(save_json)
@@ -134,10 +134,10 @@ local function load_script_data(load_ctx)
         persistence.update_format(load_data, CURRENT_SCRIPT_DATA_FORMAT, {})
         options = load_data.options
         options.new_adventure_seed = common.string_to_adventure_seed(options.new_adventure_seed)
-        options.new_tas = Tas:from_raw(options.new_tas, true)
+        options.new_tas = Tas:from_raw(options.new_tas, Tas.SERIAL_MODS.OPTIONS)
     else
         options = common.deep_copy(default_options)
-        options.new_tas = Tas:from_raw(options.new_tas, false)
+        options.new_tas = Tas:from_raw(options.new_tas, Tas.SERIAL_MODS.NONE)
     end
 end
 

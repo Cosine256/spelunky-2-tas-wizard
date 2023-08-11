@@ -4,6 +4,16 @@ local persistence = require("persistence")
 local Tas = {}
 Tas.__index = Tas
 
+-- Additional modifications to make to a raw TAS object for (de)serializion.
+Tas.SERIAL_MODS = {
+    -- Don't make any modifications.
+    NONE = 1,
+    -- Make modifications for a normal TAS.
+    NORMAL = 2,
+    -- Make modifications for the "new" TAS stored in the options.
+    OPTIONS = 3
+}
+
 function Tas:new(obj, copy_obj)
     local o
     if obj == nil then
@@ -17,7 +27,7 @@ end
 
 -- Create a copy of this TAS.
 function Tas:copy()
-    return Tas:new(self:to_raw(false), false)
+    return Tas:new(self:to_raw(Tas.SERIAL_MODS.NONE), false)
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
@@ -163,8 +173,8 @@ local FORMAT_UPDATERS = {
 }
 
 -- Create a raw copy of this TAS, containing only tables and primitive types, with no functions or prototyping.
--- is_serial_format: Format the raw copy for serialization.
-function Tas:to_raw(is_serial_format)
+-- serial_mod: Pre-serialization modifications to make to the raw object.
+function Tas:to_raw(serial_mod)
     local copy = {
         name = self.name,
         description = self.description,
@@ -193,7 +203,7 @@ function Tas:to_raw(is_serial_format)
         save_player_positions = self.save_player_positions,
         save_level_snapshots = self.save_level_snapshots
     }
-    if is_serial_format then
+    if serial_mod ~= Tas.SERIAL_MODS.NONE then
         copy.format = CURRENT_FORMAT
         if copy.start.adventure_seed then
             -- The JSON serializer doesn't handle the 64-bit integer pair correctly and converts it into lossy floats. Save it as a 128-bit hex string instead.
@@ -209,11 +219,11 @@ function Tas:to_raw(is_serial_format)
         copy.levels[level_index] = copy_level
         for player_index, self_player in ipairs(self_level.players) do
             copy_level.players[player_index] = {}
-            if not is_serial_format or self.save_player_positions then
+            if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
                 copy_level.players[player_index].start_position = common.deep_copy(self_player.start_position)
             end
         end
-        if (not is_serial_format or self.save_level_snapshots) and self_level.snapshot then
+        if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_level_snapshots) and self_level.snapshot then
             copy_level.snapshot = common.deep_copy(self_level.snapshot)
         end
         for frame_index, self_frame in ipairs(self_level.frames) do
@@ -225,7 +235,7 @@ function Tas:to_raw(is_serial_format)
                 copy_frame.players[player_index] = {
                     input = self_player.input
                 }
-                if not is_serial_format or self.save_player_positions then
+                if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
                     copy_frame.players[player_index].position = common.deep_copy(self_player.position)
                 end
             end
@@ -235,10 +245,10 @@ function Tas:to_raw(is_serial_format)
 end
 
 -- Create a TAS class instance from a raw object.
--- is_serial_format: The raw object is formatted for serialization.
-function Tas:from_raw(raw, is_serial_format)
-    raw = common.deep_copy(raw)
-    if is_serial_format then
+-- raw: The raw object to use. It will be converted into a class instance without being copied.
+-- serial_mod: Post-deserialization modifications to make to the raw object.
+function Tas:from_raw(raw, serial_mod)
+    if serial_mod ~= Tas.SERIAL_MODS.NONE then
         persistence.update_format(raw, CURRENT_FORMAT, FORMAT_UPDATERS)
         raw.format = nil
         -- Convert the 128-bit adventure seed hex string back into a 64-bit integer pair.

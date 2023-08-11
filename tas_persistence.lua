@@ -5,7 +5,7 @@ local module = {}
 
 function module.save_tas(tas, file_name)
     local status = nil
-    local save_data = tas:to_raw(true)
+    local save_data = tas:to_raw(Tas.SERIAL_MODS.NORMAL)
     local save_json = json.encode(save_data)
     local file, err = io.open(file_name, "w+")
     if not file then
@@ -33,7 +33,7 @@ function module.load_tas(file_name)
         if not success then
             return nil, "Failed to decode TAS data from JSON: "..err
         else
-            local tas = Tas:from_raw(result, true)
+            local tas = Tas:from_raw(result, Tas.SERIAL_MODS.NORMAL)
             return tas, "TAS loaded successfully"
         end
     end
