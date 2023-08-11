@@ -330,8 +330,8 @@ function module.apply_level_snapshot(level_index)
         if options.debug_print_load or options.debug_print_snapshot then
             print("apply_level_snapshot: Applying state memory snapshot for level index "..level_index..".")
         end
-        -- TODO: What do I actually need to set here to get the game to load the state correctly? The game sometimes loads the wrong level or crashes if I don't do this. Maybe the game checks some of the state before PRE_LEVEL_GENERATION is called. I apply the snapshot a second time when I intercept the load in PRE_LEVEL_GENERATION because that's the only place I can override the player inventories. Perhaps I don't need to apply the snapshot here, but need to do it in the PRE_UPDATE which will unload the current level and then run the next level's generation.
-        introspection.apply_snapshot(state, level_snapshot, GAME_TYPES.StateMemory_LevelSnapshot)
+        -- TODO: What do I actually need to set here to get the game to load the state correctly? The game sometimes loads the wrong level or crashes if I don't do this. Maybe the game checks some of the state before PRE_LEVEL_GENERATION is called. I apply the StateMemory snapshot a second time when I intercept the load in PRE_LEVEL_GENERATION because that's the only place I can override the player inventories. Perhaps I don't need to apply the StateMemory snapshot here, but need to do it in the PRE_UPDATE which will unload the current level and then run the next level's generation.
+        introspection.apply_snapshot(state, level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
         state.screen_next = SCREEN.LEVEL
         state.loading = 1
         state.pause = PAUSE.FADE
@@ -343,7 +343,7 @@ function module.apply_level_snapshot(level_index)
         module.desync_frame = -1
         return true
     else
-        print("Warning: Missing level state data for level index "..level_index..".")
+        print("Warning: Missing snapshot for level index "..level_index..".")
         return false
     end
 end
@@ -562,7 +562,7 @@ local function on_pre_level_gen()
             if options.debug_print_load or options.debug_print_snapshot then
                 print("on_pre_level_gen: Applying state memory snapshot for level index "..load_level_snapshot_index..".")
             end
-            introspection.apply_snapshot(state, load_level_data.snapshot, GAME_TYPES.StateMemory_LevelSnapshot)
+            introspection.apply_snapshot(state, load_level_data.snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
         else
             print("Warning: Missing state memory snapshot for level index "..load_level_snapshot_index..". Switching to freeplay mode.")
             module.set_mode(common_enums.MODE.FREEPLAY)
@@ -594,7 +594,9 @@ local function on_pre_level_gen()
     elseif module.mode ~= common_enums.MODE.FREEPLAY and module.current.current_level_index > 1
         and (not module.current.current_level_data.snapshot or module.mode == common_enums.MODE.RECORD)
     then
-        module.current.current_level_data.snapshot = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
+        module.current.current_level_data.snapshot = {
+            state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
+        }
         if options.debug_print_load or options.debug_print_snapshot then
             print("on_pre_level_gen: Storing state memory snapshot for level index "..module.current.current_level_index..".")
         end

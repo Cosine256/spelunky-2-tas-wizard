@@ -31,7 +31,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 9
+local CURRENT_FORMAT = 10
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -136,7 +136,6 @@ local FORMAT_UPDATERS = {
             if o.levels then
                 for _, level in ipairs(o.levels) do
                     if level.snapshot then
-                        -- TODO: Revert this format change and unflatten this object. Right now it only contains the StateMemory, but in the future I may need to store other stuff in the snapshot, such as for modded runs. Call it "state_memory" when you unflatten it instead of just "state".
                         level.snapshot = level.snapshot.state
                     end
                 end
@@ -151,7 +150,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [8] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 9,
         update = function(o)
             o.start = {
                 type = "simple",
@@ -168,6 +167,20 @@ local FORMAT_UPDATERS = {
                 player_count = o.player_count,
                 players = o.players
             }
+        end
+    },
+    [9] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            if o.levels then
+                for _, level in ipairs(o.levels) do
+                    if level.snapshot then
+                        level.snapshot = {
+                            state_memory = level.snapshot
+                        }
+                    end
+                end
+            end
         end
     }
 }
