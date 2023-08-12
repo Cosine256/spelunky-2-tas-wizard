@@ -20,13 +20,15 @@ end
 
 function TasSession:update_current_level_index(can_create)
     self:clear_current_level_index()
-    if self.tas.start.tutorial_race then
-        if state.screen == SCREEN.CAMP or (state.screen_last == SCREEN.CAMP and state.screen == SCREEN.OPTIONS) then
-            self.current_level_index = 1
-        end
-    else
-        if state.screen == SCREEN.LEVEL or (state.screen_last == SCREEN.LEVEL and (state.screen == SCREEN.OPTIONS or state.screen == SCREEN.DEATH)) then
-            self.current_level_index = state.level_count + 1
+    if self.tas.start_type == "simple" then
+        if self.tas.start_simple.tutorial_race then
+            if state.screen == SCREEN.CAMP or (state.screen_last == SCREEN.CAMP and state.screen == SCREEN.OPTIONS) then
+                self.current_level_index = 1
+            end
+        else
+            if state.screen == SCREEN.LEVEL or (state.screen_last == SCREEN.LEVEL and (state.screen == SCREEN.OPTIONS or state.screen == SCREEN.DEATH)) then
+                self.current_level_index = state.level_count + 1
+            end
         end
     end
     self.current_level_data = self.tas.levels[self.current_level_index]

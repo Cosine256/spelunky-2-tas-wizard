@@ -116,7 +116,7 @@ function module:draw_panel(ctx, is_window)
                     frames_edit_frame_start = common.clamp(ctx:win_drag_int("Start frame", frames_edit_frame_start, 0, #level_data.frames), 0, #level_data.frames)
                     frames_edit_frame_count = math.max(1, ctx:win_drag_int("Frame count to insert", frames_edit_frame_count, 1, 60))
                     frames_edit_insert_use_start = ctx:win_check("Use inputs of start frame", frames_edit_insert_use_start)
-                    for player_index = 1, session.tas.start.player_count do
+                    for player_index = 1, session.tas.start_simple.player_count do
                         if frames_edit_insert_use_start and frames_edit_frame_start ~= 0 then
                             if frames_edit_frame_start == 0 then
                                 frames_edit_insert_inputs[player_index] = INPUTS.NONE
@@ -127,7 +127,7 @@ function module:draw_panel(ctx, is_window)
                             frames_edit_insert_inputs[player_index] = INPUTS.NONE
                         end
                         local input = frames_edit_insert_inputs[player_index]
-                        if session.tas.start.player_count == 1 then
+                        if session.tas.start_simple.player_count == 1 then
                             input = draw_input_editor_inputs(ctx, input)
                         else
                             ctx:win_section("Player "..player_index.." inputs", function()
@@ -181,12 +181,12 @@ function module:draw_panel(ctx, is_window)
         elseif game_controller.current_frame_index == -1 then
             ctx:win_text("Current frame is undefined.")
         else
-            if session.tas.start.player_count == 1 then
+            if session.tas.start_simple.player_count == 1 then
                 frames_view_player_index = 1
             else
                 local player_choices = {}
-                for i = 1, session.tas.start.player_count do
-                    player_choices[i] = i.." ("..common_enums.PLAYER_CHAR:value_by_id(session.tas.start.players[i]).name..")"
+                for i = 1, session.tas.start_simple.player_count do
+                    player_choices[i] = i.." ("..common_enums.PLAYER_CHAR:value_by_id(session.tas.start_simple.players[i]).name..")"
                 end
                 local player_combo = ComboInput:new(OrderedTable:new(player_choices))
                 frames_view_player_index = player_combo:draw(ctx, "Player", frames_view_player_index)

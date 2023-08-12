@@ -63,11 +63,12 @@ local PLAYER_COUNT_COMBO = ComboInput:new(OrderedTable:new({ 1, 2, 3, 4 }))
 local PLAYER_CHAR_COMBO = ComboInput:new(common_enums.PLAYER_CHAR)
 
 local function draw_tas_start_settings_simple(ctx, tas)
+    local start = tas.start_simple
     local run_start_area_id = "custom"
-    if not tas.start.is_custom_area_choice then
+    if not start.is_custom_area_choice then
         for _, run_start_area in ipairs(RUN_START_AREA_BY_INDEX) do
-            if tas.start.world == run_start_area.world and tas.start.level == run_start_area.level and tas.start.theme == run_start_area.theme
-                and tas.start.shortcut == run_start_area.shortcut and tas.start.tutorial_race == run_start_area.tutorial_race
+            if start.world == run_start_area.world and start.level == run_start_area.level and start.theme == run_start_area.theme
+                and start.shortcut == run_start_area.shortcut and start.tutorial_race == run_start_area.tutorial_race
             then
                 run_start_area_id = run_start_area.id
                 break
@@ -77,52 +78,52 @@ local function draw_tas_start_settings_simple(ctx, tas)
     run_start_area_id = RUN_START_AREA_COMBO:draw(ctx, "Start area", run_start_area_id)
     if run_start_area_id == "custom" then
         ctx:win_indent(module.INDENT_SUB_INPUT)
-        tas.start.is_custom_area_choice = true
-        tas.start.shortcut = false
-        tas.start.tutorial_race = false
+        start.is_custom_area_choice = true
+        start.shortcut = false
+        start.tutorial_race = false
         local vanilla_level_id
         for _, vanilla_level in ipairs(VANILLA_LEVEL_BY_INDEX) do
-            if tas.start.world == vanilla_level.world and tas.start.theme == vanilla_level.theme then
+            if start.world == vanilla_level.world and start.theme == vanilla_level.theme then
                 vanilla_level_id = vanilla_level.id
                 break
             end
         end
         vanilla_level_id = VANILLA_LEVEL_COMBO:draw(ctx, "World", vanilla_level_id)
         local vanilla_level = VANILLA_LEVEL:value_by_id(vanilla_level_id)
-        tas.start.world = vanilla_level.world
-        tas.start.theme = vanilla_level.theme
+        start.world = vanilla_level.world
+        start.theme = vanilla_level.theme
         if #vanilla_level.levels == 1 then
-            tas.start.level = vanilla_level.levels[1]
+            start.level = vanilla_level.levels[1]
         else
             local level_choices = {}
             for i, level in ipairs(vanilla_level.levels) do
                 level_choices[i] = { id = level }
             end
             local level_combo = ComboInput:new(OrderedTable:new(level_choices))
-            tas.start.level = level_combo:draw(ctx, "Level", tas.start.level)
+            start.level = level_combo:draw(ctx, "Level", start.level)
         end
         ctx:win_indent(-module.INDENT_SUB_INPUT)
     else
-        tas.start.is_custom_area_choice = false
+        start.is_custom_area_choice = false
         local run_start_area = RUN_START_AREA:value_by_id(run_start_area_id)
-        tas.start.world = run_start_area.world
-        tas.start.level = run_start_area.level
-        tas.start.theme = run_start_area.theme
-        tas.start.shortcut = run_start_area.shortcut
-        tas.start.tutorial_race = run_start_area.tutorial_race
+        start.world = run_start_area.world
+        start.level = run_start_area.level
+        start.theme = run_start_area.theme
+        start.shortcut = run_start_area.shortcut
+        start.tutorial_race = run_start_area.tutorial_race
     end
 
-    local new_seed_type_id = SEED_TYPE_COMBO:draw(ctx, "Seed type", tas.start.seed_type)
+    local new_seed_type_id = SEED_TYPE_COMBO:draw(ctx, "Seed type", start.seed_type)
     local is_seeded = new_seed_type_id == "seeded"
-    if tas.start.seed_type ~= new_seed_type_id then
-        tas.start.seed_type = new_seed_type_id
+    if start.seed_type ~= new_seed_type_id then
+        start.seed_type = new_seed_type_id
         if is_seeded then
-            if not tas.start.seeded_seed then
-                tas.start.seeded_seed = options.new_tas.start.seeded_seed
+            if not start.seeded_seed then
+                start.seeded_seed = options.new_tas.start_simple.seeded_seed
             end
         else
-            if not tas.start.adventure_seed then
-                tas.start.adventure_seed = common.deep_copy(options.new_tas.start.adventure_seed)
+            if not start.adventure_seed then
+                start.adventure_seed = common.deep_copy(options.new_tas.start_simple.adventure_seed)
             end
         end
     end
@@ -131,46 +132,46 @@ local function draw_tas_start_settings_simple(ctx, tas)
     ctx:win_text(seed_type.name..": "..seed_type.desc)
     if is_seeded then
         local new_seed = common.string_to_seed(
-            ctx:win_input_text("Seed##new_seed_text", common.seed_to_string(tas.start.seeded_seed)))
+            ctx:win_input_text("Seed##new_seed_text", common.seed_to_string(start.seeded_seed)))
         if new_seed then
-            tas.start.seeded_seed = new_seed
+            start.seeded_seed = new_seed
         end
     else
         local new_part_1 = common.string_to_adventure_seed_part(
-            ctx:win_input_text("Part 1##new_seed_1_text", common.adventure_seed_part_to_string(tas.start.adventure_seed[1])))
+            ctx:win_input_text("Part 1##new_seed_1_text", common.adventure_seed_part_to_string(start.adventure_seed[1])))
         local new_part_2 = common.string_to_adventure_seed_part(
-            ctx:win_input_text("Part 2##new_seed_2_text", common.adventure_seed_part_to_string(tas.start.adventure_seed[2])))
+            ctx:win_input_text("Part 2##new_seed_2_text", common.adventure_seed_part_to_string(start.adventure_seed[2])))
         if new_part_1 then
-            tas.start.adventure_seed[1] = new_part_1
+            start.adventure_seed[1] = new_part_1
         end
         if new_part_2 then
-            tas.start.adventure_seed[2] = new_part_2
+            start.adventure_seed[2] = new_part_2
         end
     end
     if ctx:win_button("Randomize seed") then
         if is_seeded then
-            tas.start.seeded_seed = math.random(0, 0xFFFFFFFF)
+            start.seeded_seed = math.random(0, 0xFFFFFFFF)
         else
             -- Lua uses 64-bit signed integers, so the random ranges need to be specified like this.
-            tas.start.adventure_seed = { math.random(math.mininteger, math.maxinteger), math.random(math.mininteger, math.maxinteger) }
+            start.adventure_seed = { math.random(math.mininteger, math.maxinteger), math.random(math.mininteger, math.maxinteger) }
         end
     end
     ctx:win_indent(-module.INDENT_SUB_INPUT)
 
-    if tas.start.tutorial_race then
-        tas.start.tutorial_race_referee = PLAYER_CHAR_COMBO:draw(ctx, "Tutorial race referee", tas.start.tutorial_race_referee or options.new_tas.start.tutorial_race_referee)
+    if start.tutorial_race then
+        start.tutorial_race_referee = PLAYER_CHAR_COMBO:draw(ctx, "Tutorial race referee", start.tutorial_race_referee or options.new_tas.start_simple.tutorial_race_referee)
     end
 
     local new_player_count
-    if tas.start.tutorial_race then
+    if start.tutorial_race then
         new_player_count = 1
     else
-        new_player_count = PLAYER_COUNT_COMBO:draw(ctx, "Player count", tas.start.player_count)
+        new_player_count = PLAYER_COUNT_COMBO:draw(ctx, "Player count", start.player_count)
     end
-    if tas.start.player_count ~= new_player_count then
+    if start.player_count ~= new_player_count then
         -- Update all level and frame data to match the new player count.
-        print("Player count changed from "..tas.start.player_count.." to "..new_player_count..". Updating level and frame data.")
-        tas.start.player_count = new_player_count
+        print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating level and frame data.")
+        start.player_count = new_player_count
         -- TODO: Loop nesting here feels odd. There are probably other ways I could do it. Is this the best one?
         for _, level in ipairs(tas.levels) do
             for player_index = 1, CONST.MAX_PLAYERS do
@@ -193,14 +194,14 @@ local function draw_tas_start_settings_simple(ctx, tas)
             end
         end
     end
-    for player_index = 1, tas.start.player_count do
-        tas.start.players[player_index] = PLAYER_CHAR_COMBO:draw(ctx, "Player "..player_index, tas.start.players[player_index])
+    for player_index = 1, start.player_count do
+        start.players[player_index] = PLAYER_CHAR_COMBO:draw(ctx, "Player "..player_index, start.players[player_index])
     end
 end
 
 function module.draw_tas_start_settings(ctx, tas)
-    tas.start.type = START_TYPE_COMBO:draw(ctx, "Start type", tas.start.type)
-    if tas.start.type == "simple" then
+    tas.start_type = START_TYPE_COMBO:draw(ctx, "Start type", tas.start_type)
+    if tas.start_type == "simple" then
         draw_tas_start_settings_simple(ctx, tas)
     end
 end

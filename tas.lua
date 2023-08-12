@@ -31,7 +31,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 10
+local CURRENT_FORMAT = 11
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -170,7 +170,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [9] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 10,
         update = function(o)
             if o.levels then
                 for _, level in ipairs(o.levels) do
@@ -182,6 +182,15 @@ local FORMAT_UPDATERS = {
                 end
             end
         end
+    },
+    [10] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            o.start_simple = o.start
+            o.start = nil
+            o.start_type = o.start_simple.type
+            o.start_simple.type = nil
+        end
     }
 }
 
@@ -191,21 +200,8 @@ function Tas:to_raw(serial_mod)
     local copy = {
         name = self.name,
         description = self.description,
-        start = {
-            type = self.start.type,
-            seed_type = self.start.seed_type,
-            seeded_seed = self.start.seeded_seed,
-            adventure_seed = common.deep_copy(self.start.adventure_seed),
-            is_custom_area_choice = self.start.is_custom_area_choice,
-            world = self.start.world,
-            level = self.start.level,
-            theme = self.start.theme,
-            shortcut = self.start.shortcut,
-            tutorial_race = self.start.tutorial_race,
-            tutorial_race_referee = self.start.tutorial_race_referee,
-            player_count = self.start.player_count,
-            players = common.deep_copy(self.start.players),
-        },
+        start_type = self.start_type,
+        start_simple = common.deep_copy(self.start_simple),
         levels = {},
         olmec_cutscene_skip_frame = self.olmec_cutscene_skip_frame,
         olmec_cutscene_skip_input = self.olmec_cutscene_skip_input,
@@ -220,18 +216,23 @@ function Tas:to_raw(serial_mod)
         copy.format = CURRENT_FORMAT
         if serial_mod == Tas.SERIAL_MODS.NORMAL then
             -- Remove unused start values.
-            if copy.start.seed_type == "seeded" then
-                copy.start.adventure_seed = nil
-            elseif copy.start.seed_type == "adventure" then
-                copy.start.seeded_seed = nil
-            end
-            if not copy.start.tutorial_race then
-                copy.start.tutorial_race_referee = nil
+            if copy.start_type == "simple" then
+                if copy.start_simple.seed_type ~= "seeded" then
+                    copy.start_simple.seeded_seed = nil
+                end
+                if copy.start_simple.seed_type ~= "adventure" then
+                    copy.start_simple.adventure_seed = nil
+                end
+                if not copy.start_simple.tutorial_race then
+                    copy.start_simple.tutorial_race_referee = nil
+                end
+            else
+                copy.start_simple = nil
             end
         end
-        if copy.start.adventure_seed then
+        if copy.start_simple and copy.start_simple.adventure_seed then
             -- The JSON serializer doesn't handle the 64-bit integer pair correctly and converts it into lossy floats. Save it as a 128-bit hex string instead.
-            copy.start.adventure_seed = common.adventure_seed_to_string(copy.start.adventure_seed)
+            copy.start_simple.adventure_seed = common.adventure_seed_to_string(copy.start_simple.adventure_seed)
         end
     end
     for level_index, self_level in ipairs(self.levels) do
@@ -279,8 +280,8 @@ function Tas:from_raw(raw, serial_mod)
         persistence.update_format(raw, CURRENT_FORMAT, FORMAT_UPDATERS)
         raw.format = nil
         -- Convert the 128-bit adventure seed hex strings back into a 64-bit integer pairs.
-        if raw.start.adventure_seed then
-            raw.start.adventure_seed = common.string_to_adventure_seed(raw.start.adventure_seed)
+        if raw.start_simple and raw.start_simple.adventure_seed then
+            raw.start_simple.adventure_seed = common.string_to_adventure_seed(raw.start_simple.adventure_seed)
         end
         if raw.levels then
             for _, level in ipairs(raw.levels) do
@@ -298,7 +299,7 @@ function Tas:create_level_data()
         players = {},
         frames = {}
     }
-    for player_index = 1, self.start.player_count do
+    for player_index = 1, self.start_simple.player_count do
         level_data.players[player_index] = {}
     end
     return level_data
@@ -308,7 +309,7 @@ function Tas:create_frame_data()
     local frame_data = {
         players = {}
     }
-    for player_index = 1, self.start.player_count do
+    for player_index = 1, self.start_simple.player_count do
         frame_data.players[player_index] = {}
     end
     return frame_data
