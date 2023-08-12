@@ -117,11 +117,13 @@ local function draw_tas_start_settings_simple(ctx, tas)
     if tas.start.seed_type ~= new_seed_type_id then
         tas.start.seed_type = new_seed_type_id
         if is_seeded then
-            tas.start.seeded_seed = options.new_seeded_seed
-            tas.start.adventure_seed = nil
+            if not tas.start.seeded_seed then
+                tas.start.seeded_seed = options.new_tas.start.seeded_seed
+            end
         else
-            tas.start.seeded_seed = nil
-            tas.start.adventure_seed = common.deep_copy(options.new_adventure_seed)
+            if not tas.start.adventure_seed then
+                tas.start.adventure_seed = common.deep_copy(options.new_tas.start.adventure_seed)
+            end
         end
     end
     ctx:win_indent(module.INDENT_SUB_INPUT)
@@ -130,24 +132,24 @@ local function draw_tas_start_settings_simple(ctx, tas)
     if is_seeded then
         local new_seed = common.string_to_seed(
             ctx:win_input_text("Seed##new_seed_text", common.seed_to_string(tas.start.seeded_seed)))
-        if new_seed and tas.start.seeded_seed ~= new_seed then
+        if new_seed then
             tas.start.seeded_seed = new_seed
-            tas.start.adventure_seed = nil
         end
     else
-        local new_seed = {}
-        new_seed[1] = common.string_to_adventure_seed_part(
+        local new_part_1 = common.string_to_adventure_seed_part(
             ctx:win_input_text("Part 1##new_seed_1_text", common.adventure_seed_part_to_string(tas.start.adventure_seed[1])))
-        new_seed[2] = common.string_to_adventure_seed_part(
+        local new_part_2 = common.string_to_adventure_seed_part(
             ctx:win_input_text("Part 2##new_seed_2_text", common.adventure_seed_part_to_string(tas.start.adventure_seed[2])))
-        if new_seed[1] and new_seed[2] then
-            tas.start.adventure_seed = new_seed
+        if new_part_1 then
+            tas.start.adventure_seed[1] = new_part_1
+        end
+        if new_part_2 then
+            tas.start.adventure_seed[2] = new_part_2
         end
     end
     if ctx:win_button("Randomize seed") then
         if is_seeded then
             tas.start.seeded_seed = math.random(0, 0xFFFFFFFF)
-            tas.start.adventure_seed = nil
         else
             -- Lua uses 64-bit signed integers, so the random ranges need to be specified like this.
             tas.start.adventure_seed = { math.random(math.mininteger, math.maxinteger), math.random(math.mininteger, math.maxinteger) }

@@ -57,9 +57,6 @@ default_options = {
     path_mark_labels_visible = true,
     path_mark_increment = 30,
     ghost_path_visible = true,
-    new_seeded_seed = 0x00000000,
-    -- Adventure seed 0,0 generates runs with unusual similarity between levels. This default adventure seed has better behavior.
-    new_adventure_seed = { 0x0000000000000001, 0x0000000000000000 },
     new_tas = {
         name = "Unnamed TAS",
         description = "",
@@ -67,7 +64,8 @@ default_options = {
             type = "simple",
             seed_type = "seeded",
             seeded_seed = 0x00000000,
-            adventure_seed = nil,
+            -- Adventure seed 0,0 generates runs with unusual similarity between levels. This default adventure seed has better behavior.
+            adventure_seed = { 0x0000000000000001, 0x0000000000000000 },
             is_custom_area_choice = false,
             world = 1,
             level = 1,
@@ -102,7 +100,6 @@ local function save_script_data(save_ctx)
         format = CURRENT_SCRIPT_DATA_FORMAT,
         options = common.deep_copy(options)
     }
-    save_data.options.new_adventure_seed = common.adventure_seed_to_string(save_data.options.new_adventure_seed)
     save_data.options.new_tas = options.new_tas:to_raw(Tas.SERIAL_MODS.OPTIONS)
     local save_json = json.encode(save_data)
     local success, err = pcall(function()
@@ -133,7 +130,6 @@ local function load_script_data(load_ctx)
     if load_data then
         persistence.update_format(load_data, CURRENT_SCRIPT_DATA_FORMAT, {})
         options = load_data.options
-        options.new_adventure_seed = common.string_to_adventure_seed(options.new_adventure_seed)
         options.new_tas = Tas:from_raw(options.new_tas, Tas.SERIAL_MODS.OPTIONS)
     else
         options = common.deep_copy(default_options)

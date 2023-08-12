@@ -8,9 +8,9 @@ Tas.__index = Tas
 Tas.SERIAL_MODS = {
     -- Don't make any modifications.
     NONE = 1,
-    -- Make modifications for a normal TAS.
+    -- Make modifications for a normal TAS. Unused values are considered transient and omitted from serialization.
     NORMAL = 2,
-    -- Make modifications for the "new" TAS stored in the options.
+    -- Make modifications for the "new" TAS stored in the options. Unused values are kept for serialization.
     OPTIONS = 3
 }
 
@@ -218,6 +218,17 @@ function Tas:to_raw(serial_mod)
     }
     if serial_mod ~= Tas.SERIAL_MODS.NONE then
         copy.format = CURRENT_FORMAT
+        if serial_mod == Tas.SERIAL_MODS.NORMAL then
+            -- Remove unused start values.
+            if copy.start.seed_type == "seeded" then
+                copy.start.adventure_seed = nil
+            elseif copy.start.seed_type == "adventure" then
+                copy.start.seeded_seed = nil
+            end
+            if not copy.start.tutorial_race then
+                copy.start.tutorial_race_referee = nil
+            end
+        end
         if copy.start.adventure_seed then
             -- The JSON serializer doesn't handle the 64-bit integer pair correctly and converts it into lossy floats. Save it as a 128-bit hex string instead.
             copy.start.adventure_seed = common.adventure_seed_to_string(copy.start.adventure_seed)
