@@ -84,7 +84,7 @@ module.playback_force_current_frame = nil
 module.desync_level = -1
 module.desync_frame = -1
 local need_pause
-local load_level_snapshot_index
+local force_level_snapshot
 local force_level_gen_screen_last
 
 --[[
@@ -154,7 +154,7 @@ function module.reset_session_vars()
     module.desync_level = -1
     module.desync_frame = -1
     need_pause = false
-    load_level_snapshot_index = nil -- TODO: Why not -1? Why not nil for the others?
+    force_level_snapshot = nil
     force_level_gen_screen_last = nil
     reset_level_vars()
 end
@@ -331,10 +331,10 @@ function module.apply_level_snapshot(level_index)
         state.pause = PAUSE.FADE
         state.fadeout = WARP_FADE_OUT_FRAMES
         state.fadein = WARP_FADE_OUT_FRAMES
-        -- Additional loading behavior needs to occur later.
-        load_level_snapshot_index = level_index
         module.desync_level = -1
         module.desync_frame = -1
+        -- The snapshot needs to be applied at specific points during the loading process.
+        force_level_snapshot = level_snapshot
         return true
     else
         print("Warning: Missing snapshot for level index "..level_index..".")
@@ -505,20 +505,14 @@ local function on_pre_update_adventure_seed()
     if options.debug_print_load then
         print("on_pre_update_adventure_seed")
     end
-    if load_level_snapshot_index then
-        -- This level will be overridden by a stored level snapshot. Only apply the adventure seed snapshot here. The state memory snapshot will be applied right before level generation.
-        local load_level_data = module.current.tas.levels[load_level_snapshot_index]
-        if load_level_data and load_level_data.snapshot then
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_adventure_seed: Applying adventure seed snapshot for level index "..load_level_snapshot_index..": "
-                    ..common.adventure_seed_part_to_string(load_level_data.snapshot.adventure_seed[1]).."-"
-                    ..common.adventure_seed_part_to_string(load_level_data.snapshot.adventure_seed[2]))
-            end
-            set_adventure_seed(table.unpack(load_level_data.snapshot.adventure_seed))
-        else
-            print("Warning: Missing snapshot for level index "..load_level_snapshot_index..". Switching to freeplay mode.")
-            module.set_mode(common_enums.MODE.FREEPLAY)
+    if force_level_snapshot then
+        -- The upcoming level needs to be overridden by a stored level snapshot. Only apply the adventure seed snapshot here. The state memory snapshot will be applied right before level generation.
+        if options.debug_print_load or options.debug_print_snapshot then
+            print("on_pre_update_adventure_seed: Applying adventure seed snapshot: "
+                ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[1]).."-"
+                ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[2]))
         end
+        set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
     end
 end
 
@@ -554,42 +548,31 @@ local function on_pre_level_gen()
         force_level_gen_screen_last = nil
     end
 
-    if load_level_snapshot_index then
-        -- This level needs to be overridden by a stored level snapshot before generation.
-        local load_level_data = module.current.tas.levels[load_level_snapshot_index]
-        if load_level_data and load_level_data.snapshot then
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_level_gen: Applying state memory snapshot for level index "..load_level_snapshot_index..".")
-            end
-            introspection.apply_snapshot(state, load_level_data.snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
-        else
-            print("Warning: Missing snapshot for level index "..load_level_snapshot_index..". Switching to freeplay mode.")
-            module.set_mode(common_enums.MODE.FREEPLAY)
+    if force_level_snapshot then
+        -- The upcoming level needs to be overridden by a stored level snapshot.
+        if options.debug_print_load or options.debug_print_snapshot then
+            print("on_pre_level_gen: Applying state memory snapshot.")
         end
+        introspection.apply_snapshot(state, force_level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
     end
 
-    if module.current then
-        module.current:update_current_level_index(module.mode == common_enums.MODE.RECORD)
-    end
     if module.ghost_tas_session then
         module.ghost_tas_session:update_current_level_index()
     end
 
-    if not module.current then
-        return
+    if module.current then
+        module.current:update_current_level_index(module.mode == common_enums.MODE.RECORD)
+        if options.debug_print_load then
+            print("on_pre_level_gen: current_level_index="..module.current.current_level_index)
+        end
+        if module.mode == common_enums.MODE.PLAYBACK and module.current.current_level_index == -1 then
+            print("Warning: Loading level with no level data during playback. Switching to freeplay mode.")
+            module.set_mode(common_enums.MODE.FREEPLAY)
+        end
     end
 
-    if options.debug_print_load then
-        print("on_pre_level_gen: current_level_index="..module.current.current_level_index)
-    end
-
-    if module.mode == common_enums.MODE.PLAYBACK and module.current.current_level_index == -1 then
-        print("Warning: Loading level with no level data during playback. Switching to freeplay mode.")
-        module.set_mode(common_enums.MODE.FREEPLAY)
-    end
-
-    if load_level_snapshot_index then
-        load_level_snapshot_index = nil
+    if force_level_snapshot then
+        force_level_snapshot = nil
     elseif module.mode ~= common_enums.MODE.FREEPLAY and module.current.current_level_index > 1
         and (not module.current.current_level_data.snapshot or module.mode == common_enums.MODE.RECORD)
     then
