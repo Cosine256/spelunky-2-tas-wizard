@@ -238,6 +238,9 @@ function Tas:to_raw(serial_mod)
         end
         if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_level_snapshots) and self_level.snapshot then
             copy_level.snapshot = common.deep_copy(self_level.snapshot)
+            if serial_mod ~= Tas.SERIAL_MODS.NONE and copy_level.snapshot.adventure_seed then
+                copy_level.snapshot.adventure_seed = common.adventure_seed_to_string(copy_level.snapshot.adventure_seed)
+            end
         end
         for frame_index, self_frame in ipairs(self_level.frames) do
             local copy_frame = {
@@ -264,9 +267,16 @@ function Tas:from_raw(raw, serial_mod)
     if serial_mod ~= Tas.SERIAL_MODS.NONE then
         persistence.update_format(raw, CURRENT_FORMAT, FORMAT_UPDATERS)
         raw.format = nil
-        -- Convert the 128-bit adventure seed hex string back into a 64-bit integer pair.
+        -- Convert the 128-bit adventure seed hex strings back into a 64-bit integer pairs.
         if raw.start.adventure_seed then
             raw.start.adventure_seed = common.string_to_adventure_seed(raw.start.adventure_seed)
+        end
+        if raw.levels then
+            for _, level in ipairs(raw.levels) do
+                if level.snapshot and level.snapshot.adventure_seed then
+                    level.snapshot.adventure_seed = common.string_to_adventure_seed(level.snapshot.adventure_seed)
+                end
+            end
         end
     end
     return Tas:new(raw, false)
@@ -390,12 +400,6 @@ function Tas:find_closest_level_with_snapshot(target_level)
         end
     end
     return -1
-end
-
--- Compute the adventure seed that would exist right before the given level initializes PRNG and advances the adventure seed.
-function Tas:compute_level_adventure_seed(level_index)
-    -- Right before the game generates a level, it uses the adventure seed to initialize PRNG, and it advances the adventure seed to its next value. This advancement is very simple, and just increases the adventure seed's second part by its first part, allowing integer overflow. Thanks to two's complement arithmetic, this calculation works even with Lua's signed integers.
-    return { self.start.adventure_seed[1], self.start.adventure_seed[2] + (self.start.adventure_seed[1] * (level_index - 1)) }
 end
 
 return Tas
