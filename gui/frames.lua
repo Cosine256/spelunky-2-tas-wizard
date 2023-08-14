@@ -95,7 +95,11 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_section("Editing tools", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
-        if session then
+        if not session then
+            ctx:win_text("No TAS loaded.")
+        elseif not session.tas:is_start_configured() then
+            ctx:win_text("TAS start settings are not fully configured.")
+        else
             frames_edit_operation = FRAMES_EDIT_OPERATION_COMBO:draw(ctx, "Operation", frames_edit_operation)
             ctx:win_text(FRAMES_EDIT_OPERATION:value_by_id(frames_edit_operation).desc)
             local level_choices = {
@@ -116,7 +120,7 @@ function module:draw_panel(ctx, is_window)
                     frames_edit_frame_start = common.clamp(ctx:win_drag_int("Start frame", frames_edit_frame_start, 0, #level_data.frames), 0, #level_data.frames)
                     frames_edit_frame_count = math.max(1, ctx:win_drag_int("Frame count to insert", frames_edit_frame_count, 1, 60))
                     frames_edit_insert_use_start = ctx:win_check("Use inputs of start frame", frames_edit_insert_use_start)
-                    for player_index = 1, session.tas.start_simple.player_count do
+                    for player_index = 1, session.tas:get_player_count() do
                         if frames_edit_insert_use_start and frames_edit_frame_start ~= 0 then
                             if frames_edit_frame_start == 0 then
                                 frames_edit_insert_inputs[player_index] = INPUTS.NONE
@@ -127,7 +131,7 @@ function module:draw_panel(ctx, is_window)
                             frames_edit_insert_inputs[player_index] = INPUTS.NONE
                         end
                         local input = frames_edit_insert_inputs[player_index]
-                        if session.tas.start_simple.player_count == 1 then
+                        if session.tas:get_player_count() == 1 then
                             input = draw_input_editor_inputs(ctx, input)
                         else
                             ctx:win_section("Player "..player_index.." inputs", function()
@@ -162,8 +166,6 @@ function module:draw_panel(ctx, is_window)
                     end
                 end
             end
-        else
-            ctx:win_text("No TAS loaded.")
         end
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
@@ -174,6 +176,8 @@ function module:draw_panel(ctx, is_window)
         ctx:win_indent(common_gui.INDENT_SECTION)
         if not session then
             ctx:win_text("No TAS loaded.")
+        elseif not session.tas:is_start_configured() then
+            ctx:win_text("TAS start settings are not fully configured.")
         elseif game_controller.mode == common_enums.MODE.FREEPLAY then
             ctx:win_text("TAS in freeplay mode.")
         elseif session.current_level_index == -1 then
@@ -181,12 +185,13 @@ function module:draw_panel(ctx, is_window)
         elseif game_controller.current_frame_index == -1 then
             ctx:win_text("Current frame is undefined.")
         else
-            if session.tas.start_simple.player_count == 1 then
+            if session.tas:get_player_count() == 1 then
                 frames_view_player_index = 1
             else
+                local player_chars = session.tas:get_player_chars()
                 local player_choices = {}
-                for i = 1, session.tas.start_simple.player_count do
-                    player_choices[i] = i.." ("..common_enums.PLAYER_CHAR:value_by_id(session.tas.start_simple.players[i]).name..")"
+                for i = 1, session.tas:get_player_count() do
+                    player_choices[i] = i.." ("..common_enums.PLAYER_CHAR:value_by_id(player_chars[i]).name..")"
                 end
                 local player_combo = ComboInput:new(OrderedTable:new(player_choices))
                 frames_view_player_index = player_combo:draw(ctx, "Player", frames_view_player_index)

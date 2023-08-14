@@ -76,6 +76,7 @@ module.ghost_tas_session = nil
 local desync_callbacks = {}
 local next_callback_id = 0
 
+-- Determines how the game controller and the current TAS session interact with the game engine. If this is set to anything other than freeplay, then it is assumed that there is a current TAS session in a valid state for a non-freeplay mode.
 module.mode = common_enums.MODE.FREEPLAY
 module.playback_target_level = -1
 module.playback_target_frame = -1
@@ -307,6 +308,24 @@ local function apply_start_state_simple(tas)
     return true
 end
 
+local function apply_level_snapshot(level_snapshot)
+    -- Note: Tutorial race level snapshots are not supported.
+    -- TODO: What do I actually need to set here to get the game to load the state correctly? The game sometimes loads the wrong level or crashes if I don't do this. Maybe the game checks some of the state before PRE_LEVEL_GENERATION is called. I apply the StateMemory snapshot a second time when I intercept the load in PRE_LEVEL_GENERATION because that's the only place I can override the player inventories. Perhaps I don't need to apply the StateMemory snapshot here, but need to do it in the PRE_UPDATE which will unload the current level and then run the next level's generation.
+    if options.debug_print_load or options.debug_print_snapshot then
+        print("apply_level_snapshot: Applying level snapshot.")
+    end
+    introspection.apply_snapshot(state, level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
+    state.screen_next = SCREEN.LEVEL
+    state.loading = 1
+    state.pause = PAUSE.FADE
+    state.fadeout = WARP_FADE_OUT_FRAMES
+    state.fadein = WARP_FADE_OUT_FRAMES
+    module.desync_level = -1
+    module.desync_frame = -1
+    -- The snapshot needs to be applied at specific points during the loading process.
+    force_level_snapshot = level_snapshot
+end
+
 -- Prepares the game state and triggers the loading sequence for loading from the TAS's starting state.
 -- TODO: This fades in really fast if warping from another level. I use a fast fade-out for these warps, but I'm not sure how the game decides how many fade-in frames to use after that.
 function module.apply_start_state()
@@ -314,41 +333,32 @@ function module.apply_start_state()
         return false
     end
     local tas = module.current.tas
-    if tas.start_type == "simple" then
-        apply_start_state_simple(tas)
-    else
-        return false
+    if tas:is_start_configured() then
+        if tas.start_type == "simple" then
+            apply_start_state_simple(tas)
+            return true
+        elseif tas.start_type == "full" then
+            if tas:is_start_configured() then
+                apply_level_snapshot(tas.start_full)
+                return true
+            end
+        end
     end
-    return true
+    return false
 end
 
--- Prepares the game state and triggers the loading sequence for loading a level snapshot. Tutorial race level snapshots are not currently supported.
+-- Prepares the game state and triggers the loading sequence for loading a level snapshot.
 function module.apply_level_snapshot(level_index)
     if not prepare_warp_from_screen() then
         return false
     end
-
     local level_snapshot = module.current.tas.levels[level_index].snapshot
-    if level_snapshot then
-        if options.debug_print_load or options.debug_print_snapshot then
-            print("apply_level_snapshot: Applying state memory snapshot for level index "..level_index..".")
-        end
-        -- TODO: What do I actually need to set here to get the game to load the state correctly? The game sometimes loads the wrong level or crashes if I don't do this. Maybe the game checks some of the state before PRE_LEVEL_GENERATION is called. I apply the StateMemory snapshot a second time when I intercept the load in PRE_LEVEL_GENERATION because that's the only place I can override the player inventories. Perhaps I don't need to apply the StateMemory snapshot here, but need to do it in the PRE_UPDATE which will unload the current level and then run the next level's generation.
-        introspection.apply_snapshot(state, level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
-        state.screen_next = SCREEN.LEVEL
-        state.loading = 1
-        state.pause = PAUSE.FADE
-        state.fadeout = WARP_FADE_OUT_FRAMES
-        state.fadein = WARP_FADE_OUT_FRAMES
-        module.desync_level = -1
-        module.desync_frame = -1
-        -- The snapshot needs to be applied at specific points during the loading process.
-        force_level_snapshot = level_snapshot
-        return true
-    else
+    if not level_snapshot then
         print("Warning: Missing snapshot for level index "..level_index..".")
         return false
     end
+    apply_level_snapshot(level_snapshot)
+    return true
 end
 
 function module.set_mode(new_mode)
@@ -690,7 +700,7 @@ local function on_pre_update_level()
 
     if module.mode ~= common_enums.MODE.FREEPLAY and (state.loading == 0 or state.loading == 3) then
         -- Submit the desired inputs for the upcoming update. The script doesn't know whether this update will actually execute player inputs. If it does execute them, then it will execute the submitted inputs. If it doesn't execute them, such as due to the game being paused, then nothing will happen and the script can try again on the next update.
-        for player_index = 1, module.current.tas.start_simple.player_count do
+        for player_index = 1, module.current.tas:get_player_count() do
             local input
             -- Record and playback modes should both automatically skip cutscenes.
             if state.logic.olmec_cutscene then
@@ -737,7 +747,7 @@ local function on_pre_update_transition()
         end
     end
     if module.current.tas.transition_exit_frame ~= -1 then
-        for player_index = 1, module.current.tas.start_simple.player_count do
+        for player_index = 1, module.current.tas:get_player_count() do
             -- By default, suppress inputs from every player.
             state.player_inputs.player_slots[player_index].buttons = INPUTS.NONE
             state.player_inputs.player_slots[player_index].buttons_gameplay = INPUTS.NONE

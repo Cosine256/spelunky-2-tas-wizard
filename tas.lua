@@ -1,4 +1,5 @@
 local common = require("common")
+local common_enums = require("common_enums")
 local persistence = require("persistence")
 
 local Tas = {}
@@ -202,6 +203,7 @@ function Tas:to_raw(serial_mod)
         description = self.description,
         start_type = self.start_type,
         start_simple = common.deep_copy(self.start_simple),
+        start_full = common.deep_copy(self.start_full),
         levels = {},
         olmec_cutscene_skip_frame = self.olmec_cutscene_skip_frame,
         olmec_cutscene_skip_input = self.olmec_cutscene_skip_input,
@@ -229,10 +231,21 @@ function Tas:to_raw(serial_mod)
             else
                 copy.start_simple = nil
             end
+            if copy.start_type ~= "full" then
+                copy.start_full = nil
+            end
+        elseif serial_mod == Tas.SERIAL_MODS.OPTIONS then
+            if copy.start_full then
+                -- Clear the potentially enormous full start object for the options TAS.
+                copy.start_full = {}
+            end
         end
+        -- The JSON serializer doesn't handle the 64-bit integer pairs correctly and converts them into lossy floats. Save them as 128-bit hex strings instead.
         if copy.start_simple and copy.start_simple.adventure_seed then
-            -- The JSON serializer doesn't handle the 64-bit integer pair correctly and converts it into lossy floats. Save it as a 128-bit hex string instead.
             copy.start_simple.adventure_seed = common.adventure_seed_to_string(copy.start_simple.adventure_seed)
+        end
+        if copy.start_full and copy.start_full.adventure_seed then
+            copy.start_full.adventure_seed = common.adventure_seed_to_string(copy.start_full.adventure_seed)
         end
     end
     for level_index, self_level in ipairs(self.levels) do
@@ -283,6 +296,9 @@ function Tas:from_raw(raw, serial_mod)
         if raw.start_simple and raw.start_simple.adventure_seed then
             raw.start_simple.adventure_seed = common.string_to_adventure_seed(raw.start_simple.adventure_seed)
         end
+        if raw.start_full and raw.start_full.adventure_seed then
+            raw.start_full.adventure_seed = common.string_to_adventure_seed(raw.start_full.adventure_seed)
+        end
         if raw.levels then
             for _, level in ipairs(raw.levels) do
                 if level.snapshot and level.snapshot.adventure_seed then
@@ -299,7 +315,7 @@ function Tas:create_level_data()
         players = {},
         frames = {}
     }
-    for player_index = 1, self.start_simple.player_count do
+    for player_index = 1, self:get_player_count() do
         level_data.players[player_index] = {}
     end
     return level_data
@@ -309,7 +325,7 @@ function Tas:create_frame_data()
     local frame_data = {
         players = {}
     }
-    for player_index = 1, self.start_simple.player_count do
+    for player_index = 1, self:get_player_count() do
         frame_data.players[player_index] = {}
     end
     return frame_data
@@ -412,6 +428,38 @@ function Tas:find_closest_level_with_snapshot(target_level)
         end
     end
     return -1
+end
+
+function Tas:is_start_configured()
+    if self.start_type == "simple" then
+        return true
+    elseif self.start_type == "full" then
+        return self.start_full.state_memory ~= nil
+    end
+    return false
+end
+
+-- Gets the player count configured in the start settings.
+function Tas:get_player_count()
+    if self.start_type == "simple" then
+        return self.start_simple.player_count
+    elseif self.start_type == "full" and self.start_full.state_memory then
+        return self.start_full.state_memory.items.player_count
+    end
+end
+
+-- Gets the array of player characters configured in the start settings.
+function Tas:get_player_chars()
+    if self.start_type == "simple" then
+        return self.start_simple.players
+    elseif self.start_type == "full" and self.start_full.state_memory then
+        local player_chars = {}
+        for player_index = 1, CONST.MAX_PLAYERS do
+            player_chars[player_index] = common_enums.PLAYER_CHAR_BY_ENT_TYPE[
+                self.start_full.state_memory.items.player_select[player_index].character].id
+        end
+        return player_chars
+    end
 end
 
 return Tas

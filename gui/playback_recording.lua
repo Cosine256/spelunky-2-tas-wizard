@@ -81,7 +81,11 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator()
 
-    if game_controller.current then
+    if not game_controller.current then
+        ctx:win_text("No TAS loaded.")
+    elseif not game_controller.current.tas:is_start_configured() then
+        ctx:win_text("TAS start settings are not fully configured.")
+    else
         local tas_session = game_controller.current
         local tas = tas_session.tas
 
@@ -182,8 +186,6 @@ function module:draw_panel(ctx, is_window)
             local write_type = RECORD_FRAME_WRITE_TYPE:value_by_id(options.record_frame_write_type)
             ctx:win_text(write_type.name..": "..write_type.desc)
         end
-    else
-        ctx:win_text("No TAS loaded.")
     end
 end
 

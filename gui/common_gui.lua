@@ -9,7 +9,8 @@ module.INDENT_SECTION = 5
 module.INDENT_SUB_INPUT = 10
 
 local START_TYPE = OrderedTable:new({
-    { id = "simple", name = "Simple" }
+    { id = "simple", name = "Simple" },
+    { id = "full", name = "Full" }
 })
 local START_TYPE_COMBO = ComboInput:new(START_TYPE)
 
@@ -64,6 +65,7 @@ local PLAYER_CHAR_COMBO = ComboInput:new(common_enums.PLAYER_CHAR)
 
 local function draw_tas_start_settings_simple(ctx, tas)
     local start = tas.start_simple
+    ctx:win_text(START_TYPE:value_by_id("simple").name..": Provides basic start settings, such as the starting area and player characters. All other aspects of the run (health, items, etc) use the default behavior from starting a new run.")
     local run_start_area_id = "custom"
     if not start.is_custom_area_choice then
         for _, run_start_area in ipairs(RUN_START_AREA_BY_INDEX) do
@@ -199,10 +201,29 @@ local function draw_tas_start_settings_simple(ctx, tas)
     end
 end
 
+local function draw_tas_start_settings_full(ctx, tas)
+    ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full game state snapshot. A full start is configured by playing (or cheating) the game up to right before the desired starting level and then capturing a snapshot of the game state while loading that level. Runs will then start on a level with initial conditions that are identical to the game state at the time that the snapshot was captured.")
+    -- TODO: Implement snapshot capturing.
+    ctx:win_text("Note: The TAS Tool does not currently provide an editor for full starts. The only built-in way to configure a full start is via snapshot capture. However, you can still edit a full start by modifying the saved TAS file in a text editor. The full start is stored in \"start_full\". The structure of \"start_full.state_memory\" matches the \"StateMemory\" type in Overlunky's documentation, though it only includes fields that are necessary for a full start. Be very careful when manually editing a TAS file. The TAS Tool has almost no file validation and a corrupted TAS file can cause many problems and errors.")
+end
+
 function module.draw_tas_start_settings(ctx, tas)
-    tas.start_type = START_TYPE_COMBO:draw(ctx, "Start type", tas.start_type)
+    tas.start_type = START_TYPE_COMBO:draw(ctx, "Start type", tas.start_type, function(current_choice_id, new_choice_id)
+        -- TODO: Handle possible player count change when switching start types.
+        if new_choice_id == "simple" then
+            if not tas.start_simple then
+                tas.start_simple = common.deep_copy(options.new_tas.start_simple)
+            end
+        elseif new_choice_id == "full" then
+            if not tas.start_full then
+                tas.start_full = common.deep_copy(options.new_tas.start_full)
+            end
+        end
+    end)
     if tas.start_type == "simple" then
         draw_tas_start_settings_simple(ctx, tas)
+    elseif tas.start_type == "full" then
+        draw_tas_start_settings_full(ctx, tas)
     end
 end
 

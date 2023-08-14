@@ -10,7 +10,11 @@ local module = Tool_GUI:new("Warp", "warp_window")
 local warp_level = 1
 
 function module:draw_panel(ctx, is_window)
-    if game_controller.current then
+    if not game_controller.current then
+        ctx:win_text("No TAS loaded.")
+    elseif not game_controller.current.tas:is_start_configured() then
+        ctx:win_text("TAS start settings are not fully configured.")
+    else
         local tas = game_controller.current.tas
         local warp_choices = {}
         if #tas.levels == 0 then
@@ -36,8 +40,6 @@ function module:draw_panel(ctx, is_window)
             end
         end
         ctx:win_text("Warp to the specified level in freeplay mode using a snapshot stored by the TAS. If a warp is unavailable, then the TAS must be played back to that level first to store a snapshot.")
-    else
-        ctx:win_text("No TAS loaded.")
     end
 end
 

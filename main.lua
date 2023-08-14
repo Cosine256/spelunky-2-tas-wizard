@@ -76,6 +76,7 @@ default_options = {
             player_count = 1,
             players = { "ana", "margaret", "colin", "roffy" },
         },
+        start_full = {},
         levels = {},
         olmec_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME,
         olmec_cutscene_skip_input = "jump",

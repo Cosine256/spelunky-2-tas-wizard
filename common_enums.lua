@@ -40,6 +40,11 @@ module.PLAYER_CHAR = OrderedTable:new({
     { id = "classic_guy", name = "Classic Guy", ent_type_id = ENT_TYPE.CHAR_CLASSIC_GUY, texture_id = TEXTURE.DATA_TEXTURES_CHAR_ORANGE_0 }
 })
 
+module.PLAYER_CHAR_BY_ENT_TYPE = {}
+for _, player_char in pairs(module.PLAYER_CHAR:values_by_id()) do
+    module.PLAYER_CHAR_BY_ENT_TYPE[player_char.ent_type_id] = player_char
+end
+
 module.SKIP_INPUT = OrderedTable:new({
     { id = "jump", name = "Jump", input = INPUTS.JUMP },
     { id = "bomb", name = "Bomb", input = INPUTS.BOMB }
