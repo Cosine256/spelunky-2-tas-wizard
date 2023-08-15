@@ -104,6 +104,10 @@ local pre_update_loading
 local pre_update_time_level
 local pre_update_cutscene_active
 
+local level_snapshot_requests = {}
+local level_snapshot_request_count = 0
+local level_snapshot_request_next_id = 1
+
 function module.set_tas(tas)
     module.reset_session_vars()
     if tas then
@@ -158,6 +162,27 @@ function module.reset_session_vars()
     force_level_snapshot = nil
     force_level_gen_screen_last = nil
     reset_level_vars()
+end
+
+function module.register_level_snapshot_request(callback)
+    local request_id = level_snapshot_request_next_id
+    level_snapshot_request_next_id = level_snapshot_request_next_id + 1
+    level_snapshot_requests[request_id] = callback
+    level_snapshot_request_count = level_snapshot_request_count + 1
+    if options.debug_print_snapshot then
+        print("register_level_snapshot_request: Registered level snapshot request "..request_id..".")
+    end
+    return request_id
+end
+
+function module.clear_level_snapshot_request(request_id)
+    if level_snapshot_requests[request_id] then
+        level_snapshot_requests[request_id] = nil
+        level_snapshot_request_count = level_snapshot_request_count - 1
+        if options.debug_print_snapshot then
+            print("clear_level_snapshot_request: Cleared level snapshot request "..request_id..".")
+        end
+    end
 end
 
 -- Apply a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called on the next update to try again.
@@ -594,16 +619,36 @@ local function on_pre_level_gen()
         force_level_snapshot = nil
     elseif module.mode ~= common_enums.MODE.FREEPLAY and module.current.current_level_index > 1
         and (not module.current.current_level_data.snapshot or module.mode == common_enums.MODE.RECORD)
+        and state.screen == SCREEN.LEVEL
     then
-        -- Capture a level snapshot for the upcoming level.
+        -- Request a mid-run level snapshot of the upcoming level for the current TAS. It will be fulfilled immediately below.
+        module.register_level_snapshot_request(function(level_snapshot)
+            module.current.current_level_data.snapshot = level_snapshot
+        end)
+    end
+
+    if level_snapshot_request_count > 0 and state.screen == SCREEN.LEVEL then
+        -- Capture a level snapshot of the upcoming level.
         local part_1, part_2 = get_adventure_seed()
-        module.current.current_level_data.snapshot = {
+        local level_snapshot = {
             -- Store the previous adventure seed. That adventure seed is the one that was used to initialize PRNG for the upcoming level.
             adventure_seed = { part_1, part_2 - part_1 },
             state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
         }
         if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_level_gen: Captured level snapshot for level index "..module.current.current_level_index..".")
+            print("on_pre_level_gen: Captured level snapshot for "..level_snapshot_request_count.." requests.")
+        end
+        for request_id, callback in pairs(level_snapshot_requests) do
+            if level_snapshot_request_count > 1 then
+                callback(common.deep_copy(level_snapshot))
+            else
+                callback(level_snapshot)
+            end
+            if options.debug_print_load or options.debug_print_snapshot then
+                print("on_pre_level_gen: Fulfilled level snapshot request "..request_id..".")
+            end
+            level_snapshot_requests[request_id] = nil
+            level_snapshot_request_count = level_snapshot_request_count - 1
         end
     end
 end

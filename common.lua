@@ -86,18 +86,22 @@ function module.input_to_string(input)
         ..((input & INPUTS.JOURNAL > 0) and "j" or "_")
 end
 
+function module.world_level_theme_to_string(world, level, theme)
+    local theme_name = module.THEME_NAME[theme] or "Unknown"
+    if theme == THEME.BASE_CAMP then
+        return theme_name
+    elseif world == 8 and theme == THEME.COSMIC_OCEAN then
+        return "7-"..level.." "..theme_name
+    else
+        return world.."-"..level.." "..theme_name
+    end
+end
+
 function module.level_metadata_to_string(tas, index, include_total)
     local level_data = tas.levels[index]
     local text = tostring(index)..(include_total and ("/"..#tas.levels) or "")
     if level_data and level_data.metadata then
-        local theme_name = module.THEME_NAME[level_data.metadata.theme] or "Unknown"
-        if level_data.metadata.theme == THEME.BASE_CAMP then
-            return text.." ("..theme_name..")"
-        elseif level_data.metadata.world == 8 and level_data.metadata.theme == THEME.COSMIC_OCEAN then
-            return text.." (7-"..level_data.metadata.level.." "..theme_name..")"
-        else
-            return text.." ("..level_data.metadata.world.."-"..level_data.metadata.level.." "..theme_name..")"
-        end
+        return text.." ("..module.world_level_theme_to_string(level_data.metadata.world, level_data.metadata.level, level_data.metadata.theme)..")"
     else
         return text
     end

@@ -141,6 +141,13 @@ end
 -- Reset the TAS session and set the current TAS.
 -- TODO: Could move this into game_controller and give the frames GUI a way to listen for the change.
 function set_current_tas(tas)
+    if game_controller.current then
+        local current_tas = game_controller.current.tas
+        if current_tas.level_snapshot_request_id then
+            game_controller.clear_level_snapshot_request(current_tas.level_snapshot_request_id)
+            current_tas.level_snapshot_request_id = nil
+        end
+    end
     game_controller.set_tas(tas)
     tool_guis.frames.reset_vars()
 end

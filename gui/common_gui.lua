@@ -1,6 +1,7 @@
 local common = require("common")
 local common_enums = require("common_enums")
 local ComboInput = require("gui/combo_input")
+local game_controller = require("game_controller")
 local OrderedTable = require("ordered_table")
 
 local module = {}
@@ -202,9 +203,41 @@ local function draw_tas_start_settings_simple(ctx, tas)
 end
 
 local function draw_tas_start_settings_full(ctx, tas)
-    ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full game state snapshot. A full start is configured by playing (or cheating) the game up to right before the desired starting level and then capturing a snapshot of the game state while loading that level. Runs will then start on a level with initial conditions that are identical to the game state at the time that the snapshot was captured.")
-    -- TODO: Implement snapshot capturing.
-    ctx:win_text("Note: The TAS Tool does not currently provide an editor for full starts. The only built-in way to configure a full start is via snapshot capture. However, you can still edit a full start by modifying the saved TAS file in a text editor. The full start is stored in \"start_full\". The structure of \"start_full.state_memory\" matches the \"StateMemory\" type in Overlunky's documentation, though it only includes fields that are necessary for a full start. Be very careful when manually editing a TAS file. The TAS Tool has almost no file validation and a corrupted TAS file can cause many problems and errors.")
+    ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full level snapshot.")
+    ctx:win_section("More info", function()
+        ctx:win_indent(module.INDENT_SECTION)
+        ctx:win_text("A full start is configured by playing the game (with or without cheating) up to right before the desired starting level, and then capturing a snapshot of the game state while loading that level. Runs will then start on a level with initial conditions that are identical to the game state at the time that the snapshot was captured.")
+        ctx:win_text("The TAS Tool does not currently provide an editor for full starts. The only built-in way to configure a full start is via snapshot capture. However, you can still edit a full start by modifying the saved TAS file in a text editor. The full start is stored in \"start_full\". The structure of \"start_full.state_memory\" matches the \"StateMemory\" type in Overlunky's documentation, though it only includes fields that are necessary for a full start. Be very careful when manually editing a TAS file. The TAS Tool has almost no file validation and a corrupted TAS file can cause many problems and errors.")
+        ctx:win_indent(-module.INDENT_SECTION)
+    end)
+
+    if tas:is_start_configured() then
+        local start_area_name = common.world_level_theme_to_string(
+            tas.start_full.state_memory.world, tas.start_full.state_memory.level, tas.start_full.state_memory.theme)
+        ctx:win_text("Current level snapshot: "..start_area_name)
+    else
+        ctx:win_text("Current level snapshot: None")
+        if not tas.level_snapshot_request_id then
+            ctx:win_text("To capture a level snapshot, prepare your run in the prior level, and then press \"Request capture\".")
+        end
+    end
+
+    if tas.level_snapshot_request_id then
+        ctx:win_text("Capture status: Awaiting level start. A snapshot of the next level you load into will be captured.")
+        if ctx:win_button("Cancel capture") then
+            game_controller.clear_level_snapshot_request(tas.level_snapshot_request_id)
+            tas.level_snapshot_request_id = nil
+        end
+        ctx:win_text("Cancel the requested level snapshot capture.")
+    else
+        if ctx:win_button("Request capture") then
+            tas.level_snapshot_request_id = game_controller.register_level_snapshot_request(function(level_snapshot)
+                tas.level_snapshot_request_id = nil
+                tas.start_full = level_snapshot
+            end)
+        end
+        ctx:win_text("Request a new level snapshot capture.")
+    end
 end
 
 function module.draw_tas_start_settings(ctx, tas)
@@ -213,6 +246,10 @@ function module.draw_tas_start_settings(ctx, tas)
         if new_choice_id == "simple" then
             if not tas.start_simple then
                 tas.start_simple = common.deep_copy(options.new_tas.start_simple)
+            end
+            if tas.level_snapshot_request_id then
+                game_controller.clear_level_snapshot_request(tas.level_snapshot_request_id)
+                tas.level_snapshot_request_id = nil
             end
         elseif new_choice_id == "full" then
             if not tas.start_full then
