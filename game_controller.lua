@@ -107,12 +107,13 @@ local pre_update_cutscene_active
 local level_snapshot_requests = {}
 local level_snapshot_request_count = 0
 local level_snapshot_request_next_id = 1
+local captured_level_snapshot = nil
 
 function module.set_tas(tas)
     module.reset_session_vars()
     if tas then
         module.current = TasSession:new(tas)
-        module.current:update_current_level_index()
+        module.current:update_current_level_index(false)
     else
         module.current = nil
     end
@@ -121,7 +122,7 @@ end
 function module.set_ghost_tas(tas)
     if tas then
         module.ghost_tas_session = TasSession:new(tas)
-        module.ghost_tas_session:update_current_level_index()
+        module.ghost_tas_session:update_current_level_index(false)
     else
         module.ghost_tas_session = nil
     end
@@ -281,7 +282,20 @@ local function prepare_warp_from_screen()
     return can_warp
 end
 
-local function apply_start_state_simple(tas)
+-- Forces the game to start unloading the current screen. If nothing else is done, then this will just reload the current screen, but it can be combined with game state changes in order to perform sophisticated warps.
+local function trigger_warp_unload()
+    state.loading = 1
+    state.pause = PAUSE.FADE
+    state.fadeout = WARP_FADE_OUT_FRAMES
+    state.fadein = WARP_FADE_OUT_FRAMES
+end
+
+-- Forces the game to warp to a level initialized with the simple start settings of the given TAS. This sets the run reset flag, prepares the game state, and then triggers the game to start unloading the current screen. The game engine handles the rest of the process on its own.
+local function trigger_start_simple_warp(tas)
+    if options.debug_print_load then
+        print("trigger_start_simple_warp")
+    end
+
     local start = tas.start_simple
 
     state.quest_flags = common.flag_to_value(QUEST_FLAG.RESET)
@@ -322,10 +336,8 @@ local function apply_start_state_simple(tas)
         state.items.player_select[player_index].character = player_char.ent_type_id
         state.items.player_select[player_index].texture = player_char.texture_id
     end
-    state.loading = 1
-    state.pause = PAUSE.FADE
-    state.fadeout = WARP_FADE_OUT_FRAMES
-    state.fadein = WARP_FADE_OUT_FRAMES
+
+    trigger_warp_unload()
 
     module.desync_level = -1
     module.desync_frame = -1
@@ -333,21 +345,12 @@ local function apply_start_state_simple(tas)
     return true
 end
 
-local function apply_level_snapshot(level_snapshot)
-    -- Note: Tutorial race level snapshots are not supported.
-    -- TODO: What do I actually need to set here to get the game to load the state correctly? The game sometimes loads the wrong level or crashes if I don't do this. Maybe the game checks some of the state before PRE_LEVEL_GENERATION is called. I apply the StateMemory snapshot a second time when I intercept the load in PRE_LEVEL_GENERATION because that's the only place I can override the player inventories. Perhaps I don't need to apply the StateMemory snapshot here, but need to do it in the PRE_UPDATE which will unload the current level and then run the next level's generation.
-    if options.debug_print_load or options.debug_print_snapshot then
-        print("apply_level_snapshot: Applying level snapshot.")
-    end
-    introspection.apply_snapshot(state, level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
+-- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Only level snapshots are supported, not any other screens such as the camp.
+local function trigger_level_snapshot_warp(level_snapshot)
     state.screen_next = SCREEN.LEVEL
-    state.loading = 1
-    state.pause = PAUSE.FADE
-    state.fadeout = WARP_FADE_OUT_FRAMES
-    state.fadein = WARP_FADE_OUT_FRAMES
+    trigger_warp_unload()
     module.desync_level = -1
     module.desync_frame = -1
-    -- The snapshot needs to be applied at specific points during the loading process.
     force_level_snapshot = level_snapshot
 end
 
@@ -360,11 +363,11 @@ function module.apply_start_state()
     local tas = module.current.tas
     if tas:is_start_configured() then
         if tas.start_type == "simple" then
-            apply_start_state_simple(tas)
+            trigger_start_simple_warp(tas)
             return true
         elseif tas.start_type == "full" then
             if tas:is_start_configured() then
-                apply_level_snapshot(tas.start_full)
+                trigger_level_snapshot_warp(tas.start_full)
                 return true
             end
         end
@@ -382,7 +385,7 @@ function module.apply_level_snapshot(level_index)
         print("Warning: Missing snapshot for level index "..level_index..".")
         return false
     end
-    apply_level_snapshot(level_snapshot)
+    trigger_level_snapshot_warp(level_snapshot)
     return true
 end
 
@@ -544,19 +547,68 @@ function module.validate_playback_target()
     end
 end
 
--- Called right before the game updates the adventure seed and PRNG in order to generate a playable level or the camp.
-local function on_pre_update_adventure_seed()
+-- Called right before an update that will generate a playable level or the camp. Not to be confused with `on_pre_level_gen`, which is called within the update right before level generation occurs. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level.
+local function on_pre_update_level_load()
     if options.debug_print_load then
-        print("on_pre_update_adventure_seed")
+        print("on_pre_update_level_load")
     end
+
     if force_level_snapshot then
-        -- The upcoming level needs to be overridden by a stored level snapshot. Only apply the adventure seed snapshot here. The state memory snapshot will be applied right before level generation.
+        -- Apply the state memory snapshot.
         if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_update_adventure_seed: Applying adventure seed snapshot: "
-                ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[1]).."-"
-                ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[2]))
+            print("on_pre_update_level_load: Applying state memory from level snapshot.")
         end
-        set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
+        introspection.apply_snapshot(state, force_level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
+        if force_level_snapshot.adventure_seed then
+            -- Apply the adventure seed.
+            if options.debug_print_load or options.debug_print_snapshot then
+                print("on_pre_update_level_load: Applying adventure seed from level snapshot: "
+                    ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[1]).."-"
+                    ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[2]))
+            end
+            set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
+        end
+    end
+
+    if module.ghost_tas_session then
+        module.ghost_tas_session:update_current_level_index(false)
+    end
+
+    if module.current then
+        module.current:update_current_level_index(module.mode == common_enums.MODE.RECORD)
+        if options.debug_print_load then
+            print("on_pre_update_level_load: current_level_index="..module.current.current_level_index)
+        end
+        if module.mode == common_enums.MODE.PLAYBACK and module.current.current_level_index == -1 then
+            print("Warning: Loading level with no level data during playback. Switching to freeplay mode.")
+            module.set_mode(common_enums.MODE.FREEPLAY)
+        end
+        if not force_level_snapshot and module.mode ~= common_enums.MODE.FREEPLAY and module.current.current_level_index > 1
+            and (not module.current.current_level_data.snapshot or module.mode == common_enums.MODE.RECORD)
+            and state.screen_next == SCREEN.LEVEL
+        then
+            -- Request a mid-run level snapshot of the upcoming level for the current TAS.
+            local level_data = module.current.current_level_data
+            module.register_level_snapshot_request(function(level_snapshot)
+                level_data.snapshot = level_snapshot
+            end)
+        end
+    end
+
+    if level_snapshot_request_count > 0 and state.screen_next == SCREEN.LEVEL then
+        -- Begin capturing a level snapshot for the upcoming level.
+        if options.debug_print_load or options.debug_print_snapshot then
+            print("on_pre_update_level_load: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
+        end
+        -- Capture a state memory snapshot.
+        captured_level_snapshot = {
+            state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
+        }
+        if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
+            -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
+            local part_1, part_2 = get_adventure_seed()
+            captured_level_snapshot.adventure_seed = { part_1, part_2 }
+        end
     end
 end
 
@@ -570,7 +622,7 @@ local function on_pre_screen_change()
         reset_level_vars()
     end
     if state.screen ~= SCREEN.OPTIONS and (state.screen_next == SCREEN.LEVEL or state.screen_next == SCREEN.CAMP) then
-        on_pre_update_adventure_seed()
+        on_pre_update_level_load()
     end
     if module.mode ~= common_enums.MODE.FREEPLAY and state.screen_next ~= SCREEN.OPTIONS and state.screen_next ~= ON.LEVEL and state.screen_next ~= ON.CAMP
         and state.screen_next ~= SCREEN.TRANSITION and state.screen_next ~= SCREEN.SPACESHIP
@@ -593,56 +645,31 @@ local function on_pre_level_gen()
     end
 
     if force_level_snapshot then
-        -- The upcoming level needs to be overridden by a stored level snapshot.
+        -- The `player_inventory` array is applied pre-update, but it may be modified by the game when the previous screen is unloaded. Reapply it here.
         if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_level_gen: Applying state memory snapshot.")
+            print("on_pre_level_gen: Reapplying player inventory array snapshot.")
         end
-        introspection.apply_snapshot(state, force_level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
-    end
-
-    if module.ghost_tas_session then
-        module.ghost_tas_session:update_current_level_index()
-    end
-
-    if module.current then
-        module.current:update_current_level_index(module.mode == common_enums.MODE.RECORD)
-        if options.debug_print_load then
-            print("on_pre_level_gen: current_level_index="..module.current.current_level_index)
+        introspection.apply_snapshot(state.items.player_inventory, force_level_snapshot.state_memory.items.player_inventory,
+            GAME_TYPES.Items.fields_by_name["player_inventory"].type)
+        if options.debug_print_load or options.debug_print_snapshot then
+            print("on_pre_level_gen: Finished applying level snapshot.")
         end
-        if module.mode == common_enums.MODE.PLAYBACK and module.current.current_level_index == -1 then
-            print("Warning: Loading level with no level data during playback. Switching to freeplay mode.")
-            module.set_mode(common_enums.MODE.FREEPLAY)
-        end
-    end
-
-    if force_level_snapshot then
         force_level_snapshot = nil
-    elseif module.mode ~= common_enums.MODE.FREEPLAY and module.current.current_level_index > 1
-        and (not module.current.current_level_data.snapshot or module.mode == common_enums.MODE.RECORD)
-        and state.screen == SCREEN.LEVEL
-    then
-        -- Request a mid-run level snapshot of the upcoming level for the current TAS. It will be fulfilled immediately below.
-        module.register_level_snapshot_request(function(level_snapshot)
-            module.current.current_level_data.snapshot = level_snapshot
-        end)
     end
 
-    if level_snapshot_request_count > 0 and state.screen == SCREEN.LEVEL then
-        -- Capture a level snapshot of the upcoming level.
-        local part_1, part_2 = get_adventure_seed()
-        local level_snapshot = {
-            -- Store the previous adventure seed. That adventure seed is the one that was used to initialize PRNG for the upcoming level.
-            adventure_seed = { part_1, part_2 - part_1 },
-            state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
-        }
+    if captured_level_snapshot then
+        -- Recapture the `player_inventory` array in the state memory. Earlier in this update, the game may have modified the player inventories based on the player entities that were unloaded in the previous screen. Assuming that updates are not affected by the contents of the `player_inventory` array before level generation, it should be safe to overwrite the `player_inventory` array that was captured pre-update.
         if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_level_gen: Captured level snapshot for "..level_snapshot_request_count.." requests.")
+            print("on_pre_level_gen: Recapturing player inventory array snapshot.")
         end
+        captured_level_snapshot.state_memory.items.player_inventory =
+            introspection.create_snapshot(state.items.player_inventory, GAME_TYPES.Items.fields_by_name["player_inventory"].type)
+        -- The level snapshot capture is finished. Fulfill all of the requests.
         for request_id, callback in pairs(level_snapshot_requests) do
             if level_snapshot_request_count > 1 then
-                callback(common.deep_copy(level_snapshot))
+                callback(common.deep_copy(captured_level_snapshot))
             else
-                callback(level_snapshot)
+                callback(captured_level_snapshot)
             end
             if options.debug_print_load or options.debug_print_snapshot then
                 print("on_pre_level_gen: Fulfilled level snapshot request "..request_id..".")
@@ -650,6 +677,7 @@ local function on_pre_level_gen()
             level_snapshot_requests[request_id] = nil
             level_snapshot_request_count = level_snapshot_request_count - 1
         end
+        captured_level_snapshot = nil
     end
 end
 

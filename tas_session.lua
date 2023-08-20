@@ -18,14 +18,22 @@ function TasSession:new(tas)
     return o
 end
 
--- Gets whether the current or underlying screen is the camp.
+-- Gets whether the current or underlying screen is the camp, or whether the game is loading into a new camp screen.
 local function is_base_screen_camp()
-    return state.screen == SCREEN.CAMP or (state.screen_last == SCREEN.CAMP and state.screen == SCREEN.OPTIONS)
+    if state.loading == 2 then
+        return state.screen ~= SCREEN.OPTIONS and state.screen_next == SCREEN.CAMP
+    else
+        return state.screen == SCREEN.CAMP or (state.screen_last == SCREEN.CAMP and state.screen == SCREEN.OPTIONS)
+    end
 end
 
--- Gets whether the current or underlying screen is a level.
+-- Gets whether the current or underlying screen is a level, or whether the game is loading into a new level screen.
 local function is_base_screen_level()
-    return state.screen == SCREEN.LEVEL or (state.screen_last == SCREEN.LEVEL and (state.screen == SCREEN.OPTIONS or state.screen == SCREEN.DEATH))
+    if state.loading == 2 then
+        return state.screen ~= SCREEN.OPTIONS and state.screen_next == SCREEN.LEVEL
+    else
+        return state.screen == SCREEN.LEVEL or (state.screen_last == SCREEN.LEVEL and (state.screen == SCREEN.OPTIONS or state.screen == SCREEN.DEATH))
+    end
 end
 
 function TasSession:update_current_level_index(can_create)
@@ -38,13 +46,23 @@ function TasSession:update_current_level_index(can_create)
                 end
             else
                 if is_base_screen_level() then
-                    self.current_level_index = state.level_count + 1
+                    if state.loading == 2 and test_flag(state.quest_flags, QUEST_FLAG.RESET) then
+                        self.current_level_index = 1
+                    else
+                        self.current_level_index = state.level_count + 1
+                    end
                 end
             end
         elseif self.tas.start_type == "full" then
             -- Note: Tutorial race full starts are not supported.
             if is_base_screen_level() then
-                self.current_level_index = state.level_count - self.tas.start_full.state_memory.level_count + 1
+                if state.loading == 2 and test_flag(state.quest_flags, QUEST_FLAG.RESET) then
+                    if self.tas.start_full.state_memory.level_count == 0 then
+                        self.current_level_index = 1
+                    end
+                else
+                    self.current_level_index = state.level_count - self.tas.start_full.state_memory.level_count + 1
+                end
             end
         end
     end
