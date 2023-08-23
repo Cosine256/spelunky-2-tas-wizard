@@ -3,7 +3,7 @@ local game_controller = require("game_controller")
 local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("Save & Load", "save_load_window")
+local module = Tool_GUI:new("save_load", "Save & Load", "save_load_window")
 
 local file_io_status
 

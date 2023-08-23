@@ -5,7 +5,7 @@ local game_controller = require("game_controller")
 local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("Options", "options_window")
+local module = Tool_GUI:new("options", "Options", "options_window")
 
 function module:draw_panel(ctx, is_window)
     if not is_window then
@@ -61,15 +61,19 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Tools")
     -- TODO: These are shown in an arbitrary order. Give them some meaningful order, such as alphabetical, or the order they appear in the root GUI.
+    ctx:win_pushid("tool_guis")
     for _, tool_gui in pairs(tool_guis) do
+        ctx:win_pushid(tool_gui.id)
         ctx:win_text(tool_gui.name)
         ctx:win_indent(common_gui.INDENT_SUB_INPUT)
-        options[tool_gui.option_id].visible = ctx:win_check("Windowed##"..tool_gui.option_id.."_windowed", options[tool_gui.option_id].visible)
-        if ctx:win_button("Reset position##"..tool_gui.option_id.."_reset") then
+        options[tool_gui.option_id].visible = ctx:win_check("Windowed", options[tool_gui.option_id].visible)
+        if ctx:win_button("Reset position") then
             tool_gui:reset_window_position()
         end
         ctx:win_indent(-common_gui.INDENT_SUB_INPUT)
+        ctx:win_popid()
     end
+    ctx:win_popid()
 
     ctx:win_separator_text("Debug")
     options.debug_print_load = ctx:win_check("Print load info", options.debug_print_load)

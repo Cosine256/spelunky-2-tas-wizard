@@ -3,7 +3,7 @@ local common_enums = require("common_enums")
 local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("TAS Tool", "root_window")
+local module = Tool_GUI:new("root", "TAS Tool", "root_window")
 
 -- This can't be initialized until later after all of the tool GUI modules are loaded.
 local ordered_tool_guis
@@ -23,6 +23,7 @@ function module:draw_panel(ctx, is_window)
         }
     end
     local panel_drawn = false
+    ctx:win_pushid("tool_gui_panels")
     for _, tool_gui in ipairs(ordered_tool_guis) do
         if not options[tool_gui.option_id].visible then
             if panel_drawn then
@@ -30,14 +31,16 @@ function module:draw_panel(ctx, is_window)
             else
                 panel_drawn = true
             end
-            -- TODO: Give tool GUIs a second name field where only the first word is capitalized for sections.
+            ctx:win_pushid(tool_gui.id)
             ctx:win_section(tool_gui.name, function()
                 ctx:win_indent(common_gui.INDENT_SECTION)
                 tool_gui:draw_panel(ctx, false)
                 ctx:win_indent(-common_gui.INDENT_SECTION)
             end)
+            ctx:win_popid()
         end
     end
+    ctx:win_popid()
     if not panel_drawn then
         ctx:win_text("All tools detached into separate windows.")
     end

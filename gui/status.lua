@@ -3,7 +3,7 @@ local common_enums = require("common_enums")
 local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("Status", "status_window")
+local module = Tool_GUI:new("status", "Status", "status_window")
 
 function module:draw_panel(ctx, is_window)
     if game_controller.current then

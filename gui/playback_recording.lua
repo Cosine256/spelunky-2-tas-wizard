@@ -6,7 +6,7 @@ local game_controller = require("game_controller")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("Playback & Recording", "playback_recording_window")
+local module = Tool_GUI:new("playback_recording", "Playback & Recording", "playback_recording_window")
 
 local PLAYBACK_TARGET_MODE_COMBO = ComboInput:new(common_enums.PLAYBACK_TARGET_MODE)
 
@@ -73,7 +73,7 @@ end
 
 function module:draw_panel(ctx, is_window)
     -- TODO: This panel feels messy. How could I reorganize it to be easier to use?
-    ctx:win_section("Options##playback_recording_panel_options", function()
+    ctx:win_section("Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         self:draw_window_options(ctx, is_window)
         ctx:win_indent(-common_gui.INDENT_SECTION)

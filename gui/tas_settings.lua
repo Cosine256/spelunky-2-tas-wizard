@@ -4,7 +4,7 @@ local game_controller = require("game_controller")
 local ComboInput = require("gui/combo_input")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("TAS settings", "tas_settings_window")
+local module = Tool_GUI:new("tas_settings", "TAS Settings", "tas_settings_window")
 
 local SKIP_INPUT_COMBO = ComboInput:new(common_enums.SKIP_INPUT)
 
@@ -91,9 +91,7 @@ end
 
 function module:draw_panel(ctx, is_window)
     if game_controller.current then
-        ctx:win_pushid("current_tas_settings")
         draw_tas_settings(ctx, game_controller.current.tas)
-        ctx:win_popid()
     else
         ctx:win_text("No TAS loaded.")
     end

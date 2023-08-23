@@ -1,10 +1,12 @@
 local Tool_GUI = {}
 Tool_GUI.__index = Tool_GUI
 
-function Tool_GUI:new(name, option_id)
+function Tool_GUI:new(id, name, option_id)
     local o = {
+        id = id,
         name = name,
         option_id = option_id,
+        window_label = name.."###"..id,
         _skip_draw = false
     }
     setmetatable(o, self)
@@ -38,7 +40,7 @@ function Tool_GUI:draw_window(ctx)
         local tool_gui_options = options[self.option_id]
         if tool_gui_options.visible then
             -- TODO: Can't get or set the collapsed state of a window. If collapsed, then the wrong window height is written to the options.
-            local keep_visible = ctx:window(self.name, tool_gui_options.x, tool_gui_options.y, tool_gui_options.w, tool_gui_options.h, true, function(_, pos, size)
+            local keep_visible = ctx:window(self.window_label, tool_gui_options.x, tool_gui_options.y, tool_gui_options.w, tool_gui_options.h, true, function(_, pos, size)
                 tool_gui_options.x, tool_gui_options.y = pos.x, pos.y
                 tool_gui_options.w, tool_gui_options.h = size.x, size.y
                 self:draw_panel(ctx, true)

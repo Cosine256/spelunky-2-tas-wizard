@@ -6,7 +6,7 @@ local game_controller = require("game_controller")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("Frames", "frames_window")
+local module = Tool_GUI:new("frames", "Frames", "frames_window")
 
 local FRAMES_EDIT_OPERATION = OrderedTable:new({
     { id = "insert", name = "Insert", desc = "Insert new frames after the specified frame." },
@@ -81,7 +81,7 @@ end
 function module:draw_panel(ctx, is_window)
     local session = game_controller.current
 
-    ctx:win_section("Options##frames_panel_options", function()
+    ctx:win_section("Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         ctx:win_separator_text("Frames window")
         self:draw_window_options(ctx, is_window)
@@ -144,7 +144,7 @@ function module:draw_panel(ctx, is_window)
                             frames_edit_insert_inputs[player_index] = input
                         end
                     end
-                    if ctx:win_button("Insert##frames_edit_insert_button") then
+                    if ctx:win_button("Insert") then
                         session.tas:insert_frames(level_index, frames_edit_frame_start, frames_edit_frame_count, frames_edit_insert_inputs)
                         frames_edit_frame_start = frames_edit_frame_start + frames_edit_frame_count
                         game_controller.validate_current_frame()
@@ -158,7 +158,7 @@ function module:draw_panel(ctx, is_window)
                         local max_frame_count = #level_data.frames - frames_edit_frame_start + 1
                         frames_edit_frame_count = common.clamp(ctx:win_drag_int("Frame count to delete", frames_edit_frame_count, 1, max_frame_count), 1, max_frame_count)
                         ctx:win_text("Frames to delete (inclusive): "..frames_edit_frame_start.." to "..(frames_edit_frame_start + frames_edit_frame_count - 1))
-                        if ctx:win_button("Delete##frames_edit_delete_button") then
+                        if ctx:win_button("Delete") then
                             session.tas:delete_frames(level_index, frames_edit_frame_start, frames_edit_frame_count)
                             game_controller.validate_current_frame()
                             game_controller.validate_playback_target()
