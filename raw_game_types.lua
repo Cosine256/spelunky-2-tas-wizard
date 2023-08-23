@@ -4,6 +4,7 @@ local CLASSES = {
     -- This is a subset of the StateMemory class containing only necessary fields for level snapshots.
     StateMemory_LevelSnapshot = {
         fields = {
+            { type = "SCREEN", name = "screen_next" },
             { type = "int", name = "kali_favor" },
             { type = "int", name = "kali_status" },
             { type = "int", name = "kali_altars_destroyed" },
@@ -120,6 +121,7 @@ local types = {
     ENT_TYPE = {},
     JOURNAL_FLAG = {},
     QUEST_FLAG = {},
+    SCREEN = {},
     THEME = {}
 }
 

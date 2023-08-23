@@ -32,7 +32,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 11
+local CURRENT_FORMAT = 12
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -185,12 +185,27 @@ local FORMAT_UPDATERS = {
         end
     },
     [10] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 11,
         update = function(o)
             o.start_simple = o.start
             o.start = nil
             o.start_type = o.start_simple.type
             o.start_simple.type = nil
+        end
+    },
+    [11] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            if o.start_full and o.start_full.state_memory then
+                o.start_full.state_memory.screen_next = SCREEN.LEVEL
+            end
+            if o.levels then
+                for _, level in ipairs(o.levels) do
+                    if level.snapshot and level.snapshot.state_memory then
+                        level.snapshot.state_memory.screen_next = SCREEN.LEVEL
+                    end
+                end
+            end
         end
     }
 }

@@ -214,7 +214,7 @@ local function draw_tas_start_settings_full(ctx, tas)
 
     if tas:is_start_configured() then
         local start_area_name = common.world_level_theme_to_string(
-            tas.start_full.state_memory.world, tas.start_full.state_memory.level, tas.start_full.state_memory.theme)
+            tas.start_full.state_memory.world_next, tas.start_full.state_memory.level_next, tas.start_full.state_memory.theme_next)
         ctx:win_text("Current level snapshot: "..start_area_name)
     else
         ctx:win_text("Current level snapshot: None")

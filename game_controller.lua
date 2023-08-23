@@ -350,7 +350,6 @@ end
 
 -- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Only level snapshots are supported, not any other screens such as the camp.
 local function trigger_level_snapshot_warp(level_snapshot)
-    state.screen_next = SCREEN.LEVEL
     trigger_warp_unload()
     module.desync_level = -1
     module.desync_frame = -1
