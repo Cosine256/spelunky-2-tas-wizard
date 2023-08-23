@@ -40,6 +40,8 @@ local CLASSES = {
             { type = "QuestsInfo", name = "quests" },
             { type = "int", name = "correct_ushabti" },
             { type = "Items", name = "items" },
+            { type = "ENT_TYPE", name = "speedrun_character" },
+            { type = "bool", name = "speedrun_activation_trigger" },
             { type = "bool", name = "world2_coffin_spawned" },
             { type = "bool", name = "world4_coffin_spawned" },
             { type = "bool", name = "world6_coffin_spawned" },

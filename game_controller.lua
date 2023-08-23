@@ -86,7 +86,6 @@ module.desync_level = -1
 module.desync_frame = -1
 local need_pause
 local force_level_snapshot
-local force_level_gen_screen_last
 
 --[[
 Index of the current frame in a run, or -1 if undefined. The "current frame" is the frame that the game most recently executed, and its value is incremented after an update where a frame of gameplay occurred. A value of 0 means that no gameplay frames have occurred in the current level. This index is defined if and only if all of the following conditions are met:
@@ -161,7 +160,6 @@ function module.reset_session_vars()
     module.desync_frame = -1
     need_pause = false
     force_level_snapshot = nil
-    force_level_gen_screen_last = nil
     reset_level_vars()
 end
 
@@ -323,8 +321,11 @@ local function trigger_start_simple_warp(tas)
         state.theme_start = THEME.DWELLING
         state.speedrun_activation_trigger = true
         state.speedrun_character = common_enums.PLAYER_CHAR:value_by_id(start.tutorial_race_referee).ent_type_id
+        if not force_level_snapshot then
+            force_level_snapshot = {}
+        end
         -- Ensure that the player spawns in the tutorial area, instead of the rope or large door.
-        force_level_gen_screen_last = SCREEN.CAMP
+        force_level_snapshot.pre_level_gen_screen_last = SCREEN.CAMP
     else
         state.screen_next = SCREEN.LEVEL
         state.world_start = start.world
@@ -555,25 +556,6 @@ local function on_pre_update_level_load()
         print("on_pre_update_level_load")
     end
 
-    if force_level_snapshot then
-        if force_level_snapshot.state_memory then
-            -- Apply the state memory snapshot.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_level_load: Applying state memory from level snapshot.")
-            end
-            introspection.apply_snapshot(state, force_level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
-        end
-        if force_level_snapshot.adventure_seed then
-            -- Apply the adventure seed.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_level_load: Applying adventure seed from level snapshot: "
-                    ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[1]).."-"
-                    ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[2]))
-            end
-            set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
-        end
-    end
-
     if module.ghost_tas_session then
         module.ghost_tas_session:update_current_level_index(false)
     end
@@ -599,7 +581,7 @@ local function on_pre_update_level_load()
         end
     end
 
-    if level_snapshot_request_count > 0 and state.screen_next == SCREEN.LEVEL then
+    if level_snapshot_request_count > 0 then
         -- Begin capturing a level snapshot for the upcoming level.
         if options.debug_print_load or options.debug_print_snapshot then
             print("on_pre_update_level_load: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
@@ -618,6 +600,25 @@ end
 
 -- Called right before an update which is going to load a screen. The screen value itself might not change, since the game may be loading the same type of screen.
 local function on_pre_screen_change()
+    if force_level_snapshot then
+        -- Apply a level snapshot instead of loading the original destination for this screen change.
+        if force_level_snapshot.state_memory then
+            -- Apply the state memory snapshot.
+            if options.debug_print_load or options.debug_print_snapshot then
+                print("on_pre_screen_change: Applying state memory from level snapshot.")
+            end
+            introspection.apply_snapshot(state, force_level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
+        end
+        if force_level_snapshot.adventure_seed then
+            -- Apply the adventure seed.
+            if options.debug_print_load or options.debug_print_snapshot then
+                print("on_pre_screen_change: Applying adventure seed from level snapshot: "
+                    ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[1]).."-"
+                    ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[2]))
+            end
+            set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
+        end
+    end
     if ((state.screen == SCREEN.LEVEL or state.screen == SCREEN.CAMP or state.screen == SCREEN.TRANSITION)
         and state.screen_next ~= SCREEN.OPTIONS and state.screen_next ~= SCREEN.DEATH)
         or state.screen == SCREEN.DEATH
@@ -643,11 +644,6 @@ local function on_pre_level_gen()
         print("on_pre_level_gen")
     end
 
-    if force_level_gen_screen_last then
-        state.screen_last = force_level_gen_screen_last
-        force_level_gen_screen_last = nil
-    end
-
     if force_level_snapshot then
         if force_level_snapshot.state_memory then
             -- The `player_inventory` array is applied pre-update, but it may be modified by the game when the previous screen is unloaded. Reapply it here.
@@ -656,6 +652,9 @@ local function on_pre_level_gen()
             end
             introspection.apply_snapshot(state.items.player_inventory, force_level_snapshot.state_memory.items.player_inventory,
                 GAME_TYPES.Items.fields_by_name["player_inventory"].type)
+        end
+        if force_level_snapshot.pre_level_gen_screen_last then
+            state.screen_last = force_level_snapshot.pre_level_gen_screen_last
         end
         if options.debug_print_load or options.debug_print_snapshot then
             print("on_pre_level_gen: Finished applying level snapshot.")
@@ -670,6 +669,10 @@ local function on_pre_level_gen()
         end
         captured_level_snapshot.state_memory.items.player_inventory =
             introspection.create_snapshot(state.items.player_inventory, GAME_TYPES.Items.fields_by_name["player_inventory"].type)
+        if state.screen == SCREEN.CAMP then
+            -- Capture the previous screen value. It affects how the player spawns into the camp.
+            captured_level_snapshot.pre_level_gen_screen_last = state.screen_last
+        end
         -- The level snapshot capture is finished. Fulfill all of the requests.
         for request_id, callback in pairs(level_snapshot_requests) do
             if level_snapshot_request_count > 1 then
@@ -729,7 +732,7 @@ end
 
 local function on_transition()
     if options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled) then
-        -- The transition screen can't be skipped entirely. It needs to run its unload behavior in order for things like pet health to be applied to players.
+        -- The transition screen can't be skipped entirely. It needs to be loaded in order for pet health to be applied to players.
         if options.debug_print_load then
             print("on_transition: Skipping transition screen.")
         end
