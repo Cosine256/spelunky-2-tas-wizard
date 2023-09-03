@@ -32,7 +32,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 12
+local CURRENT_FORMAT = 13
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -194,7 +194,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [11] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 12,
         update = function(o)
             if o.start_full and o.start_full.state_memory then
                 o.start_full.state_memory.screen_next = SCREEN.LEVEL
@@ -203,6 +203,23 @@ local FORMAT_UPDATERS = {
                 for _, level in ipairs(o.levels) do
                     if level.snapshot and level.snapshot.state_memory then
                         level.snapshot.state_memory.screen_next = SCREEN.LEVEL
+                    end
+                end
+            end
+        end
+    },
+    [12] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            if o.start_full and o.start_full.state_memory then
+                o.start_full.state_memory.speedrun_character = ENT_TYPE.CHAR_MARGARET_TUNNEL
+                o.start_full.state_memory.speedrun_activation_trigger = false
+            end
+            if o.levels then
+                for _, level in ipairs(o.levels) do
+                    if level.snapshot and level.snapshot.state_memory then
+                        level.snapshot.state_memory.speedrun_character = ENT_TYPE.CHAR_MARGARET_TUNNEL
+                        level.snapshot.state_memory.speedrun_activation_trigger = false
                     end
                 end
             end
