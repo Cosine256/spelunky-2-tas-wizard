@@ -82,8 +82,6 @@ function module.input_to_string(input)
         ..((input & INPUTS.ROPE > 0) and "R" or "_")
         ..((input & INPUTS.DOOR > 0) and "D" or "_")
         ..((input & INPUTS.RUN > 0) and "+" or "_")
-        ..((input & INPUTS.MENU > 0) and "M" or "_")
-        ..((input & INPUTS.JOURNAL > 0) and "j" or "_")
 end
 
 function module.world_level_theme_to_string(world, level, theme)

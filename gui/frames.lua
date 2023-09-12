@@ -70,10 +70,6 @@ local function draw_input_editor_inputs(ctx, input)
     input = draw_input_editor_button_input(ctx, input, INPUTS.DOOR, "Door")
     ctx:win_inline()
     input = draw_input_editor_button_input(ctx, input, INPUTS.RUN, "Run")
-    ctx:win_inline()
-    input = draw_input_editor_button_input(ctx, input, INPUTS.MENU, "Menu")
-    ctx:win_inline()
-    input = draw_input_editor_button_input(ctx, input, INPUTS.JOURNAL, "Journal")
 
     return input
 end

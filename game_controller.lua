@@ -10,6 +10,8 @@ local POSITION_DESYNC_EPSILON = 0.0000000001
 -- Vanilla frames used to fade into and out of the transition screen.
 local TRANSITION_FADE_FRAMES = 18
 local WARP_FADE_OUT_FRAMES = 5
+-- Menu and journal inputs are not supported. They do not work correctly during recording and playback.
+local SUPPORTED_INPUT_MASK = INPUTS.JUMP | INPUTS.WHIP | INPUTS.BOMB | INPUTS.ROPE | INPUTS.RUN | INPUTS.DOOR | INPUTS.LEFT | INPUTS.RIGHT | INPUTS.UP | INPUTS.DOWN
 
 local SCREEN_WARP_HANDLER
 do
@@ -802,6 +804,7 @@ local function on_pre_update_level()
                 end
             end
             if input then
+                input = input & SUPPORTED_INPUT_MASK
                 state.player_inputs.player_slots[player_index].buttons = input
                 state.player_inputs.player_slots[player_index].buttons_gameplay = input
                 if options.debug_print_frame or options.debug_print_input then
@@ -923,11 +926,12 @@ local function on_post_update_frame_advanced()
         end
         if module.mode == common_enums.MODE.RECORD then
             -- Record the current player inputs for the frame that just executed.
+            local input = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUT_MASK
             if options.debug_print_frame or options.debug_print_input then
                 print("on_post_update: Recording input: frame="..module.current.current_level_index.."-"..module.current_frame_index
-                    .." player="..player_index.." input="..common.input_to_string(state.player_inputs.player_slots[player_index].buttons_gameplay))
+                    .." player="..player_index.." input="..common.input_to_string(input))
             end
-            player.input = state.player_inputs.player_slots[player_index].buttons_gameplay
+            player.input = input
             player.position = actual_pos
         elseif module.mode == common_enums.MODE.PLAYBACK then
             local expected_pos = player.position
