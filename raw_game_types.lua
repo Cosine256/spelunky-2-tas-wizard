@@ -49,7 +49,13 @@ local CLASSES = {
             { type = "int", name = "first_damage_world" },
             { type = "int", name = "first_damage_level" },
             { type = "ENT_TYPE", array_size = 99, name = "waddler_storage" },
-            { type = "int", array_size = 99, name = "waddler_metadata" }
+            { type = "int", array_size = 99, name = "waddler_metadata" },
+            { type = "int", name = "journal_progress_sticker_count" },
+            { type = "JournalProgressStickerSlot", array_size = 40, name = "journal_progress_sticker_slots" },
+            { type = "int", name = "journal_progress_stain_count" },
+            { type = "JournalProgressStainSlot", array_size = 30, name = "journal_progress_stain_slots" },
+            { type = "int", name = "journal_progress_theme_count" },
+            { type = "int", array_size = 9, name = "journal_progress_theme_slots" }
         }
     },
     QuestsInfo = {
@@ -113,6 +119,27 @@ local CLASSES = {
             { type = "bool", name = "activated" },
             { type = "ENT_TYPE", name = "character" },
             { type = "int", name = "texture" }
+        }
+    },
+    JournalProgressStickerSlot = {
+        fields = {
+            { type = "int", name = "theme" },
+            { type = "int", name = "grid_position" },
+            { type = "ENT_TYPE", name = "entity_type" },
+            { type = "float", name = "x" },
+            { type = "float", name = "y" },
+            { type = "float", name = "angle" }
+        }
+    },
+    JournalProgressStainSlot = {
+        fields = {
+            { type = "float", name = "x" },
+            { type = "float", name = "y" },
+            { type = "float", name = "angle" },
+            { type = "float", name = "scale" },
+            { type = "int", name = "texture_column" },
+            { type = "int", name = "texture_row" },
+            { type = "int", name = "texture_range" }
         }
     }
 }

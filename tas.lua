@@ -32,7 +32,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 13
+local CURRENT_FORMAT = 14
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -209,7 +209,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [12] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 13,
         update = function(o)
             if o.start_full and o.start_full.state_memory then
                 o.start_full.state_memory.speedrun_character = ENT_TYPE.CHAR_MARGARET_TUNNEL
@@ -220,6 +220,53 @@ local FORMAT_UPDATERS = {
                     if level.snapshot and level.snapshot.state_memory then
                         level.snapshot.state_memory.speedrun_character = ENT_TYPE.CHAR_MARGARET_TUNNEL
                         level.snapshot.state_memory.speedrun_activation_trigger = false
+                    end
+                end
+            end
+        end
+    },
+    [13] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            local function add_journal_progress(state_memory)
+                state_memory.journal_progress_sticker_count = 0
+                state_memory.journal_progress_sticker_slots = {}
+                state_memory.journal_progress_stain_count = 0
+                state_memory.journal_progress_stain_slots = {}
+                state_memory.journal_progress_theme_count = 0
+                state_memory.journal_progress_theme_slots = {}
+                for i = 1, 40 do
+                    state_memory.journal_progress_sticker_slots[i] = {
+                        theme = 0,
+                        grid_position = 0,
+                        entity_type = 0,
+                        x = 0.0,
+                        y = 0.0,
+                        angle = 0.0
+                    }
+                end
+                for i = 1, 30 do
+                    state_memory.journal_progress_stain_slots[i] = {
+                        x = 0.0,
+                        y = 0.0,
+                        angle = 0.0,
+                        scale = 0.0,
+                        texture_column = 0,
+                        texture_row = 0,
+                        texture_range = 0
+                    }
+                end
+                for i = 1, 9 do
+                    state_memory.journal_progress_theme_slots[i] = 0
+                end
+            end
+            if o.start_full and o.start_full.state_memory then
+                add_journal_progress(o.start_full.state_memory)
+            end
+            if o.levels then
+                for _, level in ipairs(o.levels) do
+                    if level.snapshot and level.snapshot.state_memory then
+                        add_journal_progress(level.snapshot.state_memory)
                     end
                 end
             end
