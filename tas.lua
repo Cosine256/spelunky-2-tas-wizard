@@ -313,11 +313,6 @@ function Tas:to_raw(serial_mod)
             if copy.start_type ~= "full" then
                 copy.start_full = nil
             end
-        elseif serial_mod == Tas.SERIAL_MODS.OPTIONS then
-            if copy.start_full then
-                -- Clear the potentially enormous full start object for the options TAS.
-                copy.start_full = {}
-            end
         end
         -- The JSON serializer doesn't handle the 64-bit integer pairs correctly and converts them into lossy floats. Save them as 128-bit hex strings instead.
         if copy.start_simple and copy.start_simple.adventure_seed then

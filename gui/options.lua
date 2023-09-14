@@ -59,6 +59,16 @@ function module:draw_panel(ctx, is_window)
         options.tas_file_history = {}
     end
 
+    ctx:win_separator_text("Default TAS settings")
+    ctx:win_text("These TAS settings are used as a preset when creating a new TAS, and as default values when changing some settings in existing TASes.")
+    ctx:win_section("Default TAS", function()
+        ctx:win_pushid("new_tas_settings")
+        ctx:win_indent(common_gui.INDENT_SECTION)
+        common_gui.draw_tas_start_settings(ctx, options.new_tas, true)
+        ctx:win_indent(-common_gui.INDENT_SECTION)
+        ctx:win_popid()
+    end)
+
     ctx:win_separator_text("Tools")
     -- TODO: These are shown in an arbitrary order. Give them some meaningful order, such as alphabetical, or the order they appear in the root GUI.
     ctx:win_pushid("tool_guis")

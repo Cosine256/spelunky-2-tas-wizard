@@ -31,7 +31,7 @@ function module.load_tas(file_name)
         file:close()
         local success, result = persistence.json_decode(load_json, false)
         if not success then
-            return nil, "Failed to decode TAS data from JSON: "..err
+            return nil, "Failed to decode TAS data from JSON: "..result
         else
             local tas = Tas:from_raw(result, Tas.SERIAL_MODS.NORMAL)
             return tas, "TAS loaded successfully"

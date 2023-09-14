@@ -11,8 +11,7 @@ local ordered_tool_guis
 function module:draw_panel(ctx, is_window)
     if not ordered_tool_guis then
         ordered_tool_guis = {
-            tool_guis.new,
-            tool_guis.save_load,
+            tool_guis.file,
             tool_guis.options,
             tool_guis.tas_settings,
             tool_guis.playback_recording,

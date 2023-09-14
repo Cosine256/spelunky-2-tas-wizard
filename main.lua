@@ -11,13 +11,12 @@ local game_controller = require("game_controller")
 local persistence = require("persistence")
 local Tas = require("tas")
 tool_guis = {
+    file = require("gui/file"),
     frames = require("gui/frames"),
     ghost = require("gui/ghost"),
-    new = require("gui/new"),
     options = require("gui/options"),
     playback_recording = require("gui/playback_recording"),
     root = require("gui/root"),
-    save_load = require("gui/save_load"),
     status = require("gui/status"),
     tas_settings = require("gui/tas_settings"),
     warp = require("gui/warp")
@@ -39,8 +38,7 @@ default_options = {
     root_window = { visible = true, x = 0.6, y = 0.95, w = 0.4, h = 1.6 },
     frames_window = { visible = false, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
     playback_recording_window = { visible = false, x = 0.6, y = 0.25, w = 0.4, h = 1.2 },
-    save_load_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
-    new_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
+    file_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
     ghost_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
     warp_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
     tas_settings_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },

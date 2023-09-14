@@ -13,6 +13,12 @@ local function draw_tas_settings(ctx, tas)
     -- TODO: Use a multi-line text input.
     tas.description = ctx:win_input_text("Description", tas.description)
 
+    ctx:win_separator_text("Start settings")
+    if #tas.levels > 0 then
+        ctx:win_text("Warning: This TAS has recorded inputs. Modifying the start settings can change level generation and RNG, which may cause it to desynchronize.")
+    end
+    common_gui.draw_tas_start_settings(ctx, tas, false)
+
     ctx:win_separator_text("Cutscenes and transitions")
     local olmec_cutscene_skip = ctx:win_check("Skip Olmec cutscene", tas.olmec_cutscene_skip_frame ~= -1)
     if olmec_cutscene_skip then
@@ -60,10 +66,6 @@ local function draw_tas_settings(ctx, tas)
     else
         tas.transition_exit_frame = -1
     end
-
-    ctx:win_separator_text("Start settings")
-    ctx:win_text("Warning: Modifying the start settings can change level generation and RNG, which may cause the TAS to desynchronize if it has any inputs recorded.")
-    common_gui.draw_tas_start_settings(ctx, tas)
 
     ctx:win_separator_text("Generated data")
     tas.save_player_positions = ctx:win_check("Save player positions", tas.save_player_positions)

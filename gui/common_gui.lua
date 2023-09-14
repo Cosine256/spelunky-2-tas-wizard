@@ -202,7 +202,7 @@ local function draw_tas_start_settings_simple(ctx, tas)
     end
 end
 
-local function draw_tas_start_settings_full(ctx, tas)
+local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
     ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full level snapshot.")
     ctx:win_section("More info", function()
         ctx:win_indent(module.INDENT_SECTION)
@@ -212,36 +212,40 @@ local function draw_tas_start_settings_full(ctx, tas)
         ctx:win_indent(-module.INDENT_SECTION)
     end)
 
-    if tas:is_start_configured() then
-        local start_area_name = common.world_level_theme_to_string(
-            tas.start_full.state_memory.world_next, tas.start_full.state_memory.level_next, tas.start_full.state_memory.theme_next)
-        ctx:win_text("Current level snapshot: "..start_area_name)
+    if is_options_tas then
+        -- Full start snapshots are enormous. Avoid storing them in the options.
+        ctx:win_text("Full starts cannot be captured for the default TAS settings.")
     else
-        ctx:win_text("Current level snapshot: None")
-        if not tas.level_snapshot_request_id then
-            ctx:win_text("To capture a level snapshot, prepare your run in the prior level, and then press \"Request capture\".")
+        if tas:is_start_configured() then
+            local start_area_name = common.world_level_theme_to_string(
+                tas.start_full.state_memory.world_next, tas.start_full.state_memory.level_next, tas.start_full.state_memory.theme_next)
+            ctx:win_text("Current level snapshot: "..start_area_name)
+        else
+            ctx:win_text("Current level snapshot: None")
+            if not tas.level_snapshot_request_id then
+                ctx:win_text("To capture a level snapshot, prepare your run in the prior level, and then press \"Request capture\".")
+            end
         end
-    end
-
-    if tas.level_snapshot_request_id then
-        ctx:win_text("Capture status: Awaiting level start. A snapshot of the next level you load into will be captured.")
-        if ctx:win_button("Cancel capture") then
-            game_controller.clear_level_snapshot_request(tas.level_snapshot_request_id)
-            tas.level_snapshot_request_id = nil
-        end
-        ctx:win_text("Cancel the requested level snapshot capture.")
-    else
-        if ctx:win_button("Request capture") then
-            tas.level_snapshot_request_id = game_controller.register_level_snapshot_request(function(level_snapshot)
+        if tas.level_snapshot_request_id then
+            ctx:win_text("Capture status: Awaiting level start. A snapshot of the next level you load into will be captured.")
+            if ctx:win_button("Cancel capture") then
+                game_controller.clear_level_snapshot_request(tas.level_snapshot_request_id)
                 tas.level_snapshot_request_id = nil
-                tas.start_full = level_snapshot
-            end)
+            end
+            ctx:win_text("Cancel the requested level snapshot capture.")
+        else
+            if ctx:win_button("Request capture") then
+                tas.level_snapshot_request_id = game_controller.register_level_snapshot_request(function(level_snapshot)
+                    tas.level_snapshot_request_id = nil
+                    tas.start_full = level_snapshot
+                end)
+            end
+            ctx:win_text("Request a new level snapshot capture.")
         end
-        ctx:win_text("Request a new level snapshot capture.")
     end
 end
 
-function module.draw_tas_start_settings(ctx, tas)
+function module.draw_tas_start_settings(ctx, tas, is_options_tas)
     tas.start_type = START_TYPE_COMBO:draw(ctx, "Start type", tas.start_type, function(current_choice_id, new_choice_id)
         -- TODO: Handle possible player count change when switching start types.
         if new_choice_id == "simple" then
@@ -261,7 +265,7 @@ function module.draw_tas_start_settings(ctx, tas)
     if tas.start_type == "simple" then
         draw_tas_start_settings_simple(ctx, tas)
     elseif tas.start_type == "full" then
-        draw_tas_start_settings_full(ctx, tas)
+        draw_tas_start_settings_full(ctx, tas, is_options_tas)
     end
 end
 

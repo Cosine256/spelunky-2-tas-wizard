@@ -3,7 +3,7 @@ local game_controller = require("game_controller")
 local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("save_load", "Save & Load", "save_load_window")
+local module = Tool_GUI:new("file", "New, Save, Load", "file_window")
 
 local file_io_status
 
@@ -12,6 +12,11 @@ function module:draw_panel(ctx, is_window)
     ctx:win_inline()
     ctx:win_width(0.9999)
     options.tas_file_name = ctx:win_input_text("##tas_file_name", options.tas_file_name)
+    if ctx:win_button("New##new_tas") then
+        set_current_tas(options.new_tas:copy())
+        file_io_status = "New TAS created"
+    end
+    ctx:win_inline()
     if game_controller.current then
         if ctx:win_button("Save##save_tas") then
             file_io_status = tas_persistence.save_tas(game_controller.current.tas, options.tas_file_name)
@@ -38,7 +43,7 @@ function module:draw_panel(ctx, is_window)
     end
     if game_controller.current then
         ctx:win_inline()
-        if ctx:win_button("Unload current##unload_tas") then
+        if ctx:win_button("Unload##unload_tas") then
             set_current_tas(nil)
             file_io_status = "TAS unloaded"
         end
