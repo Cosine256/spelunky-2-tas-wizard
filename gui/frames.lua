@@ -175,7 +175,7 @@ function module:draw_panel(ctx, is_window)
         elseif not session.tas:is_start_configured() then
             ctx:win_text("TAS start settings are not fully configured.")
         elseif game_controller.mode == common_enums.MODE.FREEPLAY then
-            ctx:win_text("TAS in freeplay mode.")
+            ctx:win_text("TAS is in freeplay mode.")
         elseif session.current_level_index == -1 then
             ctx:win_text("No TAS data for current level.")
         elseif game_controller.current_frame_index == -1 then
@@ -232,7 +232,7 @@ function module.draw_frame_edit_window(ctx, session)
         return
     end
 
-    local keep_open = ctx:window("Edit Frame ("..frame_edit_level.."-"..frame_edit_frame..")", -0.6, 0.8, 0.0, 0.0, true, function()
+    local keep_open = ctx:window("Edit Frame ("..frame_edit_level.."-"..frame_edit_frame..")###frame_edit", -0.6, 0.8, 0.0, 0.0, true, function()
         frame_edit_input = draw_input_editor_inputs(ctx, frame_edit_input)
         ctx:win_input_text("Old input", common.input_to_string(frame_edit_input_orig))
         ctx:win_input_text("New input", common.input_to_string(frame_edit_input))

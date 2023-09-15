@@ -18,6 +18,7 @@ tool_guis = {
     playback_recording = require("gui/playback_recording"),
     root = require("gui/root"),
     status = require("gui/status"),
+    tas_root = require("gui/tas_root"),
     tas_settings = require("gui/tas_settings"),
     warp = require("gui/warp")
 }
@@ -35,7 +36,9 @@ default_options = {
     record_frame_write_type = "overwrite",
     presentation_enabled = false,
     -- TODO: Order of tool GUIs is arbitrary. Alphabetize and put them in a sub-table with their IDs as keys?
+    -- TODO: Choose better default positions and sizes.
     root_window = { visible = true, x = 0.6, y = 0.95, w = 0.4, h = 1.6 },
+    tas_root_window = { visible = true, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
     frames_window = { visible = false, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
     playback_recording_window = { visible = false, x = 0.6, y = 0.25, w = 0.4, h = 1.2 },
     file_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
@@ -151,19 +154,24 @@ function set_current_tas(tas)
 end
 
 local function on_gui_frame(ctx)
-    if game_controller.mode ~= common_enums.MODE.PLAYBACK or not options.presentation_enabled then
-        ctx:draw_layer(DRAW_LAYER.BACKGROUND)
-        drawing.update_screen_vars()
-        if game_controller.ghost_tas_session and options.ghost_path_visible then
-            drawing.draw_tas_path(ctx, game_controller.ghost_tas_session, true)
-        end
-        if game_controller.current and options.paths_visible then
-            drawing.draw_tas_path(ctx, game_controller.current, false)
-        end
+    if game_controller.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
+        return
+    end
+
+    ctx:draw_layer(DRAW_LAYER.BACKGROUND)
+    drawing.update_screen_vars()
+    if game_controller.ghost_tas_session and options.ghost_path_visible then
+        drawing.draw_tas_path(ctx, game_controller.ghost_tas_session, true)
+    end
+    if game_controller.current and options.paths_visible then
+        drawing.draw_tas_path(ctx, game_controller.current, false)
     end
 
     ctx:draw_layer(DRAW_LAYER.WINDOW)
-    tool_guis.root.draw_windows(ctx)
+    for _, tool_gui in pairs(tool_guis) do
+        tool_gui:draw_window(ctx)
+    end
+    tool_guis.frames.draw_frame_edit_window(ctx, game_controller.current)
 end
 
 set_callback(function(ctx)
@@ -172,5 +180,7 @@ set_callback(function(ctx)
     register_option_callback("", options, function(ctx) tool_guis.options:draw_panel(ctx, false) end)
     set_callback(on_gui_frame, ON.GUIFRAME)
     game_controller.initialize()
+    tool_guis.root.initialize()
+    tool_guis.tas_root.initialize()
     tool_guis.frames.reset_vars()
 end, ON.LOAD)

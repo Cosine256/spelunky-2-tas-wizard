@@ -64,6 +64,31 @@ local PLAYER_COUNT_COMBO = ComboInput:new(OrderedTable:new({ 1, 2, 3, 4 }))
 
 local PLAYER_CHAR_COMBO = ComboInput:new(common_enums.PLAYER_CHAR)
 
+function module.draw_tool_gui_panels(ctx, tool_guis)
+    ctx:win_pushid("tool_gui_panels")
+    local panel_drawn = false
+    for _, tool_gui in ipairs(tool_guis) do
+        if not options[tool_gui.option_id].visible then
+            if panel_drawn then
+                ctx:win_separator()
+            else
+                panel_drawn = true
+            end
+            ctx:win_pushid(tool_gui.id)
+            ctx:win_section(tool_gui.name, function()
+                ctx:win_indent(module.INDENT_SECTION)
+                tool_gui:draw_panel(ctx, false)
+                ctx:win_indent(-module.INDENT_SECTION)
+            end)
+            ctx:win_popid()
+        end
+    end
+    ctx:win_popid()
+    if not panel_drawn then
+        ctx:win_text("All panels detached into separate windows.")
+    end
+end
+
 local function draw_tas_start_settings_simple(ctx, tas)
     local start = tas.start_simple
     ctx:win_text(START_TYPE:value_by_id("simple").name..": Provides basic start settings, such as the starting area and player characters. All other aspects of the run (health, items, etc) use the default behavior from starting a new run.")
