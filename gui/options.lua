@@ -47,10 +47,7 @@ function module:draw_panel(ctx, is_window)
     options.presentation_enabled = ctx:win_check("Activate during playback", options.presentation_enabled)
 
     ctx:win_separator_text("TAS file history")
-    local new_tas_file_history_max_size = ctx:win_input_int("Max size", options.tas_file_history_max_size)
-    if new_tas_file_history_max_size < 0 then
-        new_tas_file_history_max_size = 0
-    end
+    local new_tas_file_history_max_size = math.max(ctx:win_input_int("Max size", options.tas_file_history_max_size), 0)
     if options.tas_file_history_max_size ~= new_tas_file_history_max_size then
         options.tas_file_history_max_size = new_tas_file_history_max_size
         tas_persistence.trim_tas_file_history()
@@ -76,8 +73,10 @@ function module:draw_panel(ctx, is_window)
         ctx:win_pushid(tool_gui.id)
         ctx:win_text(tool_gui.name)
         ctx:win_indent(common_gui.INDENT_SUB_INPUT)
-        options[tool_gui.option_id].visible = ctx:win_check("Windowed", options[tool_gui.option_id].visible)
-        if ctx:win_button("Reset position") then
+        if not tool_gui.is_popup then
+            options[tool_gui.option_id].visible = ctx:win_check("Windowed", options[tool_gui.option_id].visible)
+        end
+        if ctx:win_button("Reset window position") then
             tool_gui:reset_window_position()
         end
         ctx:win_indent(-common_gui.INDENT_SUB_INPUT)

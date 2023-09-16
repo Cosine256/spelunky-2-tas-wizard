@@ -17,7 +17,9 @@ tool_guis = {
     options = require("gui/options"),
     playback_recording = require("gui/playback_recording"),
     root = require("gui/root"),
+    single_frame_editor = require("gui/single_frame_editor"),
     status = require("gui/status"),
+    tas_data = require("gui/tas_data"),
     tas_root = require("gui/tas_root"),
     tas_settings = require("gui/tas_settings"),
     warp = require("gui/warp")
@@ -40,15 +42,18 @@ default_options = {
     root_window = { visible = true, x = 0.6, y = 0.95, w = 0.4, h = 1.6 },
     tas_root_window = { visible = true, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
     frames_window = { visible = false, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
+    single_frame_editor_window = { visible = false, x = -0.2, y = 0.25, w = 0.4, h = 0.5 },
     playback_recording_window = { visible = false, x = 0.6, y = 0.25, w = 0.4, h = 1.2 },
     file_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
     ghost_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
     warp_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
     tas_settings_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
+    tas_data_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
     options_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
     status_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
-    frames_shown_past = 8,
-    frames_shown_future = 8,
+    frames_viewer_follow_current = true,
+    frames_viewer_page_size = 10,
+    frames_viewer_step_size = 10,
     pause_recording_on_level_start = true,
     pause_playback_on_level_start = false,
     pause_desync = true,
@@ -171,7 +176,6 @@ local function on_gui_frame(ctx)
     for _, tool_gui in pairs(tool_guis) do
         tool_gui:draw_window(ctx)
     end
-    tool_guis.frames.draw_frame_edit_window(ctx, game_controller.current)
 end
 
 set_callback(function(ctx)

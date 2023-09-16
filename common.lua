@@ -32,16 +32,6 @@ function module.deep_copy(obj)
     end
 end
 
-function module.clamp(number, min, max)
-    if number < min then
-        return min
-    elseif number > max then
-        return max
-    else
-        return number
-    end
-end
-
 -- Converts a flag index (1-based) into an integer value. For example, flag 5 is converted into value 16.
 function module.flag_to_value(flag)
     return 1 << (flag - 1)

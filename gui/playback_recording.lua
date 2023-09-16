@@ -52,7 +52,7 @@ local function draw_tagged_frame(ctx, id, tas, tagged_frame, level_choices, leve
         level = level_combo:draw(ctx, "##level", level)
         ctx:win_inline()
         ctx:win_width(0.25)
-        frame = common.clamp(ctx:win_drag_int("Frame", frame, 0, #tas.levels[level].frames), 0, #tas.levels[level].frames)
+        frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame, 0, #tas.levels[level].frames)
         tagged_frame.level = level
         tagged_frame.frame = frame
     end

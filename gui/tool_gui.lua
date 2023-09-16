@@ -7,6 +7,7 @@ function Tool_GUI:new(id, name, option_id)
         name = name,
         option_id = option_id,
         window_label = name.."###"..id,
+        is_popup = false,
         _skip_draw = false
     }
     setmetatable(o, self)

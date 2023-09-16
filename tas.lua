@@ -476,20 +476,29 @@ function Tas:delete_frames(level_index, frame_start_index, frame_count)
     end
 end
 
-function Tas:clear_player_positions()
-    for _, level in ipairs(self.levels) do
-        for _, player in ipairs(level.players) do
-            player.start_position = nil
-        end
-        for _, frame in ipairs(level.frames) do
-            for _, player in ipairs(frame.players) do
-                player.position = nil
-            end
+function Tas:clear_player_positions(level_index)
+    local level = self.levels[level_index]
+    for _, player in ipairs(level.players) do
+        player.start_position = nil
+    end
+    for _, frame in ipairs(level.frames) do
+        for _, player in ipairs(frame.players) do
+            player.position = nil
         end
     end
 end
 
-function Tas:clear_level_snapshots()
+function Tas:clear_all_player_positions()
+    for level_index = 1, #self.levels do
+        self:clear_player_positions(level_index)
+    end
+end
+
+function Tas:clear_level_snapshot(level_index)
+    self.levels[level_index].snapshot = nil
+end
+
+function Tas:clear_all_level_snapshots()
     for _, level in ipairs(self.levels) do
         level.snapshot = nil
     end

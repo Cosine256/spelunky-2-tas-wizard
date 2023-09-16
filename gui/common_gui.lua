@@ -64,6 +64,45 @@ local PLAYER_COUNT_COMBO = ComboInput:new(OrderedTable:new({ 1, 2, 3, 4 }))
 
 local PLAYER_CHAR_COMBO = ComboInput:new(common_enums.PLAYER_CHAR)
 
+function module.draw_drag_int_clamped(ctx, label, value, min, max, clamp_min, clamp_max)
+    value = ctx:win_drag_int(label, value, min, max)
+    if (clamp_min or clamp_min == nil) and value < min then
+        return min
+    elseif (clamp_max or clamp_max == nil) and value > max then
+        return max
+    else
+        return value
+    end
+end
+
+local function draw_inputs_editor_check(ctx, inputs, input, label)
+    return ctx:win_check(label, inputs & input > 0) and (inputs | input) or (inputs & ~input)
+end
+
+function module.draw_inputs_editor(ctx, inputs)
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.LEFT, "Left")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.RIGHT, "Right")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.UP, "Up")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.DOWN, "Down")
+
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.JUMP, "Jump")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.WHIP, "Whip")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.BOMB, "Bomb")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.ROPE, "Rope")
+
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.DOOR, "Door")
+    ctx:win_inline()
+    inputs = draw_inputs_editor_check(ctx, inputs, INPUTS.RUN, "Run")
+
+    return inputs
+end
+
 function module.draw_tool_gui_panels(ctx, tool_guis)
     ctx:win_pushid("tool_gui_panels")
     local panel_drawn = false
