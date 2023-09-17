@@ -107,7 +107,7 @@ function module.draw_tool_gui_panels(ctx, tool_guis)
     ctx:win_pushid("tool_gui_panels")
     local panel_drawn = false
     for _, tool_gui in ipairs(tool_guis) do
-        if not options[tool_gui.option_id].visible then
+        if not tool_gui:is_window_open() then
             if panel_drawn then
                 ctx:win_separator()
             else

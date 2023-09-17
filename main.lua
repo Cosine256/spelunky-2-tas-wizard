@@ -42,7 +42,7 @@ default_options = {
     root_window = { visible = true, x = 0.6, y = 0.95, w = 0.4, h = 1.6 },
     tas_root_window = { visible = true, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
     frames_window = { visible = false, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
-    single_frame_editor_window = { visible = false, x = -0.2, y = 0.25, w = 0.4, h = 0.5 },
+    single_frame_editor_window = { x = -0.2, y = 0.25, w = 0.4, h = 0.5 },
     playback_recording_window = { visible = false, x = 0.6, y = 0.25, w = 0.4, h = 1.2 },
     file_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
     ghost_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
@@ -156,6 +156,7 @@ function set_current_tas(tas)
     end
     game_controller.set_tas(tas)
     tool_guis.frames.reset_vars()
+    tool_guis.single_frame_editor:close()
 end
 
 local function on_gui_frame(ctx)

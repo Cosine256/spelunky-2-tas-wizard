@@ -32,7 +32,7 @@ function module:draw_panel(ctx, is_window)
             ctx:win_pushid("frames")
             ctx:win_section("Frames", function()
                 ctx:win_indent(common_gui.INDENT_SECTION)
-                if options[tool_guis.frames.option_id].visible then
+                if tool_guis.frames:is_window_open() then
                     ctx:win_text("Panel detached into separate window.")
                 else
                     tool_guis.frames.level_index = level_index

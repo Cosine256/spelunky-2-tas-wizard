@@ -85,6 +85,7 @@ local function draw_tas_settings(ctx, tas)
     if ctx:win_button("Reset TAS") then
         game_controller.reset_session_vars()
         tool_guis.frames.reset_vars()
+        tool_guis.single_frame_editor:close()
         tas.levels = {}
         tas.tagged_frames = {}
     end

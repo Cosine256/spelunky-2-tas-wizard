@@ -246,7 +246,7 @@ function module:draw_panel(ctx, is_window)
             if edit_mode then
                 ctx:win_inline()
                 if ctx:win_button("Edit") then
-                    tool_guis.single_frame_editor.open(self.level_index, frame_index, viewer_player_index, input)
+                    tool_guis.single_frame_editor:open(self.level_index, frame_index, viewer_player_index, input)
                 end
             end
         else

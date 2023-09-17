@@ -11,13 +11,13 @@ function module:draw_panel(ctx, is_window)
     if not is_window then
         -- TODO: Can't distinguish between whether this is embedded in the options dropdown or the TAS Tool window.
         if ctx:win_button("Show TAS Tool window") then
-            if options.root_window.visible then
+            if tool_guis.root:is_window_open() then
                 if game_controller.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
                     -- This is a shortcut for the user to disable the presentation mode setting during playback.
                     options.presentation_enabled = false
                 end
             else
-                options.root_window.visible = true
+                tool_guis.root:set_window_open(true)
             end
         end
         ctx:win_separator()
@@ -74,7 +74,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_text(tool_gui.name)
         ctx:win_indent(common_gui.INDENT_SUB_INPUT)
         if not tool_gui.is_popup then
-            options[tool_gui.option_id].visible = ctx:win_check("Windowed", options[tool_gui.option_id].visible)
+            tool_gui:set_window_open(ctx:win_check("Windowed", tool_gui:is_window_open()))
         end
         if ctx:win_button("Reset window position") then
             tool_gui:reset_window_position()
