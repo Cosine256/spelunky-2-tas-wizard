@@ -9,7 +9,7 @@ function Tool_GUI:new(id, name, option_id)
         window_label = name.."###"..id,
         is_popup = false,
         is_popup_open = false,
-        _skip_draw = false
+        _reset_window_position = false
     }
     setmetatable(o, self)
     return o
@@ -20,7 +20,9 @@ function Tool_GUI:reset_window_position()
     local window_options = options[self.option_id]
     window_options.x, window_options.y = window_default_options.x, window_default_options.y
     window_options.w, window_options.h = window_default_options.w, window_default_options.h
-    self._skip_draw = true
+    if self:is_window_open() then
+        self._reset_window_position = true
+    end
 end
 
 function Tool_GUI:draw_window_options(ctx, is_window)
@@ -36,20 +38,21 @@ function Tool_GUI:draw_window_options(ctx, is_window)
 end
 
 function Tool_GUI:draw_window(ctx)
-    if self._skip_draw then
-        self._skip_draw = false
-    else
-        if self:is_window_open() then
-            local tool_gui_options = options[self.option_id]
-            -- TODO: Can't get or set the collapsed state of a window. If collapsed, then the wrong window height is written to the options.
-            local keep_open = ctx:window(self.window_label, tool_gui_options.x, tool_gui_options.y, tool_gui_options.w, tool_gui_options.h, true, function(_, pos, size)
-                tool_gui_options.x, tool_gui_options.y = pos.x, pos.y
-                tool_gui_options.w, tool_gui_options.h = size.x, size.y
-                self:draw_panel(ctx, true)
-            end)
-            if not keep_open then
-                self:set_window_open(false)
-            end
+    if self:is_window_open() then
+        local tool_gui_options = options[self.option_id]
+        local movable = true
+        if self._reset_window_position then
+            self._reset_window_position = false
+            movable = false
+        end
+        -- TODO: Can't get or set the collapsed state of a window. If collapsed, then the wrong window height is written to the options.
+        local keep_open = ctx:window(self.window_label, tool_gui_options.x, tool_gui_options.y, tool_gui_options.w, tool_gui_options.h, movable, function(_, pos, size)
+            tool_gui_options.x, tool_gui_options.y = pos.x, pos.y
+            tool_gui_options.w, tool_gui_options.h = size.x, size.y
+            self:draw_panel(ctx, true)
+        end)
+        if not keep_open then
+            self:set_window_open(false)
         end
     end
 end
