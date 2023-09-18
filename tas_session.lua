@@ -35,6 +35,7 @@ end
 function TasSession:update_current_level_index(can_create)
     self:clear_current_level_index()
     if self.tas:is_start_configured() then
+        -- TODO: current_level_index is miscalculated for either start type if the TAS starts in the camp and contains more than one level.
         if self.tas.start_type == "simple" then
             if self.tas.start_simple.tutorial_race then
                 if is_base_screen_camp() then
@@ -50,7 +51,6 @@ function TasSession:update_current_level_index(can_create)
                 end
             end
         elseif self.tas.start_type == "full" then
-            -- Note: Tutorial race full starts are not supported.
             if is_base_screen_level() then
                 if state.loading == 2 and test_flag(state.quest_flags, QUEST_FLAG.RESET) then
                     if self.tas.start_full.state_memory.level_count == 0 then
@@ -59,6 +59,8 @@ function TasSession:update_current_level_index(can_create)
                 else
                     self.current_level_index = state.level_count - self.tas.start_full.state_memory.level_count + 1
                 end
+            elseif is_base_screen_camp() then
+                self.current_level_index = 1
             end
         end
     end
