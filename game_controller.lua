@@ -80,8 +80,8 @@ module.playback_target_level = -1
 module.playback_target_frame = -1
 module.playback_force_full_run = nil
 module.playback_force_current_frame = nil
-module.desync_level = -1
-module.desync_frame = -1
+module.desync_level = nil
+module.desync_frame = nil
 local need_pause
 local force_level_snapshot
 
@@ -135,8 +135,8 @@ function module.reset_session_vars()
     module.playback_target_frame = -1
     module.playback_force_full_run = false
     module.playback_force_current_frame = false
-    module.desync_level = -1
-    module.desync_frame = -1
+    module.desync_level = nil
+    module.desync_frame = nil
     need_pause = false
     force_level_snapshot = nil
     reset_level_vars()
@@ -204,7 +204,7 @@ local function run_desync_callbacks()
 end
 
 local function check_position_desync(player_index, expected_pos, actual_pos)
-    if module.desync_level ~= -1 then
+    if module.desync_level then
         return
     end
     if not actual_pos or math.abs(expected_pos.x - actual_pos.x) > POSITION_DESYNC_EPSILON
@@ -234,7 +234,7 @@ local function check_position_desync(player_index, expected_pos, actual_pos)
 end
 
 local function set_level_end_desync()
-    if module.desync_level ~= -1 then
+    if module.desync_level then
         return
     end
     module.desync_level = active_tas_session.current_level_index
@@ -322,8 +322,8 @@ local function trigger_start_simple_warp(tas)
 
     trigger_warp_unload()
 
-    module.desync_level = -1
-    module.desync_frame = -1
+    module.desync_level = nil
+    module.desync_frame = nil
 
     return true
 end
@@ -331,8 +331,8 @@ end
 -- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Only level snapshots are supported, not any other screens such as the camp.
 local function trigger_level_snapshot_warp(level_snapshot)
     trigger_warp_unload()
-    module.desync_level = -1
-    module.desync_frame = -1
+    module.desync_level = nil
+    module.desync_frame = nil
     force_level_snapshot = level_snapshot
 end
 

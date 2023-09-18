@@ -16,7 +16,7 @@ function module:draw_panel(ctx, is_window)
             mode_string = "Playback"
         end
 
-        if game_controller.desync_level ~= -1 then
+        if game_controller.desync_level then
             ctx:win_text("WARNING: Desynchronized on frame: "..game_controller.desync_level.."-"..game_controller.desync_frame)
         end
 
