@@ -76,8 +76,8 @@ local next_callback_id = 0
 
 -- Determines how the game controller and the active TAS session interact with the game engine. If this is set to anything other than freeplay, then it is assumed that there is an active TAS session in a valid state for a non-freeplay mode.
 module.mode = common_enums.MODE.FREEPLAY
-module.playback_target_level = -1
-module.playback_target_frame = -1
+module.playback_target_level = nil
+module.playback_target_frame = nil
 module.playback_force_full_run = nil
 module.playback_force_current_frame = nil
 module.desync_level = nil
@@ -131,8 +131,8 @@ end
 -- TODO: "session" is a confusing name since there are also TasSession objects.
 function module.reset_session_vars()
     module.mode = common_enums.MODE.FREEPLAY
-    module.playback_target_level = -1
-    module.playback_target_frame = -1
+    module.playback_target_level = nil
+    module.playback_target_frame = nil
     module.playback_force_full_run = false
     module.playback_force_current_frame = false
     module.desync_level = nil
@@ -373,16 +373,16 @@ end
 
 function module.set_mode(new_mode)
     if new_mode == common_enums.MODE.FREEPLAY then
-        module.playback_target_level = -1
-        module.playback_target_frame = -1
+        module.playback_target_level = nil
+        module.playback_target_frame = nil
         module.playback_force_full_run = false
         module.playback_force_current_frame = false
         module.current_frame_index = nil
 
     elseif new_mode == common_enums.MODE.RECORD then
         if module.mode == common_enums.MODE.PLAYBACK then
-            module.playback_target_level = -1
-            module.playback_target_frame = -1
+            module.playback_target_level = nil
+            module.playback_target_frame = nil
             if module.current_frame_index then
                 if options.record_frame_clear_action == "remaining_level" then
                     active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, module.current_frame_index, true)
