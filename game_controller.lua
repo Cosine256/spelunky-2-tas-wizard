@@ -86,7 +86,7 @@ local need_pause
 local force_level_snapshot
 
 --[[
-Index of the current frame in a run, or -1 if undefined. The "current frame" is the frame that the game most recently executed, and its value is incremented after an update where a frame of gameplay occurred. A value of 0 means that no gameplay frames have occurred in the current level. This index is defined if and only if all of the following conditions are met:
+Index of the current frame in a run, or `nil` if undefined. The "current frame" is the frame that the game most recently executed, and its value is incremented after an update where a frame of gameplay occurred. A value of 0 means that no gameplay frames have occurred in the current level. This index is defined if and only if all of the following conditions are met:
     The active TAS's `current_level_index` is defined.
     The script has not been in freeplay mode at any point during the level.
     The active TAS has not been replaced at any point during the level.
@@ -121,7 +121,7 @@ local function reset_level_vars()
     if ghost_tas_session then
         ghost_tas_session:clear_current_level_index()
     end
-    module.current_frame_index = -1
+    module.current_frame_index = nil
     transition_frame = nil
     transition_last_get_frame_seen = nil
     reset_frame_vars()
@@ -377,13 +377,13 @@ function module.set_mode(new_mode)
         module.playback_target_frame = -1
         module.playback_force_full_run = false
         module.playback_force_current_frame = false
-        module.current_frame_index = -1
+        module.current_frame_index = nil
 
     elseif new_mode == common_enums.MODE.RECORD then
         if module.mode == common_enums.MODE.PLAYBACK then
             module.playback_target_level = -1
             module.playback_target_frame = -1
-            if module.current_frame_index ~= -1 then
+            if module.current_frame_index then
                 if options.record_frame_clear_action == "remaining_level" then
                     active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, module.current_frame_index, true)
                 elseif options.record_frame_clear_action == "remaining_run" then
@@ -483,12 +483,12 @@ function module.validate_current_frame()
         if active_tas_session.current_level_index > active_tas_session.tas:get_end_level_index() then
             message = "Current level is later than end of TAS ("..active_tas_session.tas:get_end_level_index().."-"..active_tas_session.tas:get_end_frame_index()..")."
             clear_current_level_index = true
-        elseif module.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index) then
+        elseif module.current_frame_index and module.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index) then
             message = "Current frame is later than end of level ("..active_tas_session.current_level_index.."-"..active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)..")."
         end
     end
     if message then
-        print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..module.current_frame_index.."): "..message.." Switching to freeplay mode.")
+        print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..tostring(module.current_frame_index).."): "..message.." Switching to freeplay mode.")
         if options.debug_print_pause then
             prinspect("validate_current_frame: Invalid current frame pause", get_frame())
         end
@@ -827,7 +827,7 @@ local function on_pre_update_transition()
     end
 end
 
--- TODO: Review and clean up the various "active TAS", "current_level_index", "state.loading", and "MODE.FREEPLAY" checks in these pre-update functions. Some of them are probably redundant.
+-- TODO: Review and clean up the various "active_tas_session", "current_level_index", "current_frame_index", "state.loading", and "MODE.FREEPLAY" checks in these pre-update functions. Some of them are probably redundant.
 local function on_pre_update()
     if state.loading == 2 then
         on_pre_screen_change()
@@ -928,9 +928,9 @@ local function on_post_update_frame_advanced()
     end
 end
 
--- TODO: Review and clean up the various "active TAS", "current_level_index", "state.loading", and "MODE.FREEPLAY" checks in these post-update functions. Some of them are probably redundant.
+-- TODO: Review and clean up the various "active_tas_session", "current_level_index", "current_frame_index", "state.loading", and "MODE.FREEPLAY" checks in these post-update functions. Some of them are probably redundant.
 local function on_post_update()
-    if module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index and module.current_frame_index ~= -1 then
+    if module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index and module.current_frame_index then
         -- Check whether this update advanced the TAS by one frame.
         -- TODO: This check feels messy. Is there a more concise way that I can check whether the previous update should advance the TAS by one frame?
         -- TODO: What does time_level do for loading 0->1? Should the TAS actually advance one frame? Can non-exiting players perform an action on this frame?

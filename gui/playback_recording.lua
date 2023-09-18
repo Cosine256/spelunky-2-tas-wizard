@@ -125,7 +125,7 @@ function module:draw_panel(ctx, is_window)
                 table.insert(tas.tagged_frames, {
                     name = "New",
                     level = active_tas_session.current_level_index or 1,
-                    frame = game_controller.current_frame_index == -1 and 0 or game_controller.current_frame_index
+                    frame = game_controller.current_frame_index or 0
                 })
             end
             ctx:win_separator()

@@ -201,7 +201,7 @@ function module:draw_panel(ctx, is_window)
         if game_controller.mode == common_enums.MODE.FREEPLAY then
             last_current_level_index = nil
             last_current_frame_index = nil
-        elseif session.current_level_index == module.level_index and game_controller.current_frame_index ~= -1
+        elseif session.current_level_index == module.level_index and game_controller.current_frame_index
             and (session.current_level_index ~= last_current_level_index or game_controller.current_frame_index ~= last_current_frame_index)
         then
             last_current_level_index = session.current_level_index
@@ -231,7 +231,7 @@ function module:draw_panel(ctx, is_window)
                     end
                 end
             end
-            if session.current_level_index == self.level_index and game_controller.current_frame_index ~= -1 then
+            if session.current_level_index == self.level_index and game_controller.current_frame_index then
                 if frame_index == game_controller.current_frame_index then
                     label = label.." (prev)"
                     if frame_index ~= end_frame_index then
