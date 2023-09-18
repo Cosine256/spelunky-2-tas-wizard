@@ -1,6 +1,5 @@
 local common = require("common")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("single_frame_editor", "Edit Frame", "single_frame_editor_window")
@@ -20,7 +19,7 @@ function module:close()
 end
 
 function module:draw_panel(ctx, is_window)
-    local tas = game_controller.current.tas
+    local tas = active_tas_session.tas
     ctx:win_text("Editing frame "..self.level_index.."-"..self.frame_index.." for player "..self.player_index..".")
     self.new_inputs = common_gui.draw_inputs_editor(ctx, self.new_inputs)
     ctx:win_input_text("Old input", common.input_to_string(self.old_inputs))

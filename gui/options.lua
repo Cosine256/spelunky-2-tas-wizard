@@ -33,7 +33,7 @@ function module:draw_panel(ctx, is_window)
     options.pause_desync = ctx:win_check("Pause when desync is detected", options.pause_desync)
 
     ctx:win_separator_text("Player paths")
-    -- TODO: This only controls visibility of the current TAS path, not the ghost TAS path. Maybe have this setting apply globally to all paths, and then add a new TAS setting for showing its own path.
+    -- TODO: This only controls visibility of the active TAS path, not the ghost TAS path. Maybe have this setting apply globally to all paths, and then add a new TAS setting for showing its own path.
     options.paths_visible = ctx:win_check("Draw paths", options.paths_visible)
     options.path_marks_visible = ctx:win_check("Draw path marks", options.path_marks_visible)
     options.path_mark_labels_visible = ctx:win_check("Draw path mark labels", options.path_mark_labels_visible)

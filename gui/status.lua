@@ -6,9 +6,7 @@ local Tool_GUI = require("gui/tool_gui")
 local module = Tool_GUI:new("status", "Status", "status_window")
 
 function module:draw_panel(ctx, is_window)
-    if game_controller.current then
-        local tas_session = game_controller.current
-
+    if active_tas_session then
         local mode_string
         if game_controller.mode == common_enums.MODE.FREEPLAY then
             mode_string = "Freeplay"
@@ -32,8 +30,8 @@ function module:draw_panel(ctx, is_window)
         ctx:win_text("Level")
         ctx:win_inline()
         local level_text = "Undefined"
-        if tas_session.current_level_index ~= -1 then
-            level_text = common.level_metadata_to_string(tas_session.tas, tas_session.current_level_index, true)
+        if active_tas_session.current_level_index ~= -1 then
+            level_text = common.level_metadata_to_string(active_tas_session.tas, active_tas_session.current_level_index, true)
         end
         ctx:win_input_text("##level_text", level_text)
 
@@ -41,7 +39,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_inline()
         local frame_text = "Undefined"
         if game_controller.current_frame_index ~= -1 then
-            frame_text = game_controller.current_frame_index.."/"..#tas_session.current_level_data.frames
+            frame_text = game_controller.current_frame_index.."/"..#active_tas_session.current_level_data.frames
         end
         ctx:win_input_text("##frame_text", frame_text)
     else

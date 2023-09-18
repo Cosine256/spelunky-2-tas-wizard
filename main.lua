@@ -10,6 +10,8 @@ local drawing = require("drawing")
 local game_controller = require("game_controller")
 local persistence = require("persistence")
 local Tas = require("tas")
+local TasSession = require("tas_session")
+
 tool_guis = {
     file = require("gui/file"),
     frames = require("gui/frames"),
@@ -102,6 +104,11 @@ default_options = {
     debug_print_snapshot = false
 }
 
+---@type TasSession
+active_tas_session = nil
+---@type TasSession
+ghost_tas_session = nil
+
 local function save_script_data(save_ctx)
     local save_data = {
         format = CURRENT_SCRIPT_DATA_FORMAT,
@@ -144,19 +151,33 @@ local function load_script_data(load_ctx)
     end
 end
 
--- Reset the TAS session and set the current TAS.
--- TODO: Could move this into game_controller and give the frames GUI a way to listen for the change.
-function set_current_tas(tas)
-    if game_controller.current then
-        local current_tas = game_controller.current.tas
-        if current_tas.level_snapshot_request_id then
-            game_controller.clear_level_snapshot_request(current_tas.level_snapshot_request_id)
-            current_tas.level_snapshot_request_id = nil
+-- Set the TAS for a new active TAS session.
+function set_active_tas(tas)
+    if active_tas_session then
+        if active_tas_session.tas.level_snapshot_request_id then
+            game_controller.clear_level_snapshot_request(active_tas_session.tas.level_snapshot_request_id)
+            active_tas_session.tas.level_snapshot_request_id = nil
         end
     end
-    game_controller.set_tas(tas)
+    game_controller.reset_session_vars()
+    if tas then
+        active_tas_session = TasSession:new(tas)
+        active_tas_session:update_current_level_index(false)
+    else
+        active_tas_session = nil
+    end
     tool_guis.frames.reset_vars()
     tool_guis.single_frame_editor:close()
+end
+
+-- Set the TAS for a new ghost TAS session.
+function set_ghost_tas(tas)
+    if tas then
+        ghost_tas_session = TasSession:new(tas)
+        ghost_tas_session:update_current_level_index(false)
+    else
+        ghost_tas_session = nil
+    end
 end
 
 local function on_gui_frame(ctx)
@@ -166,11 +187,11 @@ local function on_gui_frame(ctx)
 
     ctx:draw_layer(DRAW_LAYER.BACKGROUND)
     drawing.update_screen_vars()
-    if game_controller.ghost_tas_session and options.ghost_path_visible then
-        drawing.draw_tas_path(ctx, game_controller.ghost_tas_session, true)
+    if ghost_tas_session and options.ghost_path_visible then
+        drawing.draw_tas_path(ctx, ghost_tas_session, true)
     end
-    if game_controller.current and options.paths_visible then
-        drawing.draw_tas_path(ctx, game_controller.current, false)
+    if active_tas_session and options.paths_visible then
+        drawing.draw_tas_path(ctx, active_tas_session, false)
     end
 
     ctx:draw_layer(DRAW_LAYER.WINDOW)

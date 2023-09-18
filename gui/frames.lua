@@ -37,7 +37,7 @@ function module.reset_vars()
 end
 
 local function compute_last_page_frame_index()
-    return math.max(#game_controller.current.tas.levels[module.level_index].frames - options.frames_viewer_page_size + 1, 1)
+    return math.max(#active_tas_session.tas.levels[module.level_index].frames - options.frames_viewer_page_size + 1, 1)
 end
 
 local function draw_page_controls(ctx, id)
@@ -50,7 +50,7 @@ local function draw_page_controls(ctx, id)
         viewer_frame_index = math.max(viewer_frame_index - options.frames_viewer_step_size, 1)
     end
     ctx:win_inline()
-    viewer_frame_index = common_gui.draw_drag_int_clamped(ctx, "##viewer_frame_index", viewer_frame_index, 1, #game_controller.current.tas.levels[module.level_index].frames)
+    viewer_frame_index = common_gui.draw_drag_int_clamped(ctx, "##viewer_frame_index", viewer_frame_index, 1, #active_tas_session.tas.levels[module.level_index].frames)
     ctx:win_inline()
     if ctx:win_button("+"..options.frames_viewer_step_size) and viewer_frame_index < compute_last_page_frame_index() then
         viewer_frame_index = math.min(viewer_frame_index + options.frames_viewer_step_size, compute_last_page_frame_index())
@@ -63,8 +63,6 @@ local function draw_page_controls(ctx, id)
 end
 
 function module:draw_panel(ctx, is_window)
-    local session = game_controller.current
-
     ctx:win_section("Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         self:draw_window_options(ctx, is_window)
@@ -75,6 +73,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
 
+    local session = active_tas_session
     if not session then
         ctx:win_text("No TAS loaded.")
         return
@@ -94,11 +93,11 @@ function module:draw_panel(ctx, is_window)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
         selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
-        if selected_level_index == 0 and game_controller.current.current_level_index == -1 then
+        if selected_level_index == 0 and session.current_level_index == -1 then
             ctx:win_text("Current level is undefined.")
             return
         end
-        self.level_index = selected_level_index == 0 and game_controller.current.current_level_index or selected_level_index
+        self.level_index = selected_level_index == 0 and session.current_level_index or selected_level_index
     end
 
     local frames = session.tas.levels[self.level_index].frames

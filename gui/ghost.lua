@@ -1,15 +1,14 @@
-local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("ghost", "Ghost", "ghost_window")
 
 function module:draw_panel(ctx, is_window)
-    if game_controller.current and ctx:win_button("Create ghost from current") then
-        game_controller.set_ghost_tas(game_controller.current.tas:copy())
+    if active_tas_session and ctx:win_button("Create ghost from active TAS") then
+        set_ghost_tas(active_tas_session.tas:copy())
     end
-    if game_controller.ghost_tas_session then
+    if ghost_tas_session then
         if ctx:win_button("Clear ghost") then
-            game_controller.set_ghost_tas(nil)
+            set_ghost_tas(nil)
         end
     else
         ctx:win_text("No ghost TAS loaded.")

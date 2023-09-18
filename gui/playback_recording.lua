@@ -81,13 +81,12 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator()
 
-    if not game_controller.current then
+    if not active_tas_session then
         ctx:win_text("No TAS loaded.")
-    elseif not game_controller.current.tas:is_start_configured() then
+    elseif not active_tas_session.tas:is_start_configured() then
         ctx:win_text("TAS start settings are not fully configured.")
     else
-        local tas_session = game_controller.current
-        local tas = tas_session.tas
+        local tas = active_tas_session.tas
 
         ctx:win_separator_text("Playback")
 
@@ -125,7 +124,7 @@ function module:draw_panel(ctx, is_window)
             if ctx:win_button("Create tagged frame") then
                 table.insert(tas.tagged_frames, {
                     name = "New",
-                    level = tas_session.current_level_index == -1 and 1 or tas_session.current_level_index,
+                    level = active_tas_session.current_level_index == -1 and 1 or active_tas_session.current_level_index,
                     frame = game_controller.current_frame_index == -1 and 0 or game_controller.current_frame_index
                 })
             end
@@ -133,7 +132,7 @@ function module:draw_panel(ctx, is_window)
             if game_controller.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
             elseif game_controller.mode == common_enums.MODE.RECORD then
-                if (tas_session.current_level_index < #tas.levels or game_controller.current_frame_index < #tas_session.current_level_data.frames) and ctx:win_button("Switch to playback mode") then
+                if (active_tas_session.current_level_index < #tas.levels or game_controller.current_frame_index < #active_tas_session.current_level_data.frames) and ctx:win_button("Switch to playback mode") then
                     if options.debug_print_mode then
                         print("Switching to playback mode.")
                     end

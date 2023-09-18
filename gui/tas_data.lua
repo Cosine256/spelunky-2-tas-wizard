@@ -1,6 +1,5 @@
 local common = require("common")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local ComboInput = require("gui/combo_input")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
@@ -11,12 +10,12 @@ local selected_level_index = 0
 local level_index
 
 function module:draw_panel(ctx, is_window)
-    if not game_controller.current then
+    if not active_tas_session then
         ctx:win_text("No TAS loaded.")
-    elseif #game_controller.current.tas.levels == 0 then
+    elseif #active_tas_session.tas.levels == 0 then
         ctx:win_text("TAS contains no recorded or generated data.")
     else
-        local tas = game_controller.current.tas
+        local tas = active_tas_session.tas
         local level_choices = {
             [0] = "Current level"
         }
@@ -25,10 +24,10 @@ function module:draw_panel(ctx, is_window)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
         selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
-        if selected_level_index == 0 and game_controller.current.current_level_index == -1 then
+        if selected_level_index == 0 and active_tas_session.current_level_index == -1 then
             ctx:win_text("Current level is undefined.")
         else
-            level_index = selected_level_index == 0 and game_controller.current.current_level_index or selected_level_index
+            level_index = selected_level_index == 0 and active_tas_session.current_level_index or selected_level_index
             ctx:win_pushid("frames")
             ctx:win_section("Frames", function()
                 ctx:win_indent(common_gui.INDENT_SECTION)

@@ -1,5 +1,4 @@
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
 
@@ -13,14 +12,14 @@ function module:draw_panel(ctx, is_window)
     ctx:win_width(0.9999)
     options.tas_file_name = ctx:win_input_text("##tas_file_name", options.tas_file_name)
     if ctx:win_button("New##new_tas") then
-        set_current_tas(options.new_tas:copy())
+        set_active_tas(options.new_tas:copy())
         file_io_status = "New TAS created"
     end
     ctx:win_inline()
-    if game_controller.current then
+    if active_tas_session then
         if ctx:win_button("Save##save_tas") then
-            file_io_status = tas_persistence.save_tas(game_controller.current.tas, options.tas_file_name)
-            tas_persistence.add_tas_file_history(options.tas_file_name, game_controller.current.tas.name)
+            file_io_status = tas_persistence.save_tas(active_tas_session.tas, options.tas_file_name)
+            tas_persistence.add_tas_file_history(options.tas_file_name, active_tas_session.tas.name)
         end
         ctx:win_inline()
     end
@@ -30,7 +29,7 @@ function module:draw_panel(ctx, is_window)
         if tas then
             tas_persistence.add_tas_file_history(options.tas_file_name, tas.name)
         end
-        set_current_tas(tas)
+        set_active_tas(tas)
     end
     ctx:win_inline()
     if ctx:win_button("Load as ghost##load_ghost") then
@@ -39,12 +38,12 @@ function module:draw_panel(ctx, is_window)
         if tas then
             tas_persistence.add_tas_file_history(options.tas_file_name, tas.name)
         end
-        game_controller.set_ghost_tas(tas)
+        set_ghost_tas(tas)
     end
-    if game_controller.current then
+    if active_tas_session then
         ctx:win_inline()
         if ctx:win_button("Unload##unload_tas") then
-            set_current_tas(nil)
+            set_active_tas(nil)
             file_io_status = "TAS unloaded"
         end
     end

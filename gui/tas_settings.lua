@@ -93,8 +93,8 @@ local function draw_tas_settings(ctx, tas)
 end
 
 function module:draw_panel(ctx, is_window)
-    if game_controller.current then
-        draw_tas_settings(ctx, game_controller.current.tas)
+    if active_tas_session then
+        draw_tas_settings(ctx, active_tas_session.tas)
     else
         ctx:win_text("No TAS loaded.")
     end

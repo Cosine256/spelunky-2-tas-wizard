@@ -10,12 +10,12 @@ local module = Tool_GUI:new("warp", "Warp", "warp_window")
 local warp_level = 1
 
 function module:draw_panel(ctx, is_window)
-    if not game_controller.current then
+    if not active_tas_session then
         ctx:win_text("No TAS loaded.")
-    elseif not game_controller.current.tas:is_start_configured() then
+    elseif not active_tas_session.tas:is_start_configured() then
         ctx:win_text("TAS start settings are not fully configured.")
     else
-        local tas = game_controller.current.tas
+        local tas = active_tas_session.tas
         local warp_choices = {}
         if #tas.levels == 0 then
             warp_choices[1] = "1"
