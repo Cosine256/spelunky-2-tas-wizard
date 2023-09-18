@@ -93,7 +93,7 @@ function module:draw_panel(ctx, is_window)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
         selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
-        if selected_level_index == 0 and session.current_level_index == -1 then
+        if selected_level_index == 0 and not session.current_level_index then
             ctx:win_text("Current level is undefined.")
             return
         end

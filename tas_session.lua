@@ -1,15 +1,13 @@
 ---@class TasSession
     ---@field tas any
-    ---@field current_level_index integer Index of the current level in the TAS, or -1 if undefined. This index is defined if and only if all of the following conditions are met: <br> - The game is in a playable level or the camp. <br> - The level type matches whether the TAS is for regular levels or the tutorial race. <br> - The TAS contains level data for this level.
+    ---@field current_level_index integer? Index of the current level in the TAS, or `nil` if undefined. This index is defined if and only if all of the following conditions are met: <br> - The game is in a playable level or the camp. <br> - The level type matches whether the TAS is for regular levels or the tutorial race. <br> - The TAS contains level data for this level.
     ---@field current_level_data any Reference to the TAS's level data for the `current_level_index`, if the index is defined.
 local TasSession = {}
 TasSession.__index = TasSession
 
 function TasSession:new(tas)
     local o = {
-        tas = tas,
-        current_level_index = -1,
-        current_level_data = nil
+        tas = tas
     }
     setmetatable(o, self)
     return o
@@ -63,7 +61,7 @@ function TasSession:update_current_level_index(can_create)
             end
         end
     end
-    if self.current_level_index ~= -1 then
+    if self.current_level_index then
         self.current_level_data = self.tas.levels[self.current_level_index]
         if not self.current_level_data then
             if can_create and (self.current_level_index == 1 or self.tas.levels[self.current_level_index - 1]) then
@@ -71,14 +69,14 @@ function TasSession:update_current_level_index(can_create)
                 self.current_level_data = self.tas:create_level_data()
                 self.tas.levels[self.current_level_index] = self.current_level_data
             else
-                self.current_level_index = -1
+                self.current_level_index = nil
             end
         end
     end
 end
 
 function TasSession:clear_current_level_index()
-    self.current_level_index = -1
+    self.current_level_index = nil
     self.current_level_data = nil
 end
 

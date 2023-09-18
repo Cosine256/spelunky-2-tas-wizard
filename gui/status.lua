@@ -30,7 +30,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_text("Level")
         ctx:win_inline()
         local level_text = "Undefined"
-        if active_tas_session.current_level_index ~= -1 then
+        if active_tas_session.current_level_index then
             level_text = common.level_metadata_to_string(active_tas_session.tas, active_tas_session.current_level_index, true)
         end
         ctx:win_input_text("##level_text", level_text)

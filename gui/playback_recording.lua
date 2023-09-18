@@ -124,7 +124,7 @@ function module:draw_panel(ctx, is_window)
             if ctx:win_button("Create tagged frame") then
                 table.insert(tas.tagged_frames, {
                     name = "New",
-                    level = active_tas_session.current_level_index == -1 and 1 or active_tas_session.current_level_index,
+                    level = active_tas_session.current_level_index or 1,
                     frame = game_controller.current_frame_index == -1 and 0 or game_controller.current_frame_index
                 })
             end
