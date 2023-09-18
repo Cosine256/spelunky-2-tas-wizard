@@ -38,8 +38,8 @@ function module:draw_panel(ctx, is_window)
         ctx:win_text("Frame")
         ctx:win_inline()
         local frame_text = "Undefined"
-        if game_controller.current_frame_index then
-            frame_text = game_controller.current_frame_index.."/"..#active_tas_session.current_level_data.frames
+        if active_tas_session.current_frame_index then
+            frame_text = active_tas_session.current_frame_index.."/"..#active_tas_session.current_level_data.frames
         end
         ctx:win_input_text("##frame_text", frame_text)
     else

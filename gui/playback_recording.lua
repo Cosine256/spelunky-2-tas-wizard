@@ -125,14 +125,16 @@ function module:draw_panel(ctx, is_window)
                 table.insert(tas.tagged_frames, {
                     name = "New",
                     level = active_tas_session.current_level_index or 1,
-                    frame = game_controller.current_frame_index or 0
+                    frame = active_tas_session.current_frame_index or 0
                 })
             end
             ctx:win_separator()
             if game_controller.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
             elseif game_controller.mode == common_enums.MODE.RECORD then
-                if (active_tas_session.current_level_index < #tas.levels or game_controller.current_frame_index < #active_tas_session.current_level_data.frames) and ctx:win_button("Switch to playback mode") then
+                if (not active_tas_session.current_level_index or active_tas_session.current_level_index < #tas.levels
+                    or active_tas_session.current_frame_index < #active_tas_session.current_level_data.frames) and ctx:win_button("Switch to playback mode")
+                then
                     if options.debug_print_mode then
                         print("Switching to playback mode.")
                     end

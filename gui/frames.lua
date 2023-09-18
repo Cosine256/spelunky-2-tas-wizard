@@ -201,12 +201,12 @@ function module:draw_panel(ctx, is_window)
         if game_controller.mode == common_enums.MODE.FREEPLAY then
             last_current_level_index = nil
             last_current_frame_index = nil
-        elseif session.current_level_index == module.level_index and game_controller.current_frame_index
-            and (session.current_level_index ~= last_current_level_index or game_controller.current_frame_index ~= last_current_frame_index)
+        elseif session.current_level_index == module.level_index and session.current_frame_index
+            and (session.current_level_index ~= last_current_level_index or session.current_frame_index ~= last_current_frame_index)
         then
             last_current_level_index = session.current_level_index
-            last_current_frame_index = game_controller.current_frame_index
-            viewer_frame_index = math.min(game_controller.current_frame_index - math.ceil(options.frames_viewer_page_size / 2) + 1, compute_last_page_frame_index())
+            last_current_frame_index = session.current_frame_index
+            viewer_frame_index = math.min(session.current_frame_index - math.ceil(options.frames_viewer_page_size / 2) + 1, compute_last_page_frame_index())
         end
     end
     if viewer_frame_index > #frames then
@@ -231,13 +231,13 @@ function module:draw_panel(ctx, is_window)
                     end
                 end
             end
-            if session.current_level_index == self.level_index and game_controller.current_frame_index then
-                if frame_index == game_controller.current_frame_index then
+            if session.current_level_index == self.level_index and session.current_frame_index then
+                if frame_index == session.current_frame_index then
                     label = label.." (prev)"
                     if frame_index ~= end_frame_index then
                         draw_separator = true
                     end
-                elseif frame_index == game_controller.current_frame_index + 1 then
+                elseif frame_index == session.current_frame_index + 1 then
                     label = label.." (next)"
                 end
             end

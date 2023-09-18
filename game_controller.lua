@@ -85,14 +85,6 @@ module.desync_frame = nil
 local need_pause
 local force_level_snapshot
 
---[[
-Index of the current frame in a run, or `nil` if undefined. The "current frame" is the frame that the game most recently executed, and its value is incremented after an update where a frame of gameplay occurred. A value of 0 means that no gameplay frames have occurred in the current level. This index is defined if and only if all of the following conditions are met:
-    The active TAS's `current_level_index` is defined.
-    The script has not been in freeplay mode at any point during the level.
-    The active TAS has not been replaced at any point during the level.
-    The active TAS contains frame data for this index.
-]]
-module.current_frame_index = nil
 -- The number of frames that have executed on the transition screen, based on `get_frame()`.
 local transition_frame
 local transition_last_get_frame_seen
@@ -121,7 +113,6 @@ local function reset_level_vars()
     if ghost_tas_session then
         ghost_tas_session:clear_current_level_index()
     end
-    module.current_frame_index = nil
     transition_frame = nil
     transition_last_get_frame_seen = nil
     reset_frame_vars()
@@ -210,7 +201,7 @@ local function check_position_desync(player_index, expected_pos, actual_pos)
     if not actual_pos or math.abs(expected_pos.x - actual_pos.x) > POSITION_DESYNC_EPSILON
             or math.abs(expected_pos.y - actual_pos.y) > POSITION_DESYNC_EPSILON then
         module.desync_level = active_tas_session.current_level_index
-        module.desync_frame = module.current_frame_index
+        module.desync_frame = active_tas_session.current_frame_index
         if actual_pos then
             print("Desynchronized on frame "..module.desync_level.."-"..module.desync_frame..": Actual position differs from expected position:")
             print("    Player: "..player_index)
@@ -238,7 +229,7 @@ local function set_level_end_desync()
         return
     end
     module.desync_level = active_tas_session.current_level_index
-    module.desync_frame = module.current_frame_index
+    module.desync_frame = active_tas_session.current_frame_index
     print("Desynchronized on frame "..module.desync_level.."-"..module.desync_frame..": Expected end of level.")
     if options.pause_desync then
         if options.debug_print_pause then
@@ -377,17 +368,17 @@ function module.set_mode(new_mode)
         module.playback_target_frame = nil
         module.playback_force_full_run = false
         module.playback_force_current_frame = false
-        module.current_frame_index = nil
+        active_tas_session.current_frame_index = nil
 
     elseif new_mode == common_enums.MODE.RECORD then
         if module.mode == common_enums.MODE.PLAYBACK then
             module.playback_target_level = nil
             module.playback_target_frame = nil
-            if module.current_frame_index then
+            if active_tas_session.current_frame_index then
                 if options.record_frame_clear_action == "remaining_level" then
-                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, module.current_frame_index, true)
+                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index, true)
                 elseif options.record_frame_clear_action == "remaining_run" then
-                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, module.current_frame_index, false)
+                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index, false)
                 end
             end
         end
@@ -398,7 +389,7 @@ function module.set_mode(new_mode)
 
         local can_use_current_frame = not module.playback_force_full_run and module.mode ~= common_enums.MODE.FREEPLAY
             and (module.playback_force_current_frame or options.playback_from == module.PLAYBACK_FROM.NOW_OR_LEVEL or options.playback_from == module.PLAYBACK_FROM.NOW)
-            and ((module.playback_target_level == active_tas_session.current_level_index and module.playback_target_frame >= module.current_frame_index) or module.playback_target_level > active_tas_session.current_level_index)
+            and (active_tas_session.current_level_index and ((module.playback_target_level == active_tas_session.current_level_index and module.playback_target_frame >= active_tas_session.current_frame_index) or module.playback_target_level > active_tas_session.current_level_index))
 
         local best_load_level_index = -1
         if module.playback_force_full_run then
@@ -460,7 +451,7 @@ function module.set_mode(new_mode)
             end
         else
             -- Playback to the target from the current frame.
-            if active_tas_session.current_level_index == module.playback_target_level and module.current_frame_index == module.playback_target_frame then
+            if active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index == module.playback_target_frame then
                 if options.debug_print_mode then
                     print("Already at playback target: target_level="..module.playback_target_level.." target_frame="..module.playback_target_frame.." load_level_index="..load_level_index)
                 end
@@ -483,12 +474,12 @@ function module.validate_current_frame()
         if active_tas_session.current_level_index > active_tas_session.tas:get_end_level_index() then
             message = "Current level is later than end of TAS ("..active_tas_session.tas:get_end_level_index().."-"..active_tas_session.tas:get_end_frame_index()..")."
             clear_current_level_index = true
-        elseif module.current_frame_index and module.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index) then
+        elseif active_tas_session.current_frame_index and active_tas_session.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index) then
             message = "Current frame is later than end of level ("..active_tas_session.current_level_index.."-"..active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)..")."
         end
     end
     if message then
-        print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..tostring(module.current_frame_index).."): "..message.." Switching to freeplay mode.")
+        print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..tostring(active_tas_session.current_frame_index).."): "..message.." Switching to freeplay mode.")
         if options.debug_print_pause then
             prinspect("validate_current_frame: Invalid current frame pause", get_frame())
         end
@@ -515,8 +506,8 @@ function module.validate_playback_target()
     elseif module.playback_target_frame > #active_tas_session.tas.levels[module.playback_target_level].frames then
         message = "Target is later than end of level ("..module.playback_target_level.."-"..#active_tas_session.tas.levels[module.playback_target_level].frames..")."
     elseif (state.loading == 0 or state.loading == 3) and (active_tas_session.current_level_index > module.playback_target_level
-            or (active_tas_session.current_level_index == module.playback_target_level and module.current_frame_index > module.playback_target_frame)) then
-        message = "Current frame ("..active_tas_session.current_level_index.."-"..module.current_frame_index..") is later than playback target."
+            or (active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index > module.playback_target_frame)) then
+        message = "Current frame ("..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index..") is later than playback target."
     end
     if message then
         print("Warning: Invalid playback target ("..module.playback_target_level.."-"..module.playback_target_frame.."): "..message.." Switching to freeplay mode.")
@@ -681,7 +672,7 @@ local function on_post_level_gen()
         print("on_post_level_gen: current_level_index="..active_tas_session.current_level_index)
     end
 
-    module.current_frame_index = 0
+    active_tas_session.current_frame_index = 0
     if (module.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_level_start) or (module.mode == common_enums.MODE.RECORD and options.pause_recording_on_level_start) then
         need_pause = true
     end
@@ -737,12 +728,12 @@ local function get_cutscene_input(player_index, logic_cutscene, last_frame, skip
     elseif logic_cutscene.timer == skip_frame - 1 then
         -- The skip button needs to be pressed one frame early. The cutscene is skipped when the button is released on the next frame.
         if options.debug_print_input then
-            print("get_cutscene_input: Sending cutscene skip input: frame="..active_tas_session.current_level_index.."-"..module.current_frame_index.." timer="..logic_cutscene.timer)
+            print("get_cutscene_input: Sending cutscene skip input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer)
         end
         return common_enums.SKIP_INPUT:value_by_id(skip_input_id).input
     elseif logic_cutscene.timer == skip_frame then
         if options.debug_print_input then
-            print("get_cutscene_input: Deferring to recorded input: frame="..active_tas_session.current_level_index.."-"..module.current_frame_index.." timer="..logic_cutscene.timer)
+            print("get_cutscene_input: Deferring to recorded input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer)
         end
         return nil
     else
@@ -773,9 +764,9 @@ local function on_pre_update_level()
             end
             if not input and module.mode == common_enums.MODE.PLAYBACK then
                 -- Only playback mode should submit normal gameplay inputs.
-                if active_tas_session.current_level_data.frames[module.current_frame_index + 1] then
+                if active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1] then
                     -- Submit the input from the upcoming frame.
-                    input = active_tas_session.current_level_data.frames[module.current_frame_index + 1].players[player_index].input
+                    input = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1].players[player_index].input
                 else
                     -- There is no upcoming frame stored for the current level. The level should have ended during the previous update.
                     set_level_end_desync()
@@ -788,7 +779,7 @@ local function on_pre_update_level()
                 state.player_inputs.player_slots[player_index].buttons_gameplay = input
                 if options.debug_print_frame or options.debug_print_input then
                     -- TODO: This is super spammy when paused.
-                    --print("on_pre_update_level: Sending input for upcoming frame: frame="..active_tas_session.current_level_index.."-"..(module.current_frame_index + 1).." input="..common.input_to_string(input))
+                    --print("on_pre_update_level: Sending input for upcoming frame: frame="..active_tas_session.current_level_index.."-"..(active_tas_session.current_frame_index + 1).." input="..common.input_to_string(input))
                 end
             end
         end
@@ -848,7 +839,7 @@ local function on_pre_update()
 end
 
 local function handle_playback_target()
-    if module.validate_playback_target() and active_tas_session.current_level_index == module.playback_target_level and module.current_frame_index == module.playback_target_frame then
+    if module.validate_playback_target() and active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index == module.playback_target_frame then
         -- Current frame is the playback target.
         if options.playback_target_pause then
             if options.debug_print_pause then
@@ -862,7 +853,7 @@ local function handle_playback_target()
                 print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to record mode.")
             end
             module.set_mode(common_enums.MODE.RECORD)
-        elseif new_mode == common_enums.MODE.FREEPLAY or (active_tas_session.current_level_index == #active_tas_session.tas.levels and module.current_frame_index == #active_tas_session.current_level_data.frames) then
+        elseif new_mode == common_enums.MODE.FREEPLAY or (active_tas_session.current_level_index == #active_tas_session.tas.levels and active_tas_session.current_frame_index == #active_tas_session.current_level_data.frames) then
             if options.debug_print_mode then
                 print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to freeplay mode.")
             end
@@ -879,20 +870,20 @@ end
 -- Called after every game update where the current frame index was incremented.
 local function on_post_update_frame_advanced()
     if options.debug_print_frame or options.debug_print_input then
-        print("on_post_update_frame_advanced: frame="..active_tas_session.current_level_index.."-"..module.current_frame_index.." input="..common.input_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
+        print("on_post_update_frame_advanced: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." input="..common.input_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
     end
 
-    local current_frame_data = active_tas_session.current_level_data.frames[module.current_frame_index]
+    local current_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index]
     if module.mode == common_enums.MODE.RECORD then
         -- Only record mode can create new frames. Playback mode should only be active during frames that already exist.
         if options.record_frame_write_type == "overwrite" then
             if not current_frame_data then
                 current_frame_data = active_tas_session.tas:create_frame_data()
-                active_tas_session.current_level_data.frames[module.current_frame_index] = current_frame_data
+                active_tas_session.current_level_data.frames[active_tas_session.current_frame_index] = current_frame_data
             end
         elseif options.record_frame_write_type == "insert" then
             current_frame_data = active_tas_session.tas:create_frame_data()
-            table.insert(active_tas_session.current_level_data.frames, module.current_frame_index, current_frame_data)
+            table.insert(active_tas_session.current_level_data.frames, active_tas_session.current_frame_index, current_frame_data)
         end
     end
 
@@ -907,7 +898,7 @@ local function on_post_update_frame_advanced()
             -- Record the current player inputs for the frame that just executed.
             local input = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUT_MASK
             if options.debug_print_frame or options.debug_print_input then
-                print("on_post_update: Recording input: frame="..active_tas_session.current_level_index.."-"..module.current_frame_index
+                print("on_post_update: Recording input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
                     .." player="..player_index.." input="..common.input_to_string(input))
             end
             player.input = input
@@ -930,15 +921,16 @@ end
 
 -- TODO: Review and clean up the various "active_tas_session", "current_level_index", "current_frame_index", "state.loading", and "MODE.FREEPLAY" checks in these post-update functions. Some of them are probably redundant.
 local function on_post_update()
-    if module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index and module.current_frame_index then
+    if module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index and active_tas_session.current_frame_index then
         -- Check whether this update advanced the TAS by one frame.
         -- TODO: This check feels messy. Is there a more concise way that I can check whether the previous update should advance the TAS by one frame?
         -- TODO: What does time_level do for loading 0->1? Should the TAS actually advance one frame? Can non-exiting players perform an action on this frame?
         if ((pre_update_loading == 3 and state.loading == 0) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
-                and (pre_update_time_level ~= state.time_level or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene)) then
-            module.current_frame_index = module.current_frame_index + 1
+            and (pre_update_time_level ~= state.time_level or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
+        then
+            active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
             on_post_update_frame_advanced()
-        elseif module.current_frame_index == 0 and module.mode == common_enums.MODE.PLAYBACK then
+        elseif active_tas_session.current_frame_index == 0 and module.mode == common_enums.MODE.PLAYBACK then
             -- Handle a possible frame 0 playback target.
             handle_playback_target()
         end
