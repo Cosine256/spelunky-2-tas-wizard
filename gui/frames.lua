@@ -148,6 +148,7 @@ function module:draw_panel(ctx, is_window)
             if ctx:win_button("Insert") then
                 session.tas:insert_frames(self.level_index, bulk_start_index, bulk_count, bulk_inputs)
                 bulk_start_index = bulk_start_index + bulk_count
+                session.desync = nil
                 game_controller.validate_current_frame()
                 game_controller.validate_playback_target()
             end
@@ -161,6 +162,7 @@ function module:draw_panel(ctx, is_window)
                 ctx:win_text("Frames to delete (inclusive): "..bulk_start_index.." to "..(bulk_start_index + bulk_count - 1))
                 if ctx:win_button("Delete") then
                     session.tas:delete_frames(self.level_index, bulk_start_index, bulk_count)
+                    session.desync = nil
                     game_controller.validate_current_frame()
                     game_controller.validate_playback_target()
                 end

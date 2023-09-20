@@ -80,8 +80,6 @@ module.playback_target_level = nil
 module.playback_target_frame = nil
 module.playback_force_full_run = nil
 module.playback_force_current_frame = nil
-module.desync_level = nil
-module.desync_frame = nil
 local need_pause
 local force_level_snapshot
 
@@ -126,8 +124,6 @@ function module.reset_session_vars()
     module.playback_target_frame = nil
     module.playback_force_full_run = false
     module.playback_force_current_frame = false
-    module.desync_level = nil
-    module.desync_frame = nil
     need_pause = false
     force_level_snapshot = nil
     reset_level_vars()
@@ -195,23 +191,24 @@ local function run_desync_callbacks()
 end
 
 local function check_position_desync(player_index, expected_pos, actual_pos)
-    if module.desync_level then
+    if active_tas_session.desync then
         return
     end
     if not actual_pos or math.abs(expected_pos.x - actual_pos.x) > POSITION_DESYNC_EPSILON
-            or math.abs(expected_pos.y - actual_pos.y) > POSITION_DESYNC_EPSILON then
-        module.desync_level = active_tas_session.current_level_index
-        module.desync_frame = active_tas_session.current_frame_index
+        or math.abs(expected_pos.y - actual_pos.y) > POSITION_DESYNC_EPSILON
+    then
+        local desync = {
+            level_index = active_tas_session.current_level_index,
+            frame_index = active_tas_session.current_frame_index,
+            desc = "Actual player "..player_index.." position differs from expected position."
+        }
+        active_tas_session.desync = desync
+        print("Desynchronized on frame "..desync.level_index.."-"..desync.frame_index..": "..desync.desc)
+        print("    Expected: x="..expected_pos.x.." y="..expected_pos.y)
         if actual_pos then
-            print("Desynchronized on frame "..module.desync_level.."-"..module.desync_frame..": Actual position differs from expected position:")
-            print("    Player: "..player_index)
-            print("    Expected: x="..expected_pos.x.." y="..expected_pos.y)
             print("    Actual: x="..actual_pos.x.." y="..actual_pos.y)
-            print("    Diff: dx="..(expected_pos.x - actual_pos.x).." dy="..(expected_pos.y - actual_pos.y))
+            print("    Diff: dx="..(actual_pos.x - expected_pos.x).." dy="..(actual_pos.y - expected_pos.y))
         else
-            print("Desynchronized on frame "..module.desync_level.."-"..module.desync_frame..": Actual position differs from expected position:")
-            print("    Player: "..player_index)
-            print("    Expected: x="..expected_pos.x.." y="..expected_pos.y)
             print("    Actual: nil")
         end
         if options.pause_desync then
@@ -225,12 +222,16 @@ local function check_position_desync(player_index, expected_pos, actual_pos)
 end
 
 local function set_level_end_desync()
-    if module.desync_level then
+    if active_tas_session.desync then
         return
     end
-    module.desync_level = active_tas_session.current_level_index
-    module.desync_frame = active_tas_session.current_frame_index
-    print("Desynchronized on frame "..module.desync_level.."-"..module.desync_frame..": Expected end of level.")
+    local desync = {
+        level_index = active_tas_session.current_level_index,
+        frame_index = active_tas_session.current_frame_index,
+        desc = "Expected end of level."
+    }
+    active_tas_session.desync = desync
+    print("Desynchronized on frame "..desync.level_index.."-"..desync.frame_index..": "..desync.desc)
     if options.pause_desync then
         if options.debug_print_pause then
             prinspect("level_end_desync: pause", get_frame())
@@ -313,8 +314,7 @@ local function trigger_start_simple_warp(tas)
 
     trigger_warp_unload()
 
-    module.desync_level = nil
-    module.desync_frame = nil
+    active_tas_session.desync = nil
 
     return true
 end
@@ -322,8 +322,7 @@ end
 -- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Only level snapshots are supported, not any other screens such as the camp.
 local function trigger_level_snapshot_warp(level_snapshot)
     trigger_warp_unload()
-    module.desync_level = nil
-    module.desync_frame = nil
+    active_tas_session.desync = nil
     force_level_snapshot = level_snapshot
 end
 

@@ -83,6 +83,7 @@ local function draw_tas_settings(ctx, tas)
 
     ctx:win_separator_text("Reset")
     if ctx:win_button("Reset TAS") then
+        active_tas_session.desync = nil
         game_controller.reset_session_vars()
         tool_guis.frames.reset_vars()
         tool_guis.single_frame_editor:close()

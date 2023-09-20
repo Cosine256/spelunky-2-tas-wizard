@@ -3,6 +3,7 @@
     ---@field current_level_index integer? Index of the current level in the TAS, or `nil` if undefined. This index is defined if and only if all of the following conditions are met: <br> - The game is in a playable level or the camp. <br> - The level type matches whether the TAS is for regular levels or the tutorial race. <br> - The TAS contains level data for this level.
     ---@field current_level_data any Reference to the TAS's level data for the `current_level_index`, if the index is defined.
     ---@field current_frame_index integer? Index of the current frame in the TAS, or `nil` if undefined. The "current frame" is the frame that the game most recently executed, and its value is incremented after an update where a frame of gameplay occurred. A value of 0 means that no gameplay frames have occurred in the current level. This index is defined if and only if all of the following conditions are met: <br> - `current_level_index` is defined. <br> - The current frame has been continuously tracked since the level loaded. <br> - The TAS contains frame data for this frame.
+    ---@field desync table? Data for desynchronization of the TAS.
 local TasSession = {}
 TasSession.__index = TasSession
 
