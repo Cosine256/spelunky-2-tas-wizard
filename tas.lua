@@ -32,7 +32,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 15
+local CURRENT_FORMAT = 16
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -273,7 +273,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [14] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 15,
         update = function(o)
             local new_levels = {}
             for level_index, level in ipairs(o.levels) do
@@ -298,6 +298,17 @@ local FORMAT_UPDATERS = {
             end
             o.levels = new_levels
         end
+    },
+    [15] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, level in ipairs(o.levels) do
+                if level.metadata.screen == SCREEN.TRANSITION then
+                    level.transition_exit_frame_index = o.transition_exit_frame
+                end
+            end
+            o.transition_exit_frame = nil
+        end
     }
 }
 
@@ -315,7 +326,6 @@ function Tas:to_raw(serial_mod)
         olmec_cutscene_skip_input = self.olmec_cutscene_skip_input,
         tiamat_cutscene_skip_frame = self.tiamat_cutscene_skip_frame,
         tiamat_cutscene_skip_input = self.tiamat_cutscene_skip_input,
-        transition_exit_frame = self.transition_exit_frame,
         tagged_frames = common.deep_copy(self.tagged_frames),
         save_player_positions = self.save_player_positions,
         save_level_snapshots = self.save_level_snapshots
@@ -352,6 +362,7 @@ function Tas:to_raw(serial_mod)
     for level_index, self_level in ipairs(self.levels) do
         local copy_level = {
             metadata = common.deep_copy(self_level.metadata),
+            transition_exit_frame_index = self_level.transition_exit_frame_index
         }
         copy.levels[level_index] = copy_level
         if self_level.players then

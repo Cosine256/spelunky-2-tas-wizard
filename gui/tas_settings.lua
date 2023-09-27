@@ -19,7 +19,7 @@ local function draw_tas_settings(ctx, tas)
     end
     common_gui.draw_tas_start_settings(ctx, tas, false)
 
-    ctx:win_separator_text("Cutscenes and transitions")
+    ctx:win_separator_text("Cutscenes")
     local olmec_cutscene_skip = ctx:win_check("Skip Olmec cutscene", tas.olmec_cutscene_skip_frame ~= -1)
     if olmec_cutscene_skip then
         if tas.olmec_cutscene_skip_frame == -1 then
@@ -51,20 +51,6 @@ local function draw_tas_settings(ctx, tas)
         tas.tiamat_cutscene_skip_input = SKIP_INPUT_COMBO:draw(ctx, "Tiamat cutscene skip input", tas.tiamat_cutscene_skip_input)
     else
         tas.tiamat_cutscene_skip_frame = -1
-    end
-    local transition_continue = ctx:win_check("Automatically exit transitions", tas.transition_exit_frame ~= -1)
-    if transition_continue then
-        if tas.transition_exit_frame == -1 then
-            tas.transition_exit_frame = game_controller.TRANSITION_EXIT_FIRST_FRAME
-        end
-        -- Maximum value is a soft limit. User can manually set it to be higher.
-        tas.transition_exit_frame = ctx:win_drag_int("Transition exit frame", tas.transition_exit_frame,
-            game_controller.TRANSITION_EXIT_FIRST_FRAME, 300)
-        if tas.transition_exit_frame < game_controller.TRANSITION_EXIT_FIRST_FRAME then
-            tas.transition_exit_frame = game_controller.TRANSITION_EXIT_FIRST_FRAME
-        end
-    else
-        tas.transition_exit_frame = -1
     end
 
     ctx:win_separator_text("Generated data")

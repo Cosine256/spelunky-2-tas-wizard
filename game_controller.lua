@@ -699,12 +699,12 @@ local function on_pre_update_tasable_screen()
         end
     elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
         inputs = {}
-        if active_tas_session.tas.transition_exit_frame ~= -1 then
+        if active_tas_session.current_level_data.transition_exit_frame_index ~= -1 then
             for player_index = 1, active_tas_session.tas:get_player_count() do
                 -- By default, suppress inputs from every player.
                 inputs[player_index] = INPUTS.NONE
             end
-            if active_tas_session.current_frame_index + 1 >= active_tas_session.tas.transition_exit_frame then
+            if active_tas_session.current_frame_index + 1 >= active_tas_session.current_level_data.transition_exit_frame_index then
                 -- Have player 1 provide the transition exit input. The exit is triggered during the first update where the input is seen, not when it's released.
                 if options.debug_print_input then
                     print("on_pre_update_tasable_screen: Submitting transition exit input.")

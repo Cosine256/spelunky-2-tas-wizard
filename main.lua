@@ -41,11 +41,11 @@ default_options = {
     presentation_enabled = false,
     -- TODO: Order of tool GUIs is arbitrary. Alphabetize and put them in a sub-table with their IDs as keys?
     -- TODO: Choose better default positions and sizes.
-    root_window = { visible = true, x = 0.6, y = 0.95, w = 0.4, h = 1.6 },
-    tas_root_window = { visible = true, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
-    frames_window = { visible = false, x = -1.0, y = 0.95, w = 0.4, h = 1.2 },
+    root_window = { visible = true, x = 0.6, y = -0.2, w = 0.4, h = 0.75 },
+    tas_root_window = { visible = true, x = -1.0, y = 0.8, w = 0.4, h = 1.15 },
+    frames_window = { visible = false, x = -1.0, y = 0.8, w = 0.4, h = 1.15 },
     single_frame_editor_window = { x = -0.2, y = 0.25, w = 0.4, h = 0.5 },
-    playback_recording_window = { visible = false, x = 0.6, y = 0.25, w = 0.4, h = 1.2 },
+    playback_recording_window = { visible = false, x = 0.6, y = 0.8, w = 0.4, h = 1.0 },
     file_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
     ghost_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
     warp_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
@@ -90,7 +90,6 @@ default_options = {
         olmec_cutscene_skip_input = "jump",
         tiamat_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME,
         tiamat_cutscene_skip_input = "jump",
-        transition_exit_frame = game_controller.TRANSITION_EXIT_FIRST_FRAME,
         tagged_frames = {},
         save_player_positions = true,
         save_level_snapshots = true
