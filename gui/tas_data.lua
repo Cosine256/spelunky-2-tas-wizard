@@ -1,4 +1,5 @@
 local common = require("common")
+local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
 local ComboInput = require("gui/combo_input")
 local OrderedTable = require("ordered_table")
@@ -20,7 +21,7 @@ function module:draw_panel(ctx, is_window)
             [0] = "Current level"
         }
         for i = 1, #tas.levels do
-            level_choices[i] = common.level_metadata_to_string(tas, i)
+            level_choices[i] = common.level_to_string(tas, i, false)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
         selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
@@ -43,20 +44,43 @@ function module:draw_panel(ctx, is_window)
             ctx:win_pushid("generated_data")
             ctx:win_section("Generated", function()
                 ctx:win_indent(common_gui.INDENT_SECTION)
-                if ctx:win_button("Clear player positions") then
-                    tas:clear_player_positions(level_index)
+                local level = tas.levels[level_index]
+                local tasable_screen = common_enums.TASABLE_SCREEN[level.metadata.screen]
+                ctx:win_separator_text("Metadata")
+                ctx:win_text("Screen: "..tasable_screen.name)
+                if level.metadata.world then
+                    ctx:win_text("World: "..level.metadata.world)
                 end
-                if tas.levels[level_index].snapshot then
-                    ctx:win_text("Level snapshot: Captured")
-                    if ctx:win_button("Clear level snapshot") then
-                        tas:clear_level_snapshot(level_index)
+                if level.metadata.level then
+                    ctx:win_text("Level: "..level.metadata.world)
+                end
+                if level.metadata.theme then
+                    ctx:win_text("Theme: "..common.THEME_NAME[level.metadata.theme])
+                end
+                ctx:win_separator_text("Player positions")
+                if tasable_screen.record_frames then
+                    if ctx:win_button("Clear player positions") then
+                        tas:clear_player_positions(level_index)
                     end
                 else
-                    if level_index == 1 then
-                        ctx:win_text("Level snapshot: N/A")
+                    ctx:win_text(tasable_screen.name.." screen does not store player positions.")
+                end
+                ctx:win_separator_text("Level snapshot")
+                if tasable_screen.can_snapshot then
+                    if level.snapshot then
+                        ctx:win_text("Level snapshot captured.")
+                        if ctx:win_button("Clear level snapshot") then
+                            tas:clear_level_snapshot(level_index)
+                        end
                     else
-                        ctx:win_text("Level snapshot: Not captured")
+                        if level_index == 1 then
+                            ctx:win_text("Level snapshot is not applicable for the first level.")
+                        else
+                            ctx:win_text("No level snapshot captured.")
+                        end
                     end
+                else
+                    ctx:win_text(tasable_screen.name.." screen does not support snapshots.")
                 end
                 ctx:win_indent(-common_gui.INDENT_SECTION)
             end)

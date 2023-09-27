@@ -1,3 +1,5 @@
+local common_enums = require("common_enums")
+
 local module = {}
 
 module.THEME_NAME = {
@@ -74,25 +76,39 @@ function module.input_to_string(input)
         ..((input & INPUTS.RUN > 0) and "+" or "_")
 end
 
-function module.world_level_theme_to_string(world, level, theme)
+local function world_level_theme_to_string(world, level, theme)
     local theme_name = module.THEME_NAME[theme] or "Unknown"
-    if theme == THEME.BASE_CAMP then
-        return theme_name
-    elseif world == 8 and theme == THEME.COSMIC_OCEAN then
+    if world == 8 and theme == THEME.COSMIC_OCEAN then
         return "7-"..level.." "..theme_name
     else
         return world.."-"..level.." "..theme_name
     end
 end
 
-function module.level_metadata_to_string(tas, index, include_total)
-    local level_data = tas.levels[index]
-    local text = tostring(index)..(include_total and ("/"..#tas.levels) or "")
-    if level_data and level_data.metadata then
-        return text.." ("..module.world_level_theme_to_string(level_data.metadata.world, level_data.metadata.level, level_data.metadata.theme)..")"
+function module.level_metadata_to_string(metadata)
+    local tasable_screen = common_enums.TASABLE_SCREEN[metadata.screen]
+    if metadata.screen == SCREEN.LEVEL or metadata.screen == SCREEN.TRANSITION then
+        local wlt_text = world_level_theme_to_string(metadata.world, metadata.level, metadata.theme)
+        if metadata.screen == SCREEN.TRANSITION then
+            return wlt_text.." "..tasable_screen.name
+        else
+            return wlt_text
+        end
     else
-        return text
+        return tasable_screen.name
     end
+end
+
+function module.level_to_string(tas, level_index, include_total)
+    local text = tostring(level_index)
+    if include_total then
+        text = text.."/"..#tas.levels
+    end
+    local level = tas.levels[level_index]
+    if level then
+        text = text.." ("..module.level_metadata_to_string(level.metadata)..")"
+    end
+    return text
 end
 
 return module

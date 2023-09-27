@@ -239,23 +239,24 @@ local function draw_tas_start_settings_simple(ctx, tas)
         -- Update all level and frame data to match the new player count.
         print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating level and frame data.")
         start.player_count = new_player_count
-        -- TODO: Loop nesting here feels odd. There are probably other ways I could do it. Is this the best one?
         for _, level in ipairs(tas.levels) do
-            for player_index = 1, CONST.MAX_PLAYERS do
-                if player_index > new_player_count then
-                    level.players[player_index] = nil
-                elseif not level.players[player_index] then
-                    level.players[player_index] = {}
-                end
-            end
-            for _, frame in ipairs(level.frames) do
+            if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
                 for player_index = 1, CONST.MAX_PLAYERS do
                     if player_index > new_player_count then
-                        frame.players[player_index] = nil
-                    elseif not frame.players[player_index] then
-                        frame.players[player_index] = {
-                            input = INPUTS.NONE
-                        }
+                        level.players[player_index] = nil
+                    elseif not level.players[player_index] then
+                        level.players[player_index] = {}
+                    end
+                end
+                for _, frame in ipairs(level.frames) do
+                    for player_index = 1, CONST.MAX_PLAYERS do
+                        if player_index > new_player_count then
+                            frame.players[player_index] = nil
+                        elseif not frame.players[player_index] then
+                            frame.players[player_index] = {
+                                input = INPUTS.NONE
+                            }
+                        end
                     end
                 end
             end
@@ -281,8 +282,15 @@ local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
         ctx:win_text("Full starts cannot be captured for the default TAS settings.")
     else
         if tas:is_start_configured() then
-            local start_area_name = common.world_level_theme_to_string(
-                tas.start_full.state_memory.world_next, tas.start_full.state_memory.level_next, tas.start_full.state_memory.theme_next)
+            local metadata = {
+                screen = tas.start_full.state_memory.screen_next
+            }
+            if metadata.screen == SCREEN.LEVEL or metadata.screen == SCREEN.TRANSITION then
+                metadata.world = tas.start_full.state_memory.world_next
+                metadata.level = tas.start_full.state_memory.level_next
+                metadata.theme = tas.start_full.state_memory.theme_next
+            end
+            local start_area_name = common.level_metadata_to_string(metadata)
             ctx:win_text("Current level snapshot: "..start_area_name)
         else
             ctx:win_text("Current level snapshot: None")

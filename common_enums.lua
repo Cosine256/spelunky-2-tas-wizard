@@ -17,6 +17,39 @@ module.PLAYBACK_TARGET_MODE = OrderedTable:new({
     { id = "freeplay", name = "Switch to freeplay", mode = module.MODE.FREEPLAY }
 })
 
+---@class TasableScreen Attributes for a TASable screen. A TASable screen is a screen which supports TAS recording and playback.
+---@field name string Display name for this screen.
+---@field count_frames boolean Whether a TAS session can count frames on this screen with its `current_frame_index` field.
+---@field record_frames boolean Whether the screen supports recording data for individual frames and playback to specific frames. Frame data includes player inputs and positions.
+---@field can_snapshot boolean Whether the screen supports capturing and applying screen snapshots. Snapshots are currently limited to screens that trigger the `PRE_LEVEL_GENERATION` callback due to the need for a mid-update callback to apply certain changes.
+---@type { [SCREEN]: TasableScreen } Table of all TASable screens.
+module.TASABLE_SCREEN = {
+    [SCREEN.CAMP] = {
+        name = "Base Camp",
+        count_frames = true,
+        record_frames = true,
+        can_snapshot = true
+    },
+    [SCREEN.LEVEL] = {
+        name = "Level",
+        count_frames = true,
+        record_frames = true,
+        can_snapshot = true
+    },
+    [SCREEN.TRANSITION] = {
+        name = "Transition",
+        count_frames = true,
+        record_frames = false,
+        can_snapshot = false
+    },
+    [SCREEN.SPACESHIP] = {
+        name = "Spaceship Cutscene",
+        count_frames = false,
+        record_frames = false,
+        can_snapshot = false
+    }
+}
+
 module.PLAYER_CHAR = OrderedTable:new({
     { id = "ana", name = "Ana", ent_type_id = ENT_TYPE.CHAR_ANA_SPELUNKY, texture_id = TEXTURE.DATA_TEXTURES_CHAR_YELLOW_0 },
     { id = "margaret", name = "Margaret", ent_type_id = ENT_TYPE.CHAR_MARGARET_TUNNEL, texture_id = TEXTURE.DATA_TEXTURES_CHAR_MAGENTA_0 },

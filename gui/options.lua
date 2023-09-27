@@ -28,8 +28,8 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Automatic pausing")
     ctx:win_text("These options control automatic game engine pauses. The pauses are the same ones used by Overlunky for frame advancing. These pauses are not recommended for use in regular Playlunky, as you will not have controls to unpause or frame advance.")
-    options.pause_recording_on_level_start = ctx:win_check("Pause recording on level start", options.pause_recording_on_level_start)
-    options.pause_playback_on_level_start = ctx:win_check("Pause playback on level start", options.pause_playback_on_level_start)
+    options.pause_recording_on_level_start = ctx:win_check("Pause recording on camp or level start", options.pause_recording_on_level_start)
+    options.pause_playback_on_level_start = ctx:win_check("Pause playback on camp or level start", options.pause_playback_on_level_start)
     options.pause_desync = ctx:win_check("Pause when desync is detected", options.pause_desync)
 
     ctx:win_separator_text("Player paths")

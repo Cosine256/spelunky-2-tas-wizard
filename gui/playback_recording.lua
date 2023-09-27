@@ -38,35 +38,41 @@ local END_TAGGED_FRAME = {
 
 local function draw_tagged_frame(ctx, id, tas, tagged_frame, level_choices, level_combo)
     ctx:win_pushid(id)
-    local delete = false
+
     local level = tagged_frame.level == -1 and #tas.levels or tagged_frame.level
-    local frame = tagged_frame.frame == -1 and #tas.levels[level].frames or tagged_frame.frame
     if tagged_frame.immutable then
         ctx:win_text(tagged_frame.name)
         ctx:win_input_text("##level", level_choices:value_by_id(level))
-        ctx:win_inline()
-        ctx:win_width(0.25)
-        ctx:win_input_text("Frame", tostring(frame))
     else
         tagged_frame.name = ctx:win_input_text("Name", tagged_frame.name)
         level = level_combo:draw(ctx, "##level", level)
-        ctx:win_inline()
-        ctx:win_width(0.25)
-        frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame, 0, #tas.levels[level].frames)
         tagged_frame.level = level
+    end
+
+    local end_frame = tas:get_end_frame_index(level)
+    local frame = tagged_frame.frame == -1 and end_frame or tagged_frame.frame
+    ctx:win_inline()
+    ctx:win_width(0.25)
+    if tagged_frame.immutable then
+        ctx:win_input_text("Frame", tostring(frame))
+    else
+        frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame, 0, end_frame)
         tagged_frame.frame = frame
     end
+
     if ctx:win_button("Playback to here") then
         game_controller.playback_target_level = level
         game_controller.playback_target_frame = frame
         game_controller.set_mode(common_enums.MODE.PLAYBACK)
     end
+    local delete = false
     if not tagged_frame.immutable then
         ctx:win_inline()
         if ctx:win_button("Delete") then
             delete = true
         end
     end
+
     ctx:win_popid()
     return delete
 end
@@ -103,7 +109,7 @@ function module:draw_panel(ctx, is_window)
 
             local level_choices = {}
             for i = 1, #tas.levels do
-                level_choices[i] = common.level_metadata_to_string(tas, i)
+                level_choices[i] = common.level_to_string(tas, i, false)
             end
             level_choices = OrderedTable:new(level_choices)
             local level_combo = ComboInput:new(level_choices)
@@ -132,8 +138,9 @@ function module:draw_panel(ctx, is_window)
             if game_controller.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
             elseif game_controller.mode == common_enums.MODE.RECORD then
-                if (not active_tas_session.current_level_index or active_tas_session.current_level_index < #tas.levels
-                    or active_tas_session.current_frame_index < #active_tas_session.current_level_data.frames) and ctx:win_button("Switch to playback mode")
+                if (not active_tas_session.current_level_index
+                    or not active_tas_session.tas:is_end_or_later(active_tas_session.current_level_index, active_tas_session.current_frame_index))
+                    and ctx:win_button("Switch to playback mode")
                 then
                     if options.debug_print_mode then
                         print("Switching to playback mode.")
@@ -166,7 +173,7 @@ function module:draw_panel(ctx, is_window)
             "Nearest level"
         }
         for i = 1, #tas.levels do
-            playback_from_choices[i + 3] = "Level "..common.level_metadata_to_string(tas, i)
+            playback_from_choices[i + 3] = "Level "..common.level_to_string(tas, i, false)
         end
         local playback_from_combo = ComboInput:new(OrderedTable:new(playback_from_choices))
         options.playback_from = playback_from_combo:draw(ctx, "Playback from", options.playback_from)

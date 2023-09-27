@@ -32,7 +32,7 @@ function Tas:copy()
 end
 
 -- TODO: Reset format to 1 and remove updaters before first release.
-local CURRENT_FORMAT = 14
+local CURRENT_FORMAT = 15
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -226,7 +226,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [13] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 14,
         update = function(o)
             local function add_journal_progress(state_memory)
                 state_memory.journal_progress_sticker_count = 0
@@ -270,6 +270,33 @@ local FORMAT_UPDATERS = {
                     end
                 end
             end
+        end
+    },
+    [14] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            local new_levels = {}
+            for level_index, level in ipairs(o.levels) do
+                table.insert(new_levels, level)
+                if level.metadata.theme == THEME.BASE_CAMP then
+                    level.metadata = {
+                        screen = SCREEN.CAMP
+                    }
+                else
+                    level.metadata.screen = SCREEN.LEVEL
+                    if level_index < #o.levels and level.metadata.theme ~= THEME.TIAMAT and level.metadata.theme ~= THEME.HUNDUN then
+                        table.insert(new_levels, {
+                            metadata = {
+                                screen = SCREEN.TRANSITION,
+                                world = level.metadata.world,
+                                level = level.metadata.level,
+                                theme = level.metadata.theme
+                            }
+                        })
+                    end
+                end
+            end
+            o.levels = new_levels
         end
     }
 }
@@ -325,14 +352,15 @@ function Tas:to_raw(serial_mod)
     for level_index, self_level in ipairs(self.levels) do
         local copy_level = {
             metadata = common.deep_copy(self_level.metadata),
-            players = {},
-            frames = {}
         }
         copy.levels[level_index] = copy_level
-        for player_index, self_player in ipairs(self_level.players) do
-            copy_level.players[player_index] = {}
-            if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
-                copy_level.players[player_index].start_position = common.deep_copy(self_player.start_position)
+        if self_level.players then
+            copy_level.players = {}
+            for player_index, self_player in ipairs(self_level.players) do
+                copy_level.players[player_index] = {}
+                if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
+                    copy_level.players[player_index].start_position = common.deep_copy(self_player.start_position)
+                end
             end
         end
         if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_level_snapshots) and self_level.snapshot then
@@ -341,17 +369,20 @@ function Tas:to_raw(serial_mod)
                 copy_level.snapshot.adventure_seed = common.adventure_seed_to_string(copy_level.snapshot.adventure_seed)
             end
         end
-        for frame_index, self_frame in ipairs(self_level.frames) do
-            local copy_frame = {
-                players = {}
-            }
-            copy_level.frames[frame_index] = copy_frame
-            for player_index, self_player in ipairs(self_frame.players) do
-                copy_frame.players[player_index] = {
-                    input = self_player.input
+        if self_level.frames then
+            copy_level.frames = {}
+            for frame_index, self_frame in ipairs(self_level.frames) do
+                local copy_frame = {
+                    players = {}
                 }
-                if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
-                    copy_frame.players[player_index].position = common.deep_copy(self_player.position)
+                copy_level.frames[frame_index] = copy_frame
+                for player_index, self_player in ipairs(self_frame.players) do
+                    copy_frame.players[player_index] = {
+                        input = self_player.input
+                    }
+                    if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
+                        copy_frame.players[player_index].position = common.deep_copy(self_player.position)
+                    end
                 end
             end
         end
@@ -384,17 +415,6 @@ function Tas:from_raw(raw, serial_mod)
     return Tas:new(raw, false)
 end
 
-function Tas:create_level_data()
-    local level_data = {
-        players = {},
-        frames = {}
-    }
-    for player_index = 1, self:get_player_count() do
-        level_data.players[player_index] = {}
-    end
-    return level_data
-end
-
 function Tas:create_frame_data()
     local frame_data = {
         players = {}
@@ -410,31 +430,36 @@ function Tas:get_end_level_index()
     return #self.levels
 end
 
--- Gets the final frame index of the specified level, or the last level if `nil`.
+-- Gets the final frame index of the specified level, or the final level if `nil`. Returns 0 if the level does not store frame data.
 function Tas:get_end_frame_index(level_index)
-    return #self.levels[level_index or #self.levels].frames
+    local level = self.levels[level_index or #self.levels]
+    return common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames and #level.frames or 0
 end
 
--- Gets the final level index and frame index.
+-- Gets the final level index and frame index. The frame index will be 0 if the final level does not store frame data.
 function Tas:get_end_indices()
-    return #self.levels, #self.levels[#self.levels].frames
+    local end_level = self.levels[#self.levels]
+    return #self.levels, common_enums.TASABLE_SCREEN[end_level.metadata.screen].record_frames and #end_level.frames or 0
 end
 
--- Removes frames after (but not including) the specified frame.
-function Tas:remove_frames_after(level_index, frame_index, only_level)
-    if only_level then
-        for i = frame_index + 1, #self.levels[level_index].frames do
-            self.levels[level_index].frames[i] = nil
-        end
-    else
-        for i = level_index, #self.levels do
-            if i == level_index then
-                for j = frame_index + 1, #self.levels[i].frames do
-                    self.levels[i].frames[j] = nil
-                end
-            else
-                self.levels[i] = nil
-            end
+-- Gets whether the given level index and frame index is equal to or later than the end of the TAS.
+function Tas:is_end_or_later(level_index, frame_index)
+    return level_index > #self.levels or (level_index == #self.levels and frame_index >= self:get_end_frame_index(level_index))
+end
+
+-- Removes levels after (but not including) the specified level.
+function Tas:remove_levels_after(level_index)
+    for i = level_index + 1, #self.levels do
+        self.levels[i] = nil
+    end
+end
+
+-- Removes frames after (but not including) the specified frame within only the specified level.
+function Tas:remove_frames_after(level_index, frame_index)
+    local level = self.levels[level_index]
+    if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
+        for i = frame_index + 1, #level.frames do
+            level.frames[i] = nil
         end
     end
 end
@@ -478,12 +503,14 @@ end
 
 function Tas:clear_player_positions(level_index)
     local level = self.levels[level_index]
-    for _, player in ipairs(level.players) do
-        player.start_position = nil
-    end
-    for _, frame in ipairs(level.frames) do
-        for _, player in ipairs(frame.players) do
-            player.position = nil
+    if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
+        for _, player in ipairs(level.players) do
+            player.start_position = nil
+        end
+        for _, frame in ipairs(level.frames) do
+            for _, player in ipairs(frame.players) do
+                player.position = nil
+            end
         end
     end
 end

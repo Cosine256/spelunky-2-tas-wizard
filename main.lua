@@ -104,9 +104,9 @@ default_options = {
     debug_print_snapshot = false
 }
 
----@type TasSession
+---@type TasSession?
 active_tas_session = nil
----@type TasSession
+---@type TasSession?
 ghost_tas_session = nil
 
 local function save_script_data(save_ctx)
@@ -162,7 +162,7 @@ function set_active_tas(tas)
     game_controller.reset_session_vars()
     if tas then
         active_tas_session = TasSession:new(tas)
-        active_tas_session:update_current_level_index(false)
+        active_tas_session:find_current_level()
     else
         active_tas_session = nil
     end
@@ -174,7 +174,7 @@ end
 function set_ghost_tas(tas)
     if tas then
         ghost_tas_session = TasSession:new(tas)
-        ghost_tas_session:update_current_level_index(false)
+        ghost_tas_session:find_current_level()
     else
         ghost_tas_session = nil
     end

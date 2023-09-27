@@ -25,6 +25,7 @@ function module:draw_panel(ctx, is_window)
     ctx:win_input_text("Old input", common.input_to_string(self.old_inputs))
     ctx:win_input_text("New input", common.input_to_string(self.new_inputs))
     if ctx:win_button("OK") then
+        -- TODO: This popup doesn't elegantly handle situations where the underlying TAS data changes after the popup is spawned. The popup should be closed automatically when this happens.
         if tas.levels[self.level_index] and tas.levels[self.level_index].frames[self.frame_index]
             and tas.levels[self.level_index].frames[self.frame_index].players[self.player_index]
         then

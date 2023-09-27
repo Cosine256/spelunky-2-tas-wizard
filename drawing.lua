@@ -50,7 +50,7 @@ local function draw_tas_path_mark(ctx, pos, label, ucolor)
 end
 
 function module.draw_tas_path(ctx, tas_session, is_ghost)
-    if not tas_session.current_level_data or state.screen == SCREEN.OPTIONS then
+    if state.screen == SCREEN.OPTIONS or not tas_session.current_level_data or not tas_session.current_tasable_screen.record_frames then
         return
     end
     local level_data = tas_session.current_level_data

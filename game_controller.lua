@@ -76,17 +76,19 @@ local next_callback_id = 0
 
 -- Determines how the game controller and the active TAS session interact with the game engine. If this is set to anything other than freeplay, then it is assumed that there is an active TAS session in a valid state for a non-freeplay mode.
 module.mode = common_enums.MODE.FREEPLAY
+-- Target level index for playback. When in playback mode, this field should not be `nil`.
 module.playback_target_level = nil
+-- Target frame index for playback. When in playback mode, this field should not be `nil`. A value of 0 means that the playback target is reached as soon at the target level is loaded.
 module.playback_target_frame = nil
 module.playback_force_full_run = nil
 module.playback_force_current_frame = nil
 local need_pause
 local force_level_snapshot
+-- The active TAS level index currently being warped to. This is cleared at the end of screen change updates.
+local warp_level_index
 
--- The number of frames that have executed on the transition screen, based on `get_frame()`.
-local transition_frame
-local transition_last_get_frame_seen
-
+-- The value of `get_frame()` at the end of the most recent update. The game increments `get_frame()` at some point between updates, not during updates.
+local prev_get_frame
 local pre_update_loading
 local pre_update_time_level
 local pre_update_cutscene_active
@@ -95,26 +97,6 @@ local level_snapshot_requests = {}
 local level_snapshot_request_count = 0
 local level_snapshot_request_next_id = 1
 local captured_level_snapshot = nil
-
--- Reset variables with the scope of a single frame.
-local function reset_frame_vars()
-    pre_update_loading = -1
-    pre_update_time_level = -1
-    pre_update_cutscene_active = false
-end
-
--- Reset variables with the scope of a single level, camp, or transition.
-local function reset_level_vars()
-    if active_tas_session then
-        active_tas_session:clear_current_level_index()
-    end
-    if ghost_tas_session then
-        ghost_tas_session:clear_current_level_index()
-    end
-    transition_frame = nil
-    transition_last_get_frame_seen = nil
-    reset_frame_vars()
-end
 
 -- Reset the entire TAS session by resetting all session and level variables. Does not unload the active TAS.
 -- TODO: "session" is a confusing name since there are also TasSession objects.
@@ -126,7 +108,12 @@ function module.reset_session_vars()
     module.playback_force_current_frame = false
     need_pause = false
     force_level_snapshot = nil
-    reset_level_vars()
+    if active_tas_session then
+        active_tas_session:unset_current_level()
+    end
+    if ghost_tas_session then
+        ghost_tas_session:unset_current_level()
+    end
 end
 
 function module.register_level_snapshot_request(callback)
@@ -154,12 +141,14 @@ end
 local function try_pause()
     if not need_pause then
         return
-    elseif state.screen ~= SCREEN.LEVEL and state.screen ~= SCREEN.CAMP then
-        -- Don't pause during this non-gameplay screen.
-        if state.screen ~= SCREEN.TRANSITION and state.screen ~= SCREEN.SPACESHIP and state.screen ~= SCREEN.OPTIONS then
-            -- This screen doesn't lead back to a playable screen. Cancel the pause entirely.
-            need_pause = false
-        end
+    end
+    if state.screen == SCREEN.OPTIONS and common_enums.TASABLE_SCREEN[state.screen_last] then
+        -- Don't pause in the options screen.
+        return
+    end
+    if not common_enums.TASABLE_SCREEN[state.screen] then
+        -- Cancel the pause entirely.
+        need_pause = false
         return
     end
     if state.loading == 0 then
@@ -315,15 +304,17 @@ local function trigger_start_simple_warp(tas)
     trigger_warp_unload()
 
     active_tas_session.desync = nil
+    warp_level_index = 1
 
     return true
 end
 
--- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Only level snapshots are supported, not any other screens such as the camp.
-local function trigger_level_snapshot_warp(level_snapshot)
+-- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot.
+local function trigger_level_snapshot_warp(level_snapshot, level_index)
     trigger_warp_unload()
     active_tas_session.desync = nil
     force_level_snapshot = level_snapshot
+    warp_level_index = level_index
 end
 
 -- Prepares the game state and triggers the loading sequence for loading from the TAS's starting state.
@@ -339,7 +330,7 @@ function module.apply_start_state()
             return true
         elseif tas.start_type == "full" then
             if tas:is_start_configured() then
-                trigger_level_snapshot_warp(tas.start_full)
+                trigger_level_snapshot_warp(tas.start_full, 1)
                 return true
             end
         end
@@ -357,7 +348,7 @@ function module.apply_level_snapshot(level_index)
         print("Warning: Missing snapshot for level index "..level_index..".")
         return false
     end
-    trigger_level_snapshot_warp(level_snapshot)
+    trigger_level_snapshot_warp(level_snapshot, level_index)
     return true
 end
 
@@ -375,9 +366,10 @@ function module.set_mode(new_mode)
             module.playback_target_frame = nil
             if active_tas_session.current_frame_index then
                 if options.record_frame_clear_action == "remaining_level" then
-                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index, true)
+                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index)
                 elseif options.record_frame_clear_action == "remaining_run" then
-                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index, false)
+                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index)
+                    active_tas_session.tas:remove_levels_after(active_tas_session.current_level_index)
                 end
             end
         end
@@ -388,7 +380,7 @@ function module.set_mode(new_mode)
 
         local can_use_current_frame = not module.playback_force_full_run and module.mode ~= common_enums.MODE.FREEPLAY
             and (module.playback_force_current_frame or options.playback_from == module.PLAYBACK_FROM.NOW_OR_LEVEL or options.playback_from == module.PLAYBACK_FROM.NOW)
-            and (active_tas_session.current_level_index and ((module.playback_target_level == active_tas_session.current_level_index and module.playback_target_frame >= active_tas_session.current_frame_index) or module.playback_target_level > active_tas_session.current_level_index))
+            and (active_tas_session.current_level_index and ((module.playback_target_level == active_tas_session.current_level_index and (not active_tas_session.current_frame_index or module.playback_target_frame >= active_tas_session.current_frame_index)) or module.playback_target_level > active_tas_session.current_level_index))
 
         local best_load_level_index = -1
         if module.playback_force_full_run then
@@ -467,13 +459,15 @@ end
 -- Validates whether the current level and frame indices are within the TAS. Prints a warning, switches to freeplay mode, and pauses if the current frame is invalid.
 -- Returns whether the current frame valid. Returns true if the current frame is already undefined.
 function module.validate_current_frame()
-    local clear_current_level_index = false
+    local unset_current_level = false
     local message
     if active_tas_session.current_level_index then
         if active_tas_session.current_level_index > active_tas_session.tas:get_end_level_index() then
             message = "Current level is later than end of TAS ("..active_tas_session.tas:get_end_level_index().."-"..active_tas_session.tas:get_end_frame_index()..")."
-            clear_current_level_index = true
-        elseif active_tas_session.current_frame_index and active_tas_session.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index) then
+            unset_current_level = true
+        elseif active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index
+            and active_tas_session.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)
+        then
             message = "Current frame is later than end of level ("..active_tas_session.current_level_index.."-"..active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)..")."
         end
     end
@@ -484,8 +478,8 @@ function module.validate_current_frame()
         end
         module.set_mode(common_enums.MODE.FREEPLAY)
         need_pause = true
-        if clear_current_level_index then
-            active_tas_session:clear_current_level_index()
+        if unset_current_level then
+            active_tas_session:unset_current_level()
         end
         return false
     else
@@ -501,11 +495,12 @@ function module.validate_playback_target()
     end
     local message
     if module.playback_target_level > #active_tas_session.tas.levels then
-        message = "Target is later than end of TAS ("..#active_tas_session.tas.levels.."-"..#active_tas_session.tas.levels[module.playback_target_level].frames..")."
-    elseif module.playback_target_frame > #active_tas_session.tas.levels[module.playback_target_level].frames then
-        message = "Target is later than end of level ("..module.playback_target_level.."-"..#active_tas_session.tas.levels[module.playback_target_level].frames..")."
+        message = "Target is later than end of TAS ("..#active_tas_session.tas:get_end_level_index().."-"..active_tas_session.tas:get_end_frame_index()..")."
+    elseif module.playback_target_frame > active_tas_session.tas:get_end_frame_index(module.playback_target_level) then
+        message = "Target is later than end of level ("..module.playback_target_level.."-"..active_tas_session.tas:get_end_frame_index(module.playback_target_level)..")."
     elseif (state.loading == 0 or state.loading == 3) and (active_tas_session.current_level_index > module.playback_target_level
-            or (active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index > module.playback_target_frame)) then
+        or (active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index > module.playback_target_frame))
+    then
         message = "Current frame ("..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index..") is later than playback target."
     end
     if message then
@@ -521,95 +516,72 @@ function module.validate_playback_target()
     end
 end
 
--- Called right before an update that will generate a playable level or the camp. Not to be confused with `on_pre_level_gen`, which is called within the update right before level generation occurs. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level.
-local function on_pre_update_level_load()
+-- Called right before an update which is going to load a TASable screen.
+local function on_pre_update_load_tasable_screen()
     if options.debug_print_load then
-        print("on_pre_update_level_load")
+        print("on_pre_update_load_tasable_screen: "..state.screen_next)
     end
 
-    if ghost_tas_session then
-        ghost_tas_session:update_current_level_index(false)
-    end
-
-    if active_tas_session then
-        active_tas_session:update_current_level_index(module.mode == common_enums.MODE.RECORD)
-        if options.debug_print_load then
-            print("on_pre_update_level_load: current_level_index="..tostring(active_tas_session.current_level_index))
-        end
-        if module.mode == common_enums.MODE.PLAYBACK and not active_tas_session.current_level_index then
-            print("Warning: Loading level with no level data during playback. Switching to freeplay mode.")
-            module.set_mode(common_enums.MODE.FREEPLAY)
-        end
-        if not force_level_snapshot and module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session.current_level_index > 1
-            and (not active_tas_session.current_level_data.snapshot or module.mode == common_enums.MODE.RECORD)
-            and state.screen_next == SCREEN.LEVEL
+    if common_enums.TASABLE_SCREEN[state.screen_next].can_snapshot then
+        if not force_level_snapshot and not warp_level_index and (module.mode == common_enums.MODE.RECORD
+            or (module.mode == common_enums.MODE.PLAYBACK and not active_tas_session.tas.levels[active_tas_session.current_level_index + 1].snapshot))
         then
-            -- Request a mid-run level snapshot of the upcoming level for the active TAS.
-            local level_data = active_tas_session.current_level_data
+            -- Request a level snapshot of the upcoming level for the active TAS.
             module.register_level_snapshot_request(function(level_snapshot)
-                level_data.snapshot = level_snapshot
+                -- The snapshot request will be fulfilled before the TAS session knows which level it belongs to. Temporarily store it until a TAS level is ready for it.
+                active_tas_session.stored_level_snapshot = level_snapshot
             end)
         end
-    end
 
-    if level_snapshot_request_count > 0 then
-        -- Begin capturing a level snapshot for the upcoming level.
-        if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_update_level_load: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
-        end
-        -- Capture a state memory snapshot.
-        captured_level_snapshot = {
-            state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
-        }
-        if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
-            -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
-            local part_1, part_2 = get_adventure_seed()
-            captured_level_snapshot.adventure_seed = { part_1, part_2 }
+        if level_snapshot_request_count > 0 then
+            -- Begin capturing a level snapshot for the upcoming level.
+            if options.debug_print_load or options.debug_print_snapshot then
+                print("on_pre_update_load_tasable_screen: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
+            end
+            -- Capture a state memory snapshot.
+            captured_level_snapshot = {
+                state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
+            }
+            if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
+                -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
+                local part_1, part_2 = get_adventure_seed()
+                captured_level_snapshot.adventure_seed = { part_1, part_2 }
+            end
         end
     end
 end
 
--- Called right before an update which is going to load a screen. The screen value itself might not change, since the game may be loading the same type of screen.
-local function on_pre_screen_change()
+-- Called right before an update which is going to load a screen. The screen value itself might not change since the game may be loading the same type of screen. For screens that include level generation, this is the last place to read or write the adventure seed. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level generation.
+local function on_pre_update_load_screen()
     if force_level_snapshot then
         -- Apply a level snapshot instead of loading the original destination for this screen change.
         if force_level_snapshot.state_memory then
             -- Apply the state memory snapshot.
             if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_screen_change: Applying state memory from level snapshot.")
+                print("on_pre_update_load_screen: Applying state memory from level snapshot.")
             end
             introspection.apply_snapshot(state, force_level_snapshot.state_memory, GAME_TYPES.StateMemory_LevelSnapshot)
         end
         if force_level_snapshot.adventure_seed then
             -- Apply the adventure seed.
             if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_screen_change: Applying adventure seed from level snapshot: "
+                print("on_pre_update_load_screen: Applying adventure seed from level snapshot: "
                     ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[1]).."-"
                     ..common.adventure_seed_part_to_string(force_level_snapshot.adventure_seed[2]))
             end
             set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
         end
     end
-    if ((state.screen == SCREEN.LEVEL or state.screen == SCREEN.CAMP or state.screen == SCREEN.TRANSITION)
-        and state.screen_next ~= SCREEN.OPTIONS and state.screen_next ~= SCREEN.DEATH)
-        or state.screen == SCREEN.DEATH
-    then
-        -- This update is going to unload the current level, camp, or transition screen.
-        reset_level_vars()
+    if state.screen_next == SCREEN.OPTIONS or state.screen == SCREEN.OPTIONS then
+        -- This update is either entering or exiting the options screen. This does not change the underlying screen and is not a relevant event for this script.
+        return
     end
-    if state.screen ~= SCREEN.OPTIONS and (state.screen_next == SCREEN.LEVEL or state.screen_next == SCREEN.CAMP) then
-        on_pre_update_level_load()
-    end
-    if module.mode ~= common_enums.MODE.FREEPLAY and state.screen_next ~= SCREEN.OPTIONS and state.screen_next ~= ON.LEVEL and state.screen_next ~= ON.CAMP
-        and state.screen_next ~= SCREEN.TRANSITION and state.screen_next ~= SCREEN.SPACESHIP
-    then
-        -- TODO: This feels messy. Am I sure that I covered every case? This has some overlap with the screens I check in try_pause. I'm basically trying to determine whether I'm changing to a screen that will eventually lead back into a playable level. The check should be slightly different for camp and level TASes.
-        print("Loading non-run screen. Switching to freeplay mode.")
-        module.set_mode(common_enums.MODE.FREEPLAY)
+    if common_enums.TASABLE_SCREEN[state.screen_next] then
+        on_pre_update_load_tasable_screen()
     end
 end
 
--- Called before level generation for any playable level or the camp. This callback occurs within a game update, and is the last place to manipulate the state memory before the level is generated. Notably, the state memory's player inventory data will be fully set and can be read or written here.
+-- Called before level generation for the `CAMP` and `LEVEL` screens. This callback occurs within a game update where `state.loading` is initially 2. The previous screen has been unloaded at this point. This is the last place to manipulate the state memory before the level is generated. The state memory's player inventory data is fully set and can be read or written here. Shortly after level generation, the game will advance `state.loading` from 2 to 3.
 local function on_pre_level_gen()
     if options.debug_print_load then
         print("on_pre_level_gen")
@@ -661,62 +633,6 @@ local function on_pre_level_gen()
     end
 end
 
--- Called after level generation for any playable level or the camp. This callback occurs within a game update, right before the game advances `state.loading` from 2 to 3.
-local function on_post_level_gen()
-    if module.mode == common_enums.MODE.FREEPLAY or not active_tas_session or not active_tas_session.current_level_index then
-        return
-    end
-
-    if options.debug_print_load then
-        print("on_post_level_gen: current_level_index="..active_tas_session.current_level_index)
-    end
-
-    active_tas_session.current_frame_index = 0
-    if (module.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_level_start) or (module.mode == common_enums.MODE.RECORD and options.pause_recording_on_level_start) then
-        need_pause = true
-    end
-
-    active_tas_session.current_level_data.metadata = {
-        world = state.world,
-        level = state.level,
-        theme = state.theme
-    }
-
-    for player_index, player in ipairs(active_tas_session.current_level_data.players) do
-        local player_ent = get_player(player_index, true)
-        local actual_pos
-        if player_ent then
-            local x, y, l = get_position(player_ent.uid)
-            actual_pos = { x = x, y = y, l = l }
-        end
-        if module.mode == common_enums.MODE.RECORD then
-            player.start_position = actual_pos
-        elseif module.mode == common_enums.MODE.PLAYBACK then
-            if player.start_position then
-                check_position_desync(player_index, player.start_position, actual_pos)
-            else
-                player.start_position = actual_pos
-            end
-        end
-    end
-end
-
-local function on_transition()
-    if options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled) then
-        -- The transition screen can't be skipped entirely. It needs to be loaded in order for pet health to be applied to players.
-        if options.debug_print_load then
-            print("on_transition: Skipping transition screen.")
-        end
-        state.screen_next = SCREEN.LEVEL
-        state.fadeout = 1 -- The fade-out will finish on the next update and the transition screen will unload.
-        state.fadein = TRANSITION_FADE_FRAMES
-        state.loading = 1
-    else
-        transition_frame = 0
-        transition_last_get_frame_seen = get_frame()
-    end
-end
-
 local function get_cutscene_input(player_index, logic_cutscene, last_frame, skip_frame, skip_input_id)
     if player_index ~= state.items.leader then
         -- Only the leader player can skip the cutscene.
@@ -741,18 +657,25 @@ local function get_cutscene_input(player_index, logic_cutscene, last_frame, skip
     end
 end
 
--- Called before every game update in a playable level that is part of the active TAS.
-local function on_pre_update_level()
-    reset_frame_vars()
-    pre_update_loading = state.loading
-    pre_update_time_level = state.time_level
-    pre_update_cutscene_active = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
+-- Called before every game update in a TASable screen, excluding the update which loads the screen.
+local function on_pre_update_tasable_screen()
+    if (state.loading ~= 0 and state.loading ~= 3) or module.mode == common_enums.MODE.FREEPLAY
+        or not active_tas_session or not active_tas_session.current_level_index
+    then
+        return
+    end
 
     module.validate_current_frame()
     module.validate_playback_target()
 
-    if module.mode ~= common_enums.MODE.FREEPLAY and (state.loading == 0 or state.loading == 3) then
-        -- Submit the desired inputs for the upcoming update. The script doesn't know whether this update will actually execute player inputs. If it does execute them, then it will execute the submitted inputs. If it doesn't execute them, such as due to the game being paused, then nothing will happen and the script can try again on the next update.
+    if module.mode == common_enums.MODE.FREEPLAY then
+        return
+    end
+
+    -- Gather player inputs from the TAS to submit for the upcoming update.
+    local inputs
+    if active_tas_session.current_tasable_screen.record_frames then
+        inputs = {}
         for player_index = 1, active_tas_session.tas:get_player_count() do
             local input
             -- Record and playback modes should both automatically skip cutscenes.
@@ -772,97 +695,206 @@ local function on_pre_update_level()
                     module.set_mode(common_enums.MODE.FREEPLAY)
                 end
             end
+            inputs[player_index] = input
+        end
+    elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
+        inputs = {}
+        if active_tas_session.tas.transition_exit_frame ~= -1 then
+            for player_index = 1, active_tas_session.tas:get_player_count() do
+                -- By default, suppress inputs from every player.
+                inputs[player_index] = INPUTS.NONE
+            end
+            if active_tas_session.current_frame_index + 1 >= active_tas_session.tas.transition_exit_frame then
+                -- Have player 1 provide the transition exit input. The exit is triggered during the first update where the input is seen, not when it's released.
+                if options.debug_print_input then
+                    print("on_pre_update_tasable_screen: Submitting transition exit input.")
+                end
+                inputs[1] = INPUTS.JUMP
+            end
+        end
+    end
+    -- Note: There is nothing to do on the SPACESHIP screen except wait for it to end.
+
+    if inputs then
+        -- Submit the desired inputs for the upcoming update. The script doesn't know whether this update will actually process player inputs. If it does process them, then it will use the submitted inputs. If it doesn't process them, such as due to the game being paused, then nothing will happen and the script can try again on the next update.
+        for player_index = 1, active_tas_session.tas:get_player_count() do
+            local input = inputs[player_index]
             if input then
                 input = input & SUPPORTED_INPUT_MASK
                 state.player_inputs.player_slots[player_index].buttons = input
                 state.player_inputs.player_slots[player_index].buttons_gameplay = input
-                if options.debug_print_frame or options.debug_print_input then
-                    -- TODO: This is super spammy when paused.
-                    --print("on_pre_update_level: Sending input for upcoming frame: frame="..active_tas_session.current_level_index.."-"..(active_tas_session.current_frame_index + 1).." input="..common.input_to_string(input))
-                end
             end
         end
     end
 end
 
--- Called before every game update in a transition while an active TAS exists.
-local function on_pre_update_transition()
-    if state.loading == 1 or state.loading == 2 or module.mode == common_enums.MODE.FREEPLAY then
-        return
-    end
-    -- Transitions have no dedicated frame counter, so `get_frame()` has to be used. `get_frame()` increments at some point between updates, not during updates like most state memory variables. Based on this counting system, the frame increments to 1 after the first fade-in update, and then doesn't change for the entire remainder of the fade-in. Inputs are processed during the final update of the fade-in, which is still frame 1. If an exit input is seen during this final update, then the fade-out is started in that same update. The frame increments one more time after the update that starts the fade-out, and the character can be seen stepping forward for that one frame. This is the same behavior that occurs in normal gameplay by holding an exit input as the transition screen loads. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
-    -- TODO: Test for entering sunken city, entering/exiting duat, and CO transitions.
-    local this_frame = get_frame()
-    if transition_last_get_frame_seen ~= this_frame then
-        transition_last_get_frame_seen = this_frame
-        transition_frame = transition_frame + 1
-        if options.debug_print_frame then
-            print("on_pre_update_transition: transition_frame="..transition_frame)
-        end
-    end
-    if active_tas_session.tas.transition_exit_frame ~= -1 then
-        for player_index = 1, active_tas_session.tas:get_player_count() do
-            -- By default, suppress inputs from every player.
-            state.player_inputs.player_slots[player_index].buttons = INPUTS.NONE
-            state.player_inputs.player_slots[player_index].buttons_gameplay = INPUTS.NONE
-        end
-        if transition_frame >= active_tas_session.tas.transition_exit_frame then
-            -- Have player 1 provide the transition exit input. The exit is triggered during the first update where the input is seen, not when it's released.
-            if options.debug_print_input then
-                print("on_pre_update_transition: Submitting transition exit input.")
-            end
-            state.player_inputs.player_slots[1].buttons = INPUTS.JUMP
-            state.player_inputs.player_slots[1].buttons_gameplay = INPUTS.JUMP
-        end
-    end
-end
 
--- TODO: Review and clean up the various "active_tas_session", "current_level_index", "current_frame_index", "state.loading", and "MODE.FREEPLAY" checks in these pre-update functions. Some of them are probably redundant.
 local function on_pre_update()
+    pre_update_loading = state.loading
+    pre_update_time_level = state.time_level
+    pre_update_cutscene_active = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
+
     if state.loading == 2 then
-        on_pre_screen_change()
-    else
-        if not active_tas_session then
-            return
-        end
-        -- TODO: I would like to unify some behavior for levels and transitions. I could do this if I get them to both use the current_frame_index variable.
-        if state.screen == SCREEN.LEVEL or state.screen == SCREEN.CAMP then
-            -- TODO: current_level_index won't be set if I'm not on one of these screens. Do I even need to check the screens?
-            if active_tas_session.current_level_index then
-                on_pre_update_level()
-            end
-        elseif state.screen == SCREEN.TRANSITION then
-            on_pre_update_transition()
-        end
+        on_pre_update_load_screen()
+    elseif common_enums.TASABLE_SCREEN[state.screen] then
+        on_pre_update_tasable_screen()
     end
 end
 
 local function handle_playback_target()
-    if module.validate_playback_target() and active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index == module.playback_target_frame then
-        -- Current frame is the playback target.
-        if options.playback_target_pause then
-            if options.debug_print_pause then
-                prinspect("handle_playback_target: Reached playback target pause", get_frame())
-            end
-            need_pause = true
+    if not module.validate_playback_target() or active_tas_session.current_level_index ~= module.playback_target_level
+        or (active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index ~= module.playback_target_frame)
+    then
+        return
+    end
+
+    if options.playback_target_pause then
+        if options.debug_print_pause then
+            prinspect("handle_playback_target: Reached playback target pause", get_frame())
         end
-        local new_mode = common_enums.PLAYBACK_TARGET_MODE:value_by_id(options.playback_target_mode).mode
-        if new_mode == common_enums.MODE.RECORD then
-            if options.debug_print_mode then
-                print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to record mode.")
+        need_pause = true
+    end
+    local new_mode = common_enums.PLAYBACK_TARGET_MODE:value_by_id(options.playback_target_mode).mode
+    if new_mode == common_enums.MODE.RECORD then
+        if options.debug_print_mode then
+            print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to record mode.")
+        end
+        module.set_mode(common_enums.MODE.RECORD)
+    elseif new_mode == common_enums.MODE.FREEPLAY or active_tas_session.tas:is_end_or_later(active_tas_session.current_level_index, active_tas_session.current_frame_index) then
+        if options.debug_print_mode then
+            print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to freeplay mode.")
+        end
+        module.set_mode(common_enums.MODE.FREEPLAY)
+    else
+        if options.debug_print_mode then
+            print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Staying in playback mode.")
+        end
+        module.playback_target_level, module.playback_target_frame = active_tas_session.tas:get_end_indices()
+    end
+end
+
+-- Called right after an update which loaded a screen.
+local function on_post_update_load_screen()
+    if state.screen == SCREEN.OPTIONS or state.screen_last == SCREEN.OPTIONS then
+        -- This update either entered or exited the options screen. This did not change the underlying screen and is not a relevant event for this script.
+        return
+    end
+    if options.debug_print_load then
+        print("on_post_update_load_screen: "..state.screen_last.." -> "..state.screen)
+    end
+
+    if active_tas_session then
+        if not common_enums.TASABLE_SCREEN[state.screen] then
+            -- The new screen is not TASable.
+            active_tas_session:unset_current_level()
+            if module.mode ~= common_enums.MODE.FREEPLAY then
+                print("Loaded non-TASable screen. Switching to freeplay mode.")
+                module.set_mode(common_enums.MODE.FREEPLAY)
             end
-            module.set_mode(common_enums.MODE.RECORD)
-        elseif new_mode == common_enums.MODE.FREEPLAY or (active_tas_session.current_level_index == #active_tas_session.tas.levels and active_tas_session.current_frame_index == #active_tas_session.current_level_data.frames) then
-            if options.debug_print_mode then
-                print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to freeplay mode.")
+        elseif warp_level_index then
+            -- This screen change was a warp.
+            if not active_tas_session:set_current_level(warp_level_index) then
+                if module.mode == common_enums.MODE.FREEPLAY then
+                    print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..".")
+                else
+                    if module.mode == common_enums.MODE.RECORD and warp_level_index == #active_tas_session.tas.levels + 1 then
+                        active_tas_session:create_end_level()
+                    else
+                        print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..". Switching to freeplay mode.")
+                        module.set_mode(common_enums.MODE.FREEPLAY)
+                    end
+                end
             end
-            module.set_mode(common_enums.MODE.FREEPLAY)
+        elseif active_tas_session.current_level_index then
+            -- This screen change was not a warp and the previous level index is known.
+            local prev_level_index = active_tas_session.current_level_index
+            if not active_tas_session:set_current_level(prev_level_index + 1) then
+                if module.mode == common_enums.MODE.FREEPLAY then
+                    active_tas_session:find_current_level()
+                else
+                    if module.mode == common_enums.MODE.RECORD and prev_level_index == #active_tas_session.tas.levels then
+                        active_tas_session:create_end_level()
+                    else
+                        print("Warning: Loaded unexpected screen after screen change from level index "..prev_level_index..". Switching to freeplay mode.")
+                        module.set_mode(common_enums.MODE.FREEPLAY)
+                    end
+                end
+            end
         else
-            if options.debug_print_mode then
-                print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Staying in playback mode.")
+            -- This screen change was not a warp and the previous level index is not known.
+            if module.mode == common_enums.MODE.FREEPLAY then
+                active_tas_session:find_current_level()
+            else
+                -- Note: This case should not be possible. Playback and recording should always know either the previous level index or the new level index.
+                print("Warning: Loaded new screen during playback or recording with unknown previous level index and unknown new level index. Switching to freeplay mode.")
+                module.set_mode(common_enums.MODE.FREEPLAY)
             end
-            module.playback_target_level, module.playback_target_frame = active_tas_session.tas:get_end_indices()
         end
+        if options.debug_print_load then
+            print("on_post_update_load_screen: Current TAS level updated to "..tostring(active_tas_session.current_level_index)..".")
+        end
+        if module.mode ~= common_enums.MODE.FREEPLAY then
+            if active_tas_session.current_tasable_screen.count_frames then
+                active_tas_session.current_frame_index = 0
+            end
+            if active_tas_session.current_tasable_screen.record_frames then
+                for player_index, player in ipairs(active_tas_session.current_level_data.players) do
+                    local player_ent = get_player(player_index, true)
+                    local actual_pos
+                    if player_ent then
+                        local x, y, l = get_position(player_ent.uid)
+                        actual_pos = { x = x, y = y, l = l }
+                    end
+                    if module.mode == common_enums.MODE.RECORD or not player.start_position then
+                        player.start_position = actual_pos
+                    else
+                        check_position_desync(player_index, player.start_position, actual_pos)
+                    end
+                end
+            end
+            if active_tas_session.current_tasable_screen.can_snapshot and active_tas_session.stored_level_snapshot then
+                active_tas_session.current_level_data.snapshot = active_tas_session.stored_level_snapshot
+                if options.debug_print_load or options.debug_print_snapshot then
+                    print("on_post_update_load_screen: Transferred stored level snapshot into TAS level "..active_tas_session.current_level_index..".")
+                end
+            end
+            if active_tas_session.current_tasable_screen.record_frames
+                and ((module.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_level_start)
+                or (module.mode == common_enums.MODE.RECORD and options.pause_recording_on_level_start))
+            then
+                need_pause = true
+            end
+        end
+        if active_tas_session.stored_level_snapshot then
+            active_tas_session.stored_level_snapshot = nil
+        end
+    end
+
+    if ghost_tas_session then
+        ghost_tas_session:unset_current_level()
+        if common_enums.TASABLE_SCREEN[state.screen] then
+            -- Check whether the active TAS's level is also the ghost TAS's level. If not, then search for any valid ghost TAS level.
+            if not active_tas_session or not active_tas_session.current_level_index
+                or not ghost_tas_session:set_current_level(active_tas_session.current_level_index)
+            then
+                ghost_tas_session:find_current_level()
+            end
+        end
+    end
+
+    if warp_level_index then
+        warp_level_index = nil
+    end
+
+    if state.screen == SCREEN.TRANSITION and options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled) then
+        -- The transition screen couldn't be skipped entirely. It needed to be loaded in order for pet health to be applied to players. Now it can be immediately unloaded.
+        if options.debug_print_load then
+            print("on_post_update_load_screen: Skipping transition screen.")
+        end
+        state.screen_next = SCREEN.LEVEL
+        state.fadeout = 1 -- The fade-out will finish on the next update and the transition screen will unload.
+        state.fadein = TRANSITION_FADE_FRAMES
+        state.loading = 1
     end
 end
 
@@ -872,43 +904,45 @@ local function on_post_update_frame_advanced()
         print("on_post_update_frame_advanced: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." input="..common.input_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
     end
 
-    local current_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index]
-    if module.mode == common_enums.MODE.RECORD then
-        -- Only record mode can create new frames. Playback mode should only be active during frames that already exist.
-        if options.record_frame_write_type == "overwrite" then
-            if not current_frame_data then
-                current_frame_data = active_tas_session.tas:create_frame_data()
-                active_tas_session.current_level_data.frames[active_tas_session.current_frame_index] = current_frame_data
-            end
-        elseif options.record_frame_write_type == "insert" then
-            current_frame_data = active_tas_session.tas:create_frame_data()
-            table.insert(active_tas_session.current_level_data.frames, active_tas_session.current_frame_index, current_frame_data)
-        end
-    end
-
-    for player_index, player in ipairs(current_frame_data.players) do
-        local player_ent = get_player(player_index, true)
-        local actual_pos
-        if player_ent then
-            local x, y, l = get_position(player_ent.uid)
-            actual_pos = { x = x, y = y, l = l }
-        end
+    if active_tas_session.current_tasable_screen.record_frames then
+        local current_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index]
         if module.mode == common_enums.MODE.RECORD then
-            -- Record the current player inputs for the frame that just executed.
-            local input = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUT_MASK
-            if options.debug_print_frame or options.debug_print_input then
-                print("on_post_update: Recording input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
-                    .." player="..player_index.." input="..common.input_to_string(input))
+            -- Only record mode can create new frames. Playback mode should only be active during frames that already exist.
+            if options.record_frame_write_type == "overwrite" then
+                if not current_frame_data then
+                    current_frame_data = active_tas_session.tas:create_frame_data()
+                    active_tas_session.current_level_data.frames[active_tas_session.current_frame_index] = current_frame_data
+                end
+            elseif options.record_frame_write_type == "insert" then
+                current_frame_data = active_tas_session.tas:create_frame_data()
+                table.insert(active_tas_session.current_level_data.frames, active_tas_session.current_frame_index, current_frame_data)
             end
-            player.input = input
-            player.position = actual_pos
-        elseif module.mode == common_enums.MODE.PLAYBACK then
-            local expected_pos = player.position
-            if expected_pos then
-                check_position_desync(player_index, expected_pos, actual_pos)
-            else
-                -- No player positions are stored for this frame. Store the current positions.
+        end
+
+        for player_index, player in ipairs(current_frame_data.players) do
+            local player_ent = get_player(player_index, true)
+            local actual_pos
+            if player_ent then
+                local x, y, l = get_position(player_ent.uid)
+                actual_pos = { x = x, y = y, l = l }
+            end
+            if module.mode == common_enums.MODE.RECORD then
+                -- Record the current player inputs for the frame that just executed.
+                local input = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUT_MASK
+                if options.debug_print_frame or options.debug_print_input then
+                    print("on_post_update: Recording input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
+                        .." player="..player_index.." input="..common.input_to_string(input))
+                end
+                player.input = input
                 player.position = actual_pos
+            elseif module.mode == common_enums.MODE.PLAYBACK then
+                local expected_pos = player.position
+                if expected_pos then
+                    check_position_desync(player_index, expected_pos, actual_pos)
+                else
+                    -- No player positions are stored for this frame. Store the current positions.
+                    player.position = actual_pos
+                end
             end
         end
     end
@@ -918,25 +952,33 @@ local function on_post_update_frame_advanced()
     end
 end
 
--- TODO: Review and clean up the various "active_tas_session", "current_level_index", "current_frame_index", "state.loading", and "MODE.FREEPLAY" checks in these post-update functions. Some of them are probably redundant.
 local function on_post_update()
-    if module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index and active_tas_session.current_frame_index then
-        -- Check whether this update advanced the TAS by one frame.
-        -- TODO: This check feels messy. Is there a more concise way that I can check whether the previous update should advance the TAS by one frame?
-        -- TODO: What does time_level do for loading 0->1? Should the TAS actually advance one frame? Can non-exiting players perform an action on this frame?
-        if ((pre_update_loading == 3 and state.loading == 0) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
-            and (pre_update_time_level ~= state.time_level or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
-        then
+    if pre_update_loading == 2 then
+        on_post_update_load_screen()
+    elseif module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index then
+        -- Check whether this update executed a TASable frame.
+        local advanced = false
+        if active_tas_session.current_tasable_screen.record_frames then
+            advanced = ((pre_update_loading == 3 and state.loading == 0) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
+                and (pre_update_time_level ~= state.time_level or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
+        elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
+            -- Transitions have no dedicated frame counter, so `get_frame()` has to be used. `get_frame()` increments at some point between updates, not during updates like most state memory variables. Based on this counting system, the frame increments to 1 after the first fade-in update, and then doesn't change for the entire remainder of the fade-in. Inputs are processed during the final update of the fade-in, which is still frame 1. If an exit input is seen during this final update, then the fade-out is started in that same update. The frame increments one more time after the update that starts the fade-out, and the character can be seen stepping forward for that one frame. This is the same behavior that occurs in normal gameplay by holding the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
+            advanced = (state.loading == 0 or state.loading == 3) and prev_get_frame ~= get_frame()
+        end
+        if advanced then
             active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
             on_post_update_frame_advanced()
-        elseif active_tas_session.current_frame_index == 0 and module.mode == common_enums.MODE.PLAYBACK then
-            -- Handle a possible frame 0 playback target.
+        elseif module.mode == common_enums.MODE.PLAYBACK
+            and (not active_tas_session.current_tasable_screen.record_frames or active_tas_session.current_frame_index == 0)
+        then
+            -- Handle a possible frame 0 playback target, or a playback target on a screen that can't target a specific frame.
             handle_playback_target()
         end
     end
 
-    -- TODO: Should I call this at the start of on_pre_update instead?
     try_pause()
+
+    prev_get_frame = get_frame()
 end
 
 function module.initialize()
@@ -944,8 +986,6 @@ function module.initialize()
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)
     set_callback(on_pre_level_gen, ON.PRE_LEVEL_GENERATION)
-    set_callback(on_post_level_gen, ON.POST_LEVEL_GENERATION)
-    set_callback(on_transition, ON.TRANSITION)
     register_console_command("set_desync_callback", set_desync_callback)
     register_console_command("clear_desync_callback", clear_desync_callback)
 end

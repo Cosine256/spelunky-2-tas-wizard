@@ -21,7 +21,7 @@ function module:draw_panel(ctx, is_window)
             warp_choices[1] = "1"
         else
             for i = 1, #tas.levels do
-                warp_choices[i] = common.level_metadata_to_string(tas, i)
+                warp_choices[i] = common.level_to_string(tas, i, false)
             end
         end
         local warp_combo = ComboInput:new(OrderedTable:new(warp_choices))
