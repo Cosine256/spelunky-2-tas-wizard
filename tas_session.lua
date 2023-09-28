@@ -22,8 +22,20 @@ end
 
 local function metadata_matches_game_level(metadata)
     local base_screen = state.screen == SCREEN.OPTIONS and state.screen_last or state.screen
-    return metadata.screen == base_screen and ((base_screen ~= SCREEN.LEVEL and base_screen ~= SCREEN.TRANSITION)
-        or (metadata.world == state.world and metadata.level == state.level and metadata.theme == state.theme))
+    if metadata.screen == base_screen then
+        if base_screen == SCREEN.LEVEL or base_screen == SCREEN.TRANSITION then
+            if metadata.world == state.world and metadata.level == state.level and metadata.theme == state.theme then
+                if base_screen == SCREEN.LEVEL then
+                    return metadata.cutscene == nil or metadata.cutscene == (state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil)
+                else
+                    return true
+                end
+            end
+        else
+            return true
+        end
+    end
+    return false
 end
 
 -- Generates a level metadata object for the game's current level.
@@ -31,10 +43,13 @@ local function generate_level_metadata()
     local metadata = {
         screen = state.screen
     }
-    if state.screen == SCREEN.LEVEL or state.screen == SCREEN.TRANSITION then
+    if metadata.screen == SCREEN.LEVEL or metadata.screen == SCREEN.TRANSITION then
         metadata.world = state.world
         metadata.level = state.level
         metadata.theme = state.theme
+        if metadata.screen == SCREEN.LEVEL and (metadata.theme == THEME.OLMEC or metadata.theme == THEME.TIAMAT) then
+            metadata.cutscene = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
+        end
     end
     return metadata
 end
@@ -57,7 +72,12 @@ function TasSession:create_end_level()
             level.players[player_index] = {}
         end
     end
-    if level.metadata.screen == SCREEN.TRANSITION then
+    if level.metadata.screen == SCREEN.LEVEL then
+        if level.metadata.cutscene then
+            level.cutscene_skip_frame_index = game_controller.CUTSCENE_SKIP_FIRST_FRAME
+            level.cutscene_skip_input = "jump"
+        end
+    elseif level.metadata.screen == SCREEN.TRANSITION then
         level.transition_exit_frame_index = game_controller.TRANSITION_EXIT_FIRST_FRAME
     end
 end

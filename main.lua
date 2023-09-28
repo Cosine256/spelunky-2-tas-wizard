@@ -86,10 +86,6 @@ default_options = {
         },
         start_full = {},
         levels = {},
-        olmec_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME,
-        olmec_cutscene_skip_input = "jump",
-        tiamat_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME,
-        tiamat_cutscene_skip_input = "jump",
         tagged_frames = {},
         save_player_positions = true,
         save_level_snapshots = true

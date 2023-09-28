@@ -1,12 +1,8 @@
-local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
 local game_controller = require("game_controller")
-local ComboInput = require("gui/combo_input")
 local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("tas_settings", "TAS Settings", "tas_settings_window")
-
-local SKIP_INPUT_COMBO = ComboInput:new(common_enums.SKIP_INPUT)
 
 local function draw_tas_settings(ctx, tas)
     tas.name = ctx:win_input_text("Name", tas.name)
@@ -18,40 +14,6 @@ local function draw_tas_settings(ctx, tas)
         ctx:win_text("Warning: This TAS has recorded inputs. Modifying the start settings can change level generation and RNG, which may cause it to desynchronize.")
     end
     common_gui.draw_tas_start_settings(ctx, tas, false)
-
-    ctx:win_separator_text("Cutscenes")
-    local olmec_cutscene_skip = ctx:win_check("Skip Olmec cutscene", tas.olmec_cutscene_skip_frame ~= -1)
-    if olmec_cutscene_skip then
-        if tas.olmec_cutscene_skip_frame == -1 then
-            tas.olmec_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME
-        end
-        tas.olmec_cutscene_skip_frame = ctx:win_drag_int("Olmec cutscene skip frame", tas.olmec_cutscene_skip_frame,
-        game_controller.CUTSCENE_SKIP_FIRST_FRAME, game_controller.OLMEC_CUTSCENE_LAST_FRAME)
-        if tas.olmec_cutscene_skip_frame < game_controller.CUTSCENE_SKIP_FIRST_FRAME then
-            tas.olmec_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME
-        elseif tas.olmec_cutscene_skip_frame > game_controller.OLMEC_CUTSCENE_LAST_FRAME then
-            tas.olmec_cutscene_skip_frame = game_controller.OLMEC_CUTSCENE_LAST_FRAME
-        end
-        tas.olmec_cutscene_skip_input = SKIP_INPUT_COMBO:draw(ctx, "Olmec cutscene skip input", tas.olmec_cutscene_skip_input)
-    else
-        tas.olmec_cutscene_skip_frame = -1
-    end
-    local tiamat_cutscene_skip = ctx:win_check("Skip Tiamat cutscene", tas.tiamat_cutscene_skip_frame ~= -1)
-    if tiamat_cutscene_skip then
-        if tas.tiamat_cutscene_skip_frame == -1 then
-            tas.tiamat_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME
-        end
-        tas.tiamat_cutscene_skip_frame = ctx:win_drag_int("Tiamat cutscene skip frame", tas.tiamat_cutscene_skip_frame,
-        game_controller.CUTSCENE_SKIP_FIRST_FRAME, game_controller.TIAMAT_CUTSCENE_LAST_FRAME)
-        if tas.tiamat_cutscene_skip_frame < game_controller.CUTSCENE_SKIP_FIRST_FRAME then
-            tas.tiamat_cutscene_skip_frame = game_controller.CUTSCENE_SKIP_FIRST_FRAME
-        elseif tas.tiamat_cutscene_skip_frame > game_controller.TIAMAT_CUTSCENE_LAST_FRAME then
-            tas.tiamat_cutscene_skip_frame = game_controller.TIAMAT_CUTSCENE_LAST_FRAME
-        end
-        tas.tiamat_cutscene_skip_input = SKIP_INPUT_COMBO:draw(ctx, "Tiamat cutscene skip input", tas.tiamat_cutscene_skip_input)
-    else
-        tas.tiamat_cutscene_skip_frame = -1
-    end
 
     ctx:win_separator_text("Generated data")
     tas.save_player_positions = ctx:win_check("Save player positions", tas.save_player_positions)

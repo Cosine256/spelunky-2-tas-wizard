@@ -31,7 +31,8 @@ function Tas:copy()
     return Tas:new(self:to_raw(Tas.SERIAL_MODS.NONE), false)
 end
 
--- TODO: Reset format to 1 and remove updaters before first release.
+-- TODO: Reset format to 1 and remove these development updaters before the first release. 
+-- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
 local CURRENT_FORMAT = 16
 local FORMAT_UPDATERS = {
     [1] = {
@@ -303,10 +304,24 @@ local FORMAT_UPDATERS = {
         output_format = CURRENT_FORMAT,
         update = function(o)
             for _, level in ipairs(o.levels) do
-                if level.metadata.screen == SCREEN.TRANSITION then
+                if level.metadata.screen == SCREEN.LEVEL then
+                    if level.metadata.theme == THEME.OLMEC then
+                        level.metadata.cutscene = true
+                        level.cutscene_skip_frame_index = o.olmec_cutscene_skip_frame
+                        level.cutscene_skip_input = o.olmec_cutscene_skip_input
+                    elseif level.metadata.theme == THEME.TIAMAT then
+                        level.metadata.cutscene = true
+                        level.cutscene_skip_frame_index = o.tiamat_cutscene_skip_frame
+                        level.cutscene_skip_input = o.tiamat_cutscene_skip_input
+                    end
+                elseif level.metadata.screen == SCREEN.TRANSITION then
                     level.transition_exit_frame_index = o.transition_exit_frame
                 end
             end
+            o.olmec_cutscene_skip_frame = nil
+            o.olmec_cutscene_skip_input = nil
+            o.tiamat_cutscene_skip_frame = nil
+            o.tiamat_cutscene_skip_input = nil
             o.transition_exit_frame = nil
         end
     }
@@ -322,10 +337,6 @@ function Tas:to_raw(serial_mod)
         start_simple = common.deep_copy(self.start_simple),
         start_full = common.deep_copy(self.start_full),
         levels = {},
-        olmec_cutscene_skip_frame = self.olmec_cutscene_skip_frame,
-        olmec_cutscene_skip_input = self.olmec_cutscene_skip_input,
-        tiamat_cutscene_skip_frame = self.tiamat_cutscene_skip_frame,
-        tiamat_cutscene_skip_input = self.tiamat_cutscene_skip_input,
         tagged_frames = common.deep_copy(self.tagged_frames),
         save_player_positions = self.save_player_positions,
         save_level_snapshots = self.save_level_snapshots
@@ -362,6 +373,8 @@ function Tas:to_raw(serial_mod)
     for level_index, self_level in ipairs(self.levels) do
         local copy_level = {
             metadata = common.deep_copy(self_level.metadata),
+            cutscene_skip_frame_index = self_level.cutscene_skip_frame_index,
+            cutscene_skip_input = self_level.cutscene_skip_input,
             transition_exit_frame_index = self_level.transition_exit_frame_index
         }
         copy.levels[level_index] = copy_level

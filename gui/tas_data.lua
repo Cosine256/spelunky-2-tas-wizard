@@ -8,8 +8,24 @@ local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("tas_data", "TAS Data", "tas_data_window")
 
+local SKIP_INPUT_COMBO = ComboInput:new(common_enums.SKIP_INPUT)
+
 local selected_level_index = 0
 local level_index
+
+local function draw_cutscene_skip_settings(ctx, level, name, last_frame_index)
+    local cutscene_skip = ctx:win_check("Skip "..name.." cutscene", level.cutscene_skip_frame_index ~= -1)
+    if cutscene_skip then
+        if level.cutscene_skip_frame_index == -1 then
+            level.cutscene_skip_frame_index = game_controller.CUTSCENE_SKIP_FIRST_FRAME
+        end
+        level.cutscene_skip_frame_index = common_gui.draw_drag_int_clamped(ctx, "Cutscene skip frame",
+            level.cutscene_skip_frame_index, game_controller.CUTSCENE_SKIP_FIRST_FRAME, last_frame_index)
+        level.cutscene_skip_input = SKIP_INPUT_COMBO:draw(ctx, "Cutscene skip input", level.cutscene_skip_input)
+    else
+        level.cutscene_skip_frame_index = -1
+    end
+end
 
 function module:draw_panel(ctx, is_window)
     if not active_tas_session then
@@ -53,19 +69,32 @@ function module:draw_panel(ctx, is_window)
                     ctx:win_text("World: "..level.metadata.world)
                 end
                 if level.metadata.level then
-                    ctx:win_text("Level: "..level.metadata.world)
+                    ctx:win_text("Level: "..level.metadata.level)
                 end
                 if level.metadata.theme then
                     ctx:win_text("Theme: "..common.THEME_NAME[level.metadata.theme])
                 end
-                if level.metadata.screen == SCREEN.TRANSITION then
+                if level.metadata.cutscene ~= nil then
+                    ctx:win_text("Cutscene: "..(level.metadata.cutscene and "Yes" or "No"))
+                end
+                if level.metadata.screen == SCREEN.LEVEL then
+                    if level.metadata.cutscene then
+                        ctx:win_separator_text("Cutscene settings")
+                        if level.metadata.theme == THEME.OLMEC then
+                            draw_cutscene_skip_settings(ctx, level, "Olmec", game_controller.OLMEC_CUTSCENE_LAST_FRAME)
+                        elseif level.metadata.theme == THEME.TIAMAT then
+                            draw_cutscene_skip_settings(ctx, level, "Tiamat", game_controller.TIAMAT_CUTSCENE_LAST_FRAME)
+                        end
+                    end
+                elseif level.metadata.screen == SCREEN.TRANSITION then
                     ctx:win_separator_text("Transition settings")
-                    local transition_exit = ctx:win_check("Automatically exit transitions", level.transition_exit_frame_index ~= -1)
+                    local transition_exit = ctx:win_check("Automatically exit transition", level.transition_exit_frame_index ~= -1)
                     if transition_exit then
                         if level.transition_exit_frame_index == -1 then
                             level.transition_exit_frame_index = game_controller.TRANSITION_EXIT_FIRST_FRAME
                         end
-                        level.transition_exit_frame_index = common_gui.draw_drag_int_clamped(ctx, "Transition exit frame", level.transition_exit_frame_index, game_controller.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
+                        level.transition_exit_frame_index = common_gui.draw_drag_int_clamped(ctx, "Transition exit frame",
+                            level.transition_exit_frame_index, game_controller.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
                     else
                         level.transition_exit_frame_index = -1
                     end
