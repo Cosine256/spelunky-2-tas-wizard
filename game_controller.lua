@@ -83,6 +83,8 @@ module.playback_target_frame = nil
 module.playback_force_full_run = nil
 module.playback_force_current_frame = nil
 local need_pause
+-- If true, then do not automatically exit the current transition screen even if the TAS is configured to do so.
+local suppress_auto_transition_exit
 local force_level_snapshot
 -- The active TAS level index currently being warped to. This is cleared at the end of screen change updates.
 local warp_level_index
@@ -107,7 +109,9 @@ function module.reset_session_vars()
     module.playback_force_full_run = false
     module.playback_force_current_frame = false
     need_pause = false
+    suppress_auto_transition_exit = false
     force_level_snapshot = nil
+    warp_level_index = nil
     if active_tas_session then
         active_tas_session:unset_current_level()
     end
@@ -149,6 +153,15 @@ local function try_pause()
     if not common_enums.TASABLE_SCREEN[state.screen] then
         -- Cancel the pause entirely.
         need_pause = false
+        return
+    end
+    if state.screen == SCREEN.TRANSITION and options.pause_suppress_auto_transition_exit then
+        -- Suppress the automatic exit of the current transition screen instead of pausing.
+        need_pause = false
+        suppress_auto_transition_exit = true
+        if options.debug_print_pause then
+            print("try_pause: Suppressing automatic exit of transition screen instead of pausing.")
+        end
         return
     end
     if state.loading == 0 then
@@ -524,7 +537,8 @@ local function on_pre_update_load_tasable_screen()
 
     if common_enums.TASABLE_SCREEN[state.screen_next].can_snapshot then
         if not force_level_snapshot and not warp_level_index and (module.mode == common_enums.MODE.RECORD
-            or (module.mode == common_enums.MODE.PLAYBACK and not active_tas_session.tas.levels[active_tas_session.current_level_index + 1].snapshot))
+            or (module.mode == common_enums.MODE.PLAYBACK and active_tas_session.current_level_index < active_tas_session.tas:get_end_level_index()
+            and not active_tas_session.tas.levels[active_tas_session.current_level_index + 1].snapshot))
         then
             -- Request a level snapshot of the upcoming level for the active TAS.
             module.register_level_snapshot_request(function(level_snapshot)
@@ -576,6 +590,7 @@ local function on_pre_update_load_screen()
         -- This update is either entering or exiting the options screen. This does not change the underlying screen and is not a relevant event for this script.
         return
     end
+    suppress_auto_transition_exit = false
     if common_enums.TASABLE_SCREEN[state.screen_next] then
         on_pre_update_load_tasable_screen()
     end
@@ -702,7 +717,7 @@ local function on_pre_update_tasable_screen()
         end
     elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
         inputs = {}
-        if active_tas_session.current_level_data.transition_exit_frame_index ~= -1 then
+        if not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index ~= -1 then
             for player_index = 1, active_tas_session.tas:get_player_count() do
                 -- By default, suppress inputs from every player.
                 inputs[player_index] = INPUTS.NONE
@@ -861,10 +876,12 @@ local function on_post_update_load_screen()
                     print("on_post_update_load_screen: Transferred stored level snapshot into TAS level "..active_tas_session.current_level_index..".")
                 end
             end
-            if active_tas_session.current_tasable_screen.record_frames
-                and ((module.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_level_start)
-                or (module.mode == common_enums.MODE.RECORD and options.pause_recording_on_level_start))
+            if (module.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_screen_load)
+                or (module.mode == common_enums.MODE.RECORD and options.pause_recording_on_screen_load)
             then
+                if options.debug_print_pause then
+                    print("on_post_update_load_screen: Pausing after screen load.")
+                end
                 need_pause = true
             end
         end

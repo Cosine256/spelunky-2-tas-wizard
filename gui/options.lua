@@ -28,9 +28,11 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Automatic pausing")
     ctx:win_text("These options control automatic game engine pauses. The pauses are the same ones used by Overlunky for frame advancing. These pauses are not recommended for use in regular Playlunky, as you will not have controls to unpause or frame advance.")
-    options.pause_recording_on_level_start = ctx:win_check("Pause recording on camp or level start", options.pause_recording_on_level_start)
-    options.pause_playback_on_level_start = ctx:win_check("Pause playback on camp or level start", options.pause_playback_on_level_start)
+    options.pause_playback_on_screen_load = ctx:win_check("Pause after screen loads during playback", options.pause_playback_on_screen_load)
+    options.pause_recording_on_screen_load = ctx:win_check("Pause after screen loads during recording", options.pause_recording_on_screen_load)
     options.pause_desync = ctx:win_check("Pause when desync is detected", options.pause_desync)
+    options.pause_suppress_auto_transition_exit = ctx:win_check("Suppress transition auto-exit instead of pausing", options.pause_suppress_auto_transition_exit)
+    ctx:win_text("Instead of pausing in a transition screen, temporarily suppress automatically exiting the transition.")
 
     ctx:win_separator_text("Player paths")
     -- TODO: This only controls visibility of the active TAS path, not the ghost TAS path. Maybe have this setting apply globally to all paths, and then add a new TAS setting for showing its own path.
