@@ -243,12 +243,16 @@ local function set_level_end_desync()
     run_desync_callbacks()
 end
 
--- Prepare for screen-specific warp behavior. Returns false if it isn't safe to warp to a level from this screen.
+-- Validates whether a warp can be performed and prepares for screen-specific warp behavior. Returns false if it isn't currently safe to warp from this screen.
 local function prepare_warp_from_screen()
+    if state.loading == 2 then
+        print("Cannot warp during screen change update.")
+        return false
+    end
     local screen_can_warp = SCREEN_WARP_HANDLER[state.screen]
     local can_warp = type(screen_can_warp) == "function" and screen_can_warp() or screen_can_warp == true
     if not can_warp then
-        print("Cannot warp to level from current screen.")
+        print("Cannot warp from current screen.")
     end
     return can_warp
 end
@@ -268,6 +272,7 @@ local function trigger_start_simple_warp(tas)
     end
 
     local start = tas.start_simple
+    force_level_snapshot = nil
 
     state.quest_flags = common.flag_to_value(QUEST_FLAG.RESET)
     if start.seed_type == "seeded" then
@@ -315,11 +320,8 @@ local function trigger_start_simple_warp(tas)
     end
 
     trigger_warp_unload()
-
     active_tas_session.desync = nil
     warp_level_index = 1
-
-    return true
 end
 
 -- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot.
