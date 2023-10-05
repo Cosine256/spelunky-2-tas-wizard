@@ -853,9 +853,7 @@ local function on_post_update_load_screen()
             print("on_post_update_load_screen: Current TAS level updated to "..tostring(active_tas_session.current_level_index)..".")
         end
         if module.mode ~= common_enums.MODE.FREEPLAY then
-            if active_tas_session.current_tasable_screen.count_frames then
-                active_tas_session.current_frame_index = 0
-            end
+            active_tas_session.current_frame_index = 0
             if active_tas_session.current_tasable_screen.record_frames then
                 for player_index, player in ipairs(active_tas_session.current_level_data.players) do
                     local player_ent = get_player(player_index, true)
@@ -978,12 +976,12 @@ local function on_post_update()
         on_post_update_load_screen()
     elseif module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index then
         -- Check whether this update executed a TASable frame.
-        local advanced = false
+        local advanced
         if active_tas_session.current_tasable_screen.record_frames then
             advanced = ((pre_update_loading == 3 and state.loading == 0) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
                 and (pre_update_time_level ~= state.time_level or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
-        elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
-            -- Transitions have no dedicated frame counter, so `get_frame()` has to be used. `get_frame()` increments at some point between updates, not during updates like most state memory variables. Based on this counting system, the frame increments to 1 after the first fade-in update, and then doesn't change for the entire remainder of the fade-in. Inputs are processed during the final update of the fade-in, which is still frame 1. If an exit input is seen during this final update, then the fade-out is started in that same update. The frame increments one more time after the update that starts the fade-out, and the character can be seen stepping forward for that one frame. This is the same behavior that occurs in normal gameplay by holding the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
+        else
+            -- This screen has no dedicated frame counter, so `get_frame()` has to be used. `get_frame()` increments at some point between updates, not during updates like most state memory variables. Based on this counting system, the frame increments to 1 after the first fade-in update, and then doesn't change for the entire remainder of the fade-in. For the transition screen, inputs are processed during the final update of the fade-in, which is still frame 1. If an exit input is seen during this final update, then the fade-out is started in that same update. The frame increments one more time after the update that starts the fade-out, and the character can be seen stepping forward for that one frame. This is the same behavior that occurs in normal gameplay by holding the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
             advanced = (state.loading == 0 or state.loading == 3) and prev_get_frame ~= get_frame()
         end
         if advanced then
