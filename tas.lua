@@ -550,15 +550,6 @@ function Tas:clear_all_level_snapshots()
     end
 end
 
-function Tas:find_closest_level_with_snapshot(target_level)
-    for level_index = target_level, 2, -1 do
-        if self.levels[level_index].snapshot then
-            return level_index
-        end
-    end
-    return -1
-end
-
 function Tas:is_start_configured()
     if self.start_type == "simple" then
         return true

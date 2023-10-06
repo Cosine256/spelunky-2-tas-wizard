@@ -61,9 +61,12 @@ do
 end
 
 module.PLAYBACK_FROM = {
-    NOW_OR_LEVEL = 1,
-    NOW = 2,
-    LEVEL = 3
+    -- Use current frame or load the nearest level to reach the target, preferring whichever is closer.
+    HERE_OR_NEAREST_LEVEL = 1,
+    -- Prefer current frame if it can reach the target. Otherwise, load the nearest level.
+    HERE_ELSE_NEAREST_LEVEL = 2,
+    -- Load the nearest level to reach the target.
+    NEAREST_LEVEL = 3
 }
 
 module.CUTSCENE_SKIP_FIRST_FRAME = 2
@@ -80,10 +83,10 @@ module.mode = common_enums.MODE.FREEPLAY
 module.playback_target_level = nil
 -- Target frame index for playback. When in playback mode, this field should not be `nil`. A value of 0 means that the playback target is reached as soon at the target level is loaded.
 module.playback_target_frame = nil
-module.playback_force_full_run = nil
-module.playback_force_current_frame = nil
 -- Whether playback has reached the end of the TAS. This flag is used to prevent "playback target reached" behavior from being repeated every time playback is checked. If frames are added to the end of the TAS, then the playback target will be set to the new end and this flag will be cleared.
 module.playback_waiting_at_end = nil
+module.playback_force_full_run = nil
+module.playback_force_current_frame = nil
 local need_pause
 -- If true, then do not automatically exit the current transition screen even if the TAS is configured to do so.
 local suppress_auto_transition_exit
@@ -105,9 +108,9 @@ local captured_level_snapshot = nil
 local function reset_playback_vars()
     module.playback_target_level = nil
     module.playback_target_frame = nil
+    module.playback_waiting_at_end = false
     module.playback_force_full_run = false
     module.playback_force_current_frame = false
-    module.playback_waiting_at_end = false
 end
 
 -- Reset the entire TAS session by resetting all session and level variables. Does not unload the active TAS.
@@ -474,80 +477,79 @@ function module.set_mode(new_mode)
         end
 
     elseif new_mode == common_enums.MODE.PLAYBACK then
-        module.playback_waiting_at_end = false
-        local need_load = false
-        local load_level_index = -1
-
         local can_use_current_frame = not module.playback_force_full_run and module.mode ~= common_enums.MODE.FREEPLAY
-            and (module.playback_force_current_frame or options.playback_from == module.PLAYBACK_FROM.NOW_OR_LEVEL or options.playback_from == module.PLAYBACK_FROM.NOW)
+            and (module.playback_force_current_frame or options.playback_from == module.PLAYBACK_FROM.HERE_OR_NEAREST_LEVEL
+                or options.playback_from == module.PLAYBACK_FROM.HERE_ELSE_NEAREST_LEVEL)
             and active_tas_session.current_level_index and active_tas_session.current_frame_index
             and common.compare_level_frame_index(module.playback_target_level, module.playback_target_frame,
                 active_tas_session.current_level_index, active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index or 0) >= 0
 
-        local best_load_level_index = -1
+        local load_level_index
         if module.playback_force_full_run then
-            best_load_level_index = 1
+            load_level_index = 1
         elseif not module.playback_force_current_frame then
-            if module.mode == common_enums.MODE.FREEPLAY or options.playback_from == module.PLAYBACK_FROM.NOW_OR_LEVEL or options.playback_from == module.PLAYBACK_FROM.LEVEL then
-                best_load_level_index = active_tas_session.tas:find_closest_level_with_snapshot(module.playback_target_level)
-                if best_load_level_index == -1 then
-                    best_load_level_index = 1
+            if options.playback_from <= 3 then
+                load_level_index = 1
+                for level_index = module.playback_target_level, 2, -1 do
+                    if active_tas_session.tas.levels[level_index].snapshot then
+                        load_level_index = level_index
+                        break
+                    end
                 end
-            elseif options.playback_from == 4 then
-                best_load_level_index = 1
-            elseif options.playback_from > 4 and active_tas_session.tas.levels[options.playback_from - 3].snapshot then
-                best_load_level_index = options.playback_from - 3
+            else
+                local playback_from_level_index = options.playback_from - 3
+                if playback_from_level_index <= module.playback_target_level
+                    and (playback_from_level_index == 1 or active_tas_session.tas.levels[playback_from_level_index].snapshot)
+                then
+                    load_level_index = playback_from_level_index
+                end
             end
         end
 
+        module.playback_waiting_at_end = false
         module.playback_force_full_run = false
         module.playback_force_current_frame = false
 
         if options.debug_print_mode then
-            print("Evaluating playback method: can_use_current_frame="..tostring(can_use_current_frame).." best_load_level_index="..best_load_level_index)
+            print("Evaluating playback method: can_use_current_frame="..tostring(can_use_current_frame).." load_level_index="..tostring(load_level_index))
         end
         if can_use_current_frame then
-            -- Default behavior is to use current frame.
-            if best_load_level_index ~= -1 then
-                -- Can use current frame or load a level state. Choose the closer one.
-                if active_tas_session.current_level_index < best_load_level_index then
-                    need_load = true
-                    if best_load_level_index > 1 then
-                        load_level_index = best_load_level_index
-                    end
-                end
+            -- The current frame can be used. Decide whether a level should be loaded instead.
+            if load_level_index and (options.playback_from ~= module.PLAYBACK_FROM.HERE_OR_NEAREST_LEVEL
+                or load_level_index <= active_tas_session.current_level_index)
+            then
+                -- Use the current frame.
+                load_level_index = nil
             end
-        elseif best_load_level_index ~= -1 then
-            need_load = true
-            if best_load_level_index > 1 then
-                load_level_index = best_load_level_index
-            end
-        else
+        elseif not load_level_index then
             -- Can neither use current frame nor load a level state.
-            -- TODO: Give the caller a way to check whether this will happen before they change the playback target to something unreachable.
+            -- TODO: Give the caller a way to check whether this will happen before they change the playback target.
             print("Warning: Cannot reach playback target with current options. Switching to freeplay mode.")
             module.set_mode(common_enums.MODE.FREEPLAY)
             return
         end
 
-        if need_load then
+        if load_level_index then
             -- Load a level to reach the playback target.
             if options.debug_print_mode then
-                print("Loading level for playback: target_level="..module.playback_target_level.." target_frame="..module.playback_target_frame.." load_level_index="..load_level_index)
+                print("Loading level "..load_level_index.." to reach playback target "..module.playback_target_level.."-"..module.playback_target_frame..".")
             end
-            if load_level_index == -1 then
-                if not module.apply_start_state() then
-                    return
-                end
+            local load_success
+            if load_level_index == 1 then
+                load_success = module.apply_start_state()
             else
-                if not module.apply_level_snapshot(load_level_index) then
-                    return
-                end
+                load_success = module.apply_level_snapshot(load_level_index)
+            end
+            if not load_success then
+                -- TODO: Give the caller a way to check whether this will happen before they change the playback target.
+                print("Warning: Failed to load level "..load_level_index.." to reach playback target. Switching to freeplay mode.")
+                module.set_mode(common_enums.MODE.FREEPLAY)
+                return
             end
         else
-            -- Playback to the target from the current frame.
+            -- Playback from the current frame to reach the playback target.
             if options.debug_print_mode then
-                print("Playing back from current frame: target_level="..module.playback_target_level.." target_frame="..module.playback_target_frame.." load_level_index="..load_level_index)
+                print("Playing back from current frame to reach playback target "..module.playback_target_level.."-"..module.playback_target_frame..".")
             end
         end
     end

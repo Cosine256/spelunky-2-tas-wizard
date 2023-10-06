@@ -167,8 +167,8 @@ function module:draw_panel(ctx, is_window)
         end
 
         local playback_from_choices = {
-            "Current frame or nearest level",
-            "Current frame",
+            "Here or nearest level",
+            "Here, else nearest level",
             "Nearest level"
         }
         for i = 1, #tas.levels do
