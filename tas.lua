@@ -466,11 +466,6 @@ function Tas:get_end_indices()
     return #self.levels, common_enums.TASABLE_SCREEN[end_level.metadata.screen].record_frames and #end_level.frames or 0
 end
 
--- Gets whether the given level index and frame index is equal to or later than the end of the TAS.
-function Tas:is_end_or_later(level_index, frame_index)
-    return level_index > #self.levels or (level_index == #self.levels and frame_index >= self:get_end_frame_index(level_index))
-end
-
 -- Removes levels after (but not including) the specified level.
 function Tas:remove_levels_after(level_index)
     for i = level_index + 1, #self.levels do

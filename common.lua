@@ -111,4 +111,12 @@ function module.level_to_string(tas, level_index, include_total)
     return text
 end
 
+-- Compares two level index and frame index pairs and returns the result as a signed integer.
+-- Negative: Pair 1 is before pair 2.
+-- Zero: Pair 1 is equal to pair 2.
+-- Positive: Pair 1 is after pair 2.
+function module.compare_level_frame_index(level_index_1, frame_index_1, level_index_2, frame_index_2)
+    return level_index_1 == level_index_2 and frame_index_1 - frame_index_2 or level_index_1 - level_index_2
+end
+
 return module

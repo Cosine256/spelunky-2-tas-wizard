@@ -367,46 +367,47 @@ function module.apply_level_snapshot(level_index)
     return true
 end
 
--- Validates the playback target. Prints a warning, switches to freeplay mode, and pauses if the target is invalid.
--- Returns whether the playback target was valid. Returns true if current mode is not playback.
-function module.validate_playback_target()
-    if module.mode ~= common_enums.MODE.PLAYBACK then
-        return true
+local function on_playback_invalid(message)
+    print("Warning: Invalid playback target ("..module.playback_target_level.."-"..module.playback_target_frame.."): "..message.." Switching to freeplay mode.")
+    module.set_mode(common_enums.MODE.FREEPLAY)
+    if options.debug_print_pause then
+        prinspect("on_playback_invalid: Invalid playback target pause", get_frame())
     end
-    local message
-    if module.playback_target_level > active_tas_session.tas:get_end_level_index() then
-        message = "Target is later than end of TAS ("..active_tas_session.tas:get_end_level_index().."-"..active_tas_session.tas:get_end_frame_index()..")."
-    elseif module.playback_target_frame > active_tas_session.tas:get_end_frame_index(module.playback_target_level) then
-        message = "Target is later than end of level ("..module.playback_target_level.."-"..active_tas_session.tas:get_end_frame_index(module.playback_target_level)..")."
-    elseif (state.loading == 0 or state.loading == 3) and (active_tas_session.current_level_index > module.playback_target_level
-        or (active_tas_session.current_level_index == module.playback_target_level and active_tas_session.current_frame_index > module.playback_target_frame))
-    then
-        message = "Current frame ("..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index..") is later than playback target."
-    end
-    if message then
-        print("Warning: Invalid playback target ("..module.playback_target_level.."-"..module.playback_target_frame.."): "..message.." Switching to freeplay mode.")
-        if options.debug_print_pause then
-            prinspect("validate_playback_target: Invalid playback target pause", get_frame())
-        end
-        module.set_mode(common_enums.MODE.FREEPLAY)
-        need_pause = true
-        return false
-    else
-        return true
-    end
+    need_pause = true
 end
 
--- Validates the playback target and then checks whether the target matches the current level and frame. If the target fails validation, then `validate_playback_target` failure behavior is executed. If the target matches, then the configured target action is executed. Otherwise, nothing happens.
-local function handle_playback_target()
-    if not module.validate_playback_target() or active_tas_session.current_level_index ~= module.playback_target_level
-        or (active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index ~= module.playback_target_frame)
-    then
+-- Checks the current playback status. If playback is invalid, then it is stopped. If playback is valid and the target matches the current level and frame, then the target action is executed. If not in playback mode, or if none of the prior conditions are met, then nothing happens.
+function module.check_playback()
+    if module.mode ~= common_enums.MODE.PLAYBACK then
+        return
+    end
+    local end_level_index, end_frame_index = active_tas_session.tas:get_end_indices()
+    local end_comparison = common.compare_level_frame_index(module.playback_target_level, module.playback_target_frame, end_level_index, end_frame_index)
+    if end_comparison > 0 then
+        on_playback_invalid("Target is later than end of TAS ("..end_level_index.."-"..end_frame_index..").")
+        return
+    end
+    if module.playback_target_frame > active_tas_session.tas:get_end_frame_index(module.playback_target_level) then
+        on_playback_invalid("Target is later than end of level ("..module.playback_target_level.."-"..active_tas_session.tas:get_end_frame_index(module.playback_target_level)..").")
+        return
+    end
+    if state.loading ~= 0 and state.loading ~= 3 then
+        -- Don't compare the playback target to the current frame during screen unloading.
+        return
+    end
+    local current_comparison = common.compare_level_frame_index(module.playback_target_level, module.playback_target_frame,
+        active_tas_session.current_level_index, active_tas_session.current_frame_index)
+    if current_comparison < 0 then
+        on_playback_invalid("Current frame ("..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index..") is later than playback target.")
+        return
+    elseif current_comparison > 0 then
+        -- The playback target is later than the current frame.
         return
     end
 
     if options.playback_target_pause then
         if options.debug_print_pause then
-            prinspect("handle_playback_target: Reached playback target pause", get_frame())
+            prinspect("check_playback: Reached playback target pause", get_frame())
         end
         need_pause = true
     end
@@ -416,16 +417,23 @@ local function handle_playback_target()
             print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to record mode.")
         end
         module.set_mode(common_enums.MODE.RECORD)
-    elseif new_mode == common_enums.MODE.FREEPLAY or active_tas_session.tas:is_end_or_later(active_tas_session.current_level_index, active_tas_session.current_frame_index) then
+    elseif new_mode == common_enums.MODE.FREEPLAY then
         if options.debug_print_mode then
             print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to freeplay mode.")
         end
         module.set_mode(common_enums.MODE.FREEPLAY)
     else
-        if options.debug_print_mode then
-            print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Staying in playback mode and setting target to end of TAS.")
+        if end_comparison < 0 then
+            if options.debug_print_mode then
+                print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Staying in playback mode and setting target to end of TAS.")
+            end
+            module.playback_target_level, module.playback_target_frame = end_level_index, end_frame_index
+        else
+            if options.debug_print_mode then
+                print("Playback target ("..module.playback_target_level.."-"..module.playback_target_frame..") reached. Switching to freeplay mode due to end of TAS.")
+            end
+            module.set_mode(common_enums.MODE.FREEPLAY)
         end
-        module.playback_target_level, module.playback_target_frame = active_tas_session.tas:get_end_indices()
     end
 end
 
@@ -457,7 +465,9 @@ function module.set_mode(new_mode)
 
         local can_use_current_frame = not module.playback_force_full_run and module.mode ~= common_enums.MODE.FREEPLAY
             and (module.playback_force_current_frame or options.playback_from == module.PLAYBACK_FROM.NOW_OR_LEVEL or options.playback_from == module.PLAYBACK_FROM.NOW)
-            and (active_tas_session.current_level_index and ((module.playback_target_level == active_tas_session.current_level_index and (not active_tas_session.current_frame_index or module.playback_target_frame >= active_tas_session.current_frame_index)) or module.playback_target_level > active_tas_session.current_level_index))
+            and active_tas_session.current_level_index and active_tas_session.current_frame_index
+            and common.compare_level_frame_index(module.playback_target_level, module.playback_target_frame,
+                active_tas_session.current_level_index, active_tas_session.current_frame_index) >= 0
 
         local best_load_level_index = -1
         if module.playback_force_full_run then
@@ -524,8 +534,8 @@ function module.set_mode(new_mode)
             if options.debug_print_mode then
                 print("Playing back from current frame: target_level="..module.playback_target_level.." target_frame="..module.playback_target_frame.." load_level_index="..load_level_index)
             end
-            -- Immediately handle the playback target in case it already matches the current level and frame.
-            handle_playback_target()
+            -- Immediately check playback in case the target already matches the current level and frame.
+            module.check_playback()
         end
     end
     module.mode = new_mode
@@ -717,7 +727,7 @@ local function on_pre_update_tasable_screen()
     end
 
     module.validate_current_frame()
-    module.validate_playback_target()
+    module.check_playback()
 
     if module.mode == common_enums.MODE.FREEPLAY then
         return
@@ -966,9 +976,7 @@ local function on_post_update_frame_advanced()
         end
     end
 
-    if module.mode == common_enums.MODE.PLAYBACK then
-        handle_playback_target()
-    end
+    module.check_playback()
 end
 
 local function on_post_update()
@@ -990,8 +998,8 @@ local function on_post_update()
         elseif module.mode == common_enums.MODE.PLAYBACK
             and (not active_tas_session.current_tasable_screen.record_frames or active_tas_session.current_frame_index == 0)
         then
-            -- Handle a possible frame 0 playback target, or a playback target on a screen that can't target a specific frame.
-            handle_playback_target()
+            -- Check playback in case of a frame 0 playback target.
+            module.check_playback()
         end
     end
 
