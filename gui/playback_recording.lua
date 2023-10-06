@@ -138,9 +138,7 @@ function module:draw_panel(ctx, is_window)
             if game_controller.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
             elseif game_controller.mode == common_enums.MODE.RECORD then
-                if (not active_tas_session.current_level_index or not active_tas_session.current_frame_index
-                    or common.compare_level_frame_index(active_tas_session.current_level_index, active_tas_session.current_frame_index,
-                        tas:get_end_level_index(), tas:get_end_frame_index()) < 0)
+                if active_tas_session.current_level_index and active_tas_session.current_frame_index
                     and ctx:win_button("Switch to playback mode")
                 then
                     if options.debug_print_mode then
