@@ -5,6 +5,8 @@ local common_enums = require("common_enums")
 local introspection = require("introspection")
 local GAME_TYPES = introspection.register_types({}, require("raw_game_types"))
 
+-- The maximum amount of time to spend executing one batch of fast updates, in milliseconds.
+local FAST_UPDATE_BATCH_DURATION = 100
 local POSITION_DESYNC_EPSILON = 0.0000000001
 -- Vanilla frames used to fade into and out of the transition screen.
 local TRANSITION_FADE_FRAMES = 18
@@ -93,6 +95,9 @@ local suppress_auto_transition_exit
 local force_level_snapshot
 -- The active TAS level index currently being warped to. This is cleared at the end of screen change updates.
 local warp_level_index
+
+-- The start time of the current fast update batch. Any game updates that occur while this is set are fast updates initiated by `update_frame()`.
+local fast_update_start_time
 
 -- The value of `get_frame()` at the end of the most recent update. The game increments `get_frame()` at some point between updates, not during updates.
 local prev_get_frame
@@ -803,8 +808,40 @@ local function on_pre_update_tasable_screen()
     end
 end
 
+local function can_fast_update()
+    return options.fast_update_playback and not options.presentation_enabled and module.mode == common_enums.MODE.PLAYBACK
+        and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
+        and (not active_tas_session.current_level_data or active_tas_session.current_level_data.metadata.screen ~= SCREEN.TRANSITION
+            or (not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index ~= -1))
+end
 
 local function on_pre_update()
+    -- Before executing the upcoming normal update, check whether a batch of fast updates should occur. Fast updates are identical to normal updates as far the game state is concerned, and they trigger OL callbacks just like normal updates. However, they do not perform any rendering and are not locked to any frame rate, so fast updates can be executed as quickly as the computer is capable of doing so. This is usually significantly faster than the 60 FPS of normal updates.
+    -- Only a finite batch of fast updates will be executed. The batch will end once the maximum duration is reached, or if any checks stop the batch early. Once the batch ends, the pending normal update will be allowed to execute. Unlike the fast updates, rendering will occur after the normal update. This will allow pausing and GUI interactions to occur, although the performance will be very laggy. It will also let the user see the progress of fast playback rather than the game appearing to be frozen until fast playback stops, and it will prevent an uninterruptible infinite loop if fast playback fails to reach a stopping point for whatever reason. Before the next normal update, the script will check again whether another batch of fast updates should occur.
+    if not fast_update_start_time and can_fast_update() then
+        fast_update_start_time = get_ms()
+        if options.debug_print_fast_update then
+            print("on_pre_update: Starting fast update batch. fast_update_start_time="..fast_update_start_time)
+        end
+        while true do
+            update_state()
+            local duration = get_ms() - fast_update_start_time
+            if duration >= FAST_UPDATE_BATCH_DURATION then
+                if options.debug_print_fast_update then
+                    print("on_pre_update: Stopping fast update batch after "..duration.."ms: Max duration reached.")
+                end
+                break
+            end
+            if not can_fast_update() then
+                if options.debug_print_fast_update then
+                    print("on_pre_update: Stopping fast update batch after "..duration.."ms: Fast update conditions no longer met.")
+                end
+                break
+            end
+        end
+        fast_update_start_time = nil
+    end
+
     pre_update_loading = state.loading
     pre_update_time_level = state.time_level
     pre_update_cutscene_active = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
@@ -916,6 +953,8 @@ local function on_post_update_load_screen()
                 end
                 need_pause = true
             end
+            -- Check playback in case of a frame 0 playback target.
+            module.check_playback()
         end
         if active_tas_session.stored_level_snapshot then
             active_tas_session.stored_level_snapshot = nil
@@ -1024,16 +1063,12 @@ local function on_post_update()
                 and (pre_update_time_level ~= state.time_level or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
         else
             -- This screen has no dedicated frame counter, so `get_frame()` has to be used. `get_frame()` increments at some point between updates, not during updates like most state memory variables. Based on this counting system, the frame increments to 1 after the first fade-in update, and then doesn't change for the entire remainder of the fade-in. For the transition screen, inputs are processed during the final update of the fade-in, which is still frame 1. If an exit input is seen during this final update, then the fade-out is started in that same update. The frame increments one more time after the update that starts the fade-out, and the character can be seen stepping forward for that one frame. This is the same behavior that occurs in normal gameplay by holding the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
+            -- TODO: Find an alternative to get_frame() that works during fast updates.
             advanced = (state.loading == 0 or state.loading == 3) and prev_get_frame ~= get_frame()
         end
         if advanced then
             active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
             on_post_update_frame_advanced()
-        elseif module.mode == common_enums.MODE.PLAYBACK
-            and (not active_tas_session.current_tasable_screen.record_frames or active_tas_session.current_frame_index == 0)
-        then
-            -- Check playback in case of a frame 0 playback target.
-            module.check_playback()
         end
     end
 

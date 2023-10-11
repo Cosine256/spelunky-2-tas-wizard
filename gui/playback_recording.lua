@@ -77,6 +77,13 @@ local function draw_tagged_frame(ctx, id, tas, tagged_frame, level_choices, leve
     return delete
 end
 
+function module:draw_fast_update_playback_option(ctx, include_desc)
+    options.fast_update_playback = ctx:win_check("Fast playback", options.fast_update_playback)
+    if include_desc then
+        ctx:win_text("During playback, execute game updates as fast as possible and skip rendering on most frames. The game will be very laggy during fast updates.")
+    end
+end
+
 function module:draw_panel(ctx, is_window)
     -- TODO: This panel feels messy. How could I reorganize it to be easier to use?
     ctx:win_section("Options", function()
@@ -178,6 +185,7 @@ function module:draw_panel(ctx, is_window)
         options.playback_from = playback_from_combo:draw(ctx, "Playback from", options.playback_from)
         options.playback_target_mode = PLAYBACK_TARGET_MODE_COMBO:draw(ctx, "Playback target action", options.playback_target_mode)
         options.playback_target_pause = ctx:win_check("Pause at playback target", options.playback_target_pause)
+        self:draw_fast_update_playback_option(ctx, false)
 
         ctx:win_separator_text("Recording")
 

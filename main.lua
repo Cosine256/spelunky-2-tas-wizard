@@ -60,6 +60,7 @@ default_options = {
     pause_recording_on_screen_load = true,
     pause_desync = true,
     pause_suppress_auto_transition_exit = true,
+    fast_update_playback = false,
     transition_skip = false,
     paths_visible = true,
     path_marks_visible = true,
@@ -92,6 +93,7 @@ default_options = {
         save_level_snapshots = true
     },
     debug_print_load = false,
+    debug_print_fast_update = false,
     debug_print_file = false,
     debug_print_frame = false,
     debug_print_input = false,

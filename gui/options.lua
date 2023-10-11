@@ -24,6 +24,7 @@ function module:draw_panel(ctx, is_window)
     end
 
     ctx:win_separator_text("Speed tweaks")
+    tool_guis.playback_recording:draw_fast_update_playback_option(ctx, true)
     options.transition_skip = ctx:win_check("Skip level transitions", options.transition_skip)
 
     ctx:win_separator_text("Automatic pausing")
@@ -88,6 +89,7 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Debug")
     options.debug_print_load = ctx:win_check("Print load info", options.debug_print_load)
+    options.debug_print_fast_update = ctx:win_check("Print fast update info", options.debug_print_fast_update)
     options.debug_print_file = ctx:win_check("Print file info", options.debug_print_file)
     options.debug_print_frame = ctx:win_check("Print frame info", options.debug_print_frame)
     options.debug_print_input = ctx:win_check("Print input info", options.debug_print_input)
