@@ -100,8 +100,6 @@ local warp_level_index
 local fast_update_start_time
 
 local pre_update_loading
-local pre_update_time_level
-local pre_update_cutscene_active
 
 local level_snapshot_requests = {}
 local level_snapshot_request_count = 0
@@ -177,9 +175,10 @@ local function try_pause()
         end
         return
     end
-    if state.loading == 0 then
-        -- It's safe to pause here.
-        -- TODO: OL added an option to change which pause flag it uses. Need to handle the other ones, or instruct the user to only use the FADE flag.
+    if state.loading == 0 and (state.pause == 0 or state.pause == PAUSE.FADE) then
+        -- It's safe to pause now.
+        -- TODO: OL has an option to change its pause behavior. The FADE pause is the only one that is currently supported by this script. Need to handle the other ones, or instruct the user to only use the FADE pause.
+        -- TODO: Pausing is not safe during mixed or non-FADE pause states because OL FADE pauses currently handle them incorrectly and will erase the other pause flags. This causes problems such as level timer desync during cutscenes.
         state.pause = PAUSE.FADE
         need_pause = false
         if options.debug_print_pause then
@@ -843,8 +842,6 @@ local function on_pre_update()
     end
 
     pre_update_loading = state.loading
-    pre_update_time_level = state.time_level
-    pre_update_cutscene_active = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
 
     if state.loading == 2 then
         on_pre_update_load_screen()
@@ -1063,19 +1060,12 @@ end
 local function on_post_update()
     if pre_update_loading == 2 then
         on_post_update_load_screen()
-    elseif module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session and active_tas_session.current_level_index and state.screen ~= SCREEN.OPTIONS then
-        -- Check whether this update executed a TASable frame.
-        local advanced
-        if active_tas_session.current_tasable_screen.record_frames then
-            advanced = did_entities_update() and (pre_update_time_level ~= state.time_level
-                or (pre_update_cutscene_active and not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
-        else
-            advanced = did_entities_update()
-        end
-        if advanced then
-            active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
-            on_post_update_frame_advanced()
-        end
+    elseif module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session.current_level_index and state.screen ~= SCREEN.OPTIONS and did_entities_update()
+        and (active_tas_session.current_level_data.metadata.screen ~= SCREEN.LEVEL or (not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
+    then
+        -- This update executed a TASable frame.
+        active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
+        on_post_update_frame_advanced()
     end
 
     try_pause()

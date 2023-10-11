@@ -60,7 +60,7 @@ end
 
 function OrderedTable:values_by_id()
     local values = {}
-    for id, entry in ipairs(self._entries_by_id) do
+    for id, entry in pairs(self._entries_by_id) do
         values[id] = entry.value
     end
     return values
