@@ -719,18 +719,20 @@ local function get_cutscene_input(player_index, logic_cutscene, last_frame)
     elseif active_tas_session.current_level_data.cutscene_skip_frame_index == -1 then
         -- The cutscene should not be skipped.
         return INPUTS.NONE
-    elseif player_index ~= state.items.leader then
-        -- Only the leader player can skip the cutscene.
-        return INPUTS.NONE
     elseif logic_cutscene.timer == active_tas_session.current_level_data.cutscene_skip_frame_index - 1 then
         -- The skip button needs to be pressed one frame early. The cutscene is skipped when the button is released on the next frame.
-        if options.debug_print_input then
-            print("get_cutscene_input: Sending cutscene skip input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer)
+        if player_index == state.items.leader then
+            if options.debug_print_input then
+                print("get_cutscene_input: Sending cutscene skip input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer.." player_index="..player_index)
+            end
+            return common_enums.SKIP_INPUT:value_by_id(active_tas_session.current_level_data.cutscene_skip_input).input
+        else
+            -- Only the leader player can skip the cutscene.
+            return INPUTS.NONE
         end
-        return common_enums.SKIP_INPUT:value_by_id(active_tas_session.current_level_data.cutscene_skip_input).input
     elseif logic_cutscene.timer == active_tas_session.current_level_data.cutscene_skip_frame_index then
         if options.debug_print_input then
-            print("get_cutscene_input: Deferring to recorded input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer)
+            print("get_cutscene_input: Deferring to recorded input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer.." player_index="..player_index)
         end
         return nil
     else
