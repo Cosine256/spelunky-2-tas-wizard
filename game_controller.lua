@@ -100,6 +100,7 @@ local warp_level_index
 local fast_update_start_time
 
 local pre_update_loading
+local pre_update_pause
 
 local level_snapshot_requests = {}
 local level_snapshot_request_count = 0
@@ -844,6 +845,7 @@ local function on_pre_update()
     end
 
     pre_update_loading = state.loading
+    pre_update_pause = state.pause
 
     if state.loading == 2 then
         on_pre_update_load_screen()
@@ -876,7 +878,10 @@ local function on_post_update_load_screen()
             -- This screen change was a warp.
             if not active_tas_session:set_current_level(warp_level_index) then
                 if module.mode == common_enums.MODE.FREEPLAY then
-                    print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..".")
+                    -- The level won't exist yet if freeplay warping to level 1 in a TAS with no recorded data.
+                    if warp_level_index ~= 1 or #active_tas_session.tas.levels > 0 then
+                        print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..".")
+                    end
                 else
                     if module.mode == common_enums.MODE.RECORD and warp_level_index == #active_tas_session.tas.levels + 1 then
                         active_tas_session:create_end_level()
@@ -1056,7 +1061,8 @@ local function did_entities_update()
     -- TODO: This logic is only guessing whether entities were updated based on the state memory before and after the update. This seems to work for vanilla game behavior, but it doesn't properly handle OL freeze pauses and other scripted scenarios. It would be better if it could check whether the entities were actually updated. Is there a way to do this for any screen capable of having entities, even if it has 0 entities in it?
     -- TODO: There is an entity update that seems to occur when loading screens that generate entities. Does it always happen for these screens? It should count as an entity update here even if it isn't a TASable frame.
     return ((pre_update_loading == 3 and (state.loading == 0 or state.loading == 1)) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
-        and state.pause & (PAUSE.MENU | PAUSE.FADE | PAUSE.ANKH) == 0
+        -- Within an update, the vanilla game sets specific pause flags either before or after entities are updated. A pause flag that prevents entity updating will only have an effect if it's set before the game starts the entity updates. This means that this logic needs to check the pre-update value for some pause flags instead of the post-update value depending on when the game sets them. Some pause flags are not checked here because they either don't prevent entity updates or they have an unknown purpose.
+        and (pre_update_pause & PAUSE.ANKH == 0 and state.pause & (PAUSE.MENU | PAUSE.FADE) == 0)
 end
 
 local function on_post_update()
