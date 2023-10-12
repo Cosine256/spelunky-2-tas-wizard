@@ -713,15 +713,15 @@ local function on_pre_level_gen()
 end
 
 local function get_cutscene_input(player_index, logic_cutscene, last_frame)
-    if active_tas_session.current_level_data.cutscene_skip_frame_index == -1 then
+    if logic_cutscene.timer == last_frame then
+        -- The cutscene will end naturally during this update. Defer to normal input handling.
+        return nil
+    elseif active_tas_session.current_level_data.cutscene_skip_frame_index == -1 then
         -- The cutscene should not be skipped.
         return INPUTS.NONE
     elseif player_index ~= state.items.leader then
         -- Only the leader player can skip the cutscene.
         return INPUTS.NONE
-    elseif logic_cutscene.timer == last_frame then
-        -- The cutscene will end naturally during this update. Defer to normal input handling.
-        return nil
     elseif logic_cutscene.timer == active_tas_session.current_level_data.cutscene_skip_frame_index - 1 then
         -- The skip button needs to be pressed one frame early. The cutscene is skipped when the button is released on the next frame.
         if options.debug_print_input then
@@ -1012,7 +1012,7 @@ local function on_post_update_frame_advanced()
                 set_level_end_desync()
             end
             if options.debug_print_mode then
-                print("Executed TASable frame during playback without frame data. Switching to freeplay mode.")
+                print("on_post_update_frame_advanced: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
             end
             module.set_mode(common_enums.MODE.FREEPLAY)
             return
@@ -1029,7 +1029,7 @@ local function on_post_update_frame_advanced()
                 -- Record the current player inputs for the frame that just executed.
                 local input = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUT_MASK
                 if options.debug_print_frame or options.debug_print_input then
-                    print("on_post_update: Recording input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
+                    print("on_post_update_frame_advanced: Recording input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
                         .." player="..player_index.." input="..common.input_to_string(input))
                 end
                 player.input = input
