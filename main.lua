@@ -2,7 +2,6 @@ meta.name = "TAS Tool"
 meta.version = "0.0.0"
 meta.description = ""
 meta.author = "Cosine"
-meta.unsafe = true
 
 local common = require("common")
 local common_enums = require("common_enums")

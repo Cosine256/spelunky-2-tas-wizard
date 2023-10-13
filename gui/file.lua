@@ -80,10 +80,7 @@ function module:draw_panel(ctx, is_window)
         end)
         ctx:win_popid()
     end
-    if options.tas_file_name:find("[/\\]") then
-        ctx:win_text("Note: This script cannot create directories. If this directory does not exist, then you'll need to create it yourself.")
-    end
-    ctx:win_text("The TAS file input accepts any valid file path. By default, relative paths are relative to the directory containing the Spelunky 2 executable file.")
+    ctx:win_text("The TAS file input accepts file paths relative to this mod's data directory. When writing files, directories will be created if needed. The data directory is located in the Spelunky 2 install directory at \"Mods/Data/[mod_name]\".")
 end
 
 return module
