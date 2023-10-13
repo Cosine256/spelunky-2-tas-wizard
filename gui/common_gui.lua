@@ -236,9 +236,15 @@ local function draw_tas_start_settings_simple(ctx, tas)
         new_player_count = PLAYER_COUNT_COMBO:draw(ctx, "Player count", start.player_count)
     end
     if start.player_count ~= new_player_count then
-        -- Update all level and frame data to match the new player count.
         print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating level and frame data.")
         start.player_count = new_player_count
+        -- Populate unassigned player characters.
+        for player_index = 1, new_player_count do
+            if not start.players[player_index] then
+                start.players[player_index] = options.new_tas.start_simple.players[player_index]
+            end
+        end
+        -- Update all level and frame data to match the new player count.
         for _, level in ipairs(tas.levels) do
             if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
                 for player_index = 1, CONST.MAX_PLAYERS do

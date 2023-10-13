@@ -326,10 +326,14 @@ local function trigger_start_simple_warp(tas)
     end
     state.items.player_count = start.player_count
     for player_index = 1, CONST.MAX_PLAYERS do
-        local player_char = common_enums.PLAYER_CHAR:value_by_id(start.players[player_index])
-        state.items.player_select[player_index].activated = player_index <= start.player_count
-        state.items.player_select[player_index].character = player_char.ent_type_id
-        state.items.player_select[player_index].texture = player_char.texture_id
+        if player_index <= start.player_count then
+            local player_char = common_enums.PLAYER_CHAR:value_by_id(start.players[player_index])
+            state.items.player_select[player_index].activated = true
+            state.items.player_select[player_index].character = player_char.ent_type_id
+            state.items.player_select[player_index].texture = player_char.texture_id
+        else
+            state.items.player_select[player_index].activated = false
+        end
     end
 
     trigger_warp_unload()

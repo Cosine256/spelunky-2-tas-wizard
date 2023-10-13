@@ -355,6 +355,9 @@ function Tas:to_raw(serial_mod)
                 if not copy.start_simple.tutorial_race then
                     copy.start_simple.tutorial_race_referee = nil
                 end
+                for player_index = CONST.MAX_PLAYERS, copy.start_simple.player_count + 1, -1 do
+                    copy.start_simple.players[player_index] = nil
+                end
             else
                 copy.start_simple = nil
             end
@@ -568,7 +571,7 @@ function Tas:get_player_count()
     end
 end
 
--- Gets the array of player characters configured in the start settings.
+-- Gets the array of player characters configured in the start settings. The array size will at least match the configured player count, but will be larger if additional unused player characters are stored.
 function Tas:get_player_chars()
     if self.start_type == "simple" then
         return self.start_simple.players
