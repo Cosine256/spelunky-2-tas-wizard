@@ -721,7 +721,7 @@ local function get_cutscene_input(player_index, logic_cutscene, last_frame)
     if logic_cutscene.timer == last_frame then
         -- The cutscene will end naturally during this update. Defer to normal input handling.
         return nil
-    elseif active_tas_session.current_level_data.cutscene_skip_frame_index == -1 then
+    elseif not active_tas_session.current_level_data.cutscene_skip_frame_index then
         -- The cutscene should not be skipped.
         return INPUTS.NONE
     elseif logic_cutscene.timer == active_tas_session.current_level_data.cutscene_skip_frame_index - 1 then
@@ -784,7 +784,7 @@ local function on_pre_update_tasable_screen()
     elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
         -- Exiting is triggered during the first update where the exit input is seen being held down, not when it's released. The earliest update where inputs are processed is the final update of the fade-in. If an exit input is seen during the earliest update, then the fade-out is started in that same update. The update still executes entity state machines, so characters can be seen stepping forward for a single frame. This is the same behavior that occurs in normal gameplay by holding down the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
         inputs = {}
-        if not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index ~= -1 then
+        if not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index then
             for player_index = 1, active_tas_session.tas:get_player_count() do
                 -- By default, suppress inputs from every player.
                 inputs[player_index] = INPUTS.NONE
@@ -817,7 +817,7 @@ local function can_fast_update()
     return options.fast_update_playback and not options.presentation_enabled and module.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
         and (not active_tas_session.current_level_data or active_tas_session.current_level_data.metadata.screen ~= SCREEN.TRANSITION
-            or (not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index ~= -1))
+            or (not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index ~= nil))
 end
 
 local function on_pre_update()

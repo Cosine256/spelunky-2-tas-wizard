@@ -14,16 +14,16 @@ local selected_level_index = 0
 local level_index
 
 local function draw_cutscene_skip_settings(ctx, level, name, last_frame_index)
-    local cutscene_skip = ctx:win_check("Skip "..name.." cutscene", level.cutscene_skip_frame_index ~= -1)
+    local cutscene_skip = ctx:win_check("Skip "..name.." cutscene", level.cutscene_skip_frame_index ~= nil)
     if cutscene_skip then
-        if level.cutscene_skip_frame_index == -1 then
+        if not level.cutscene_skip_frame_index then
             level.cutscene_skip_frame_index = game_controller.CUTSCENE_SKIP_FIRST_FRAME
         end
         level.cutscene_skip_frame_index = common_gui.draw_drag_int_clamped(ctx, "Cutscene skip frame",
             level.cutscene_skip_frame_index, game_controller.CUTSCENE_SKIP_FIRST_FRAME, last_frame_index)
         level.cutscene_skip_input = SKIP_INPUT_COMBO:draw(ctx, "Cutscene skip input", level.cutscene_skip_input)
     else
-        level.cutscene_skip_frame_index = -1
+        level.cutscene_skip_frame_index = nil
     end
 end
 
@@ -88,15 +88,15 @@ function module:draw_panel(ctx, is_window)
                     end
                 elseif level.metadata.screen == SCREEN.TRANSITION then
                     ctx:win_separator_text("Transition settings")
-                    local transition_exit = ctx:win_check("Automatically exit transition", level.transition_exit_frame_index ~= -1)
+                    local transition_exit = ctx:win_check("Automatically exit transition", level.transition_exit_frame_index ~= nil)
                     if transition_exit then
-                        if level.transition_exit_frame_index == -1 then
+                        if not level.transition_exit_frame_index then
                             level.transition_exit_frame_index = game_controller.TRANSITION_EXIT_FIRST_FRAME
                         end
                         level.transition_exit_frame_index = common_gui.draw_drag_int_clamped(ctx, "Transition exit frame",
                             level.transition_exit_frame_index, game_controller.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
                     else
-                        level.transition_exit_frame_index = -1
+                        level.transition_exit_frame_index = nil
                     end
                 end
                 if tasable_screen.record_frames then

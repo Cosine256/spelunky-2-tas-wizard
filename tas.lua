@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 16
+local CURRENT_FORMAT = 17
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -301,7 +301,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [15] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 16,
         update = function(o)
             for _, level in ipairs(o.levels) do
                 if level.metadata.screen == SCREEN.LEVEL then
@@ -323,6 +323,19 @@ local FORMAT_UPDATERS = {
             o.tiamat_cutscene_skip_frame = nil
             o.tiamat_cutscene_skip_input = nil
             o.transition_exit_frame = nil
+        end
+    },
+    [16] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, level in ipairs(o.levels) do
+                if level.cutscene_skip_frame_index == -1 then
+                    level.cutscene_skip_frame_index = nil
+                end
+                if level.transition_exit_frame_index == -1 then
+                    level.transition_exit_frame_index = nil
+                end
+            end
         end
     }
 }
