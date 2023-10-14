@@ -2,6 +2,15 @@ local common_enums = require("common_enums")
 
 local module = {}
 
+-- The earliest frame in which a boss cutscene can be skipped.
+module.CUTSCENE_SKIP_FIRST_FRAME = 2
+-- The highest value of the Olmec cutscene logic timer before the cutscene ends.
+module.OLMEC_CUTSCENE_LAST_FRAME = 809
+-- The highest value of the Tiamat cutscene logic timer before the cutscene ends.
+module.TIAMAT_CUTSCENE_LAST_FRAME = 379
+-- The earliest frame in which a transition can be exited.
+module.TRANSITION_EXIT_FIRST_FRAME = 1
+
 module.THEME_NAME = {
     [THEME.BASE_CAMP] = "Base Camp",
     [THEME.DWELLING] = "Dwelling",

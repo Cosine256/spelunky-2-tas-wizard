@@ -75,6 +75,16 @@ function module.draw_drag_int_clamped(ctx, label, value, min, max, clamp_min, cl
     end
 end
 
+function module.draw_player_combo_input(ctx, tas, label, selected_player_index)
+    local player_chars = tas:get_player_chars()
+    local player_choices = {}
+    for i = 1, tas:get_player_count() do
+        player_choices[i] = i.." ("..common_enums.PLAYER_CHAR:value_by_id(player_chars[i]).name..")"
+    end
+    local player_combo = ComboInput:new(OrderedTable:new(player_choices))
+    return player_combo:draw(ctx, label, selected_player_index)
+end
+
 local function draw_inputs_editor_check(ctx, inputs, input, label)
     return ctx:win_check(label, inputs & input > 0) and (inputs | input) or (inputs & ~input)
 end

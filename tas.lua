@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 17
+local CURRENT_FORMAT = 18
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -326,7 +326,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [16] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 17,
         update = function(o)
             for _, level in ipairs(o.levels) do
                 if level.cutscene_skip_frame_index == -1 then
@@ -334,6 +334,42 @@ local FORMAT_UPDATERS = {
                 end
                 if level.transition_exit_frame_index == -1 then
                     level.transition_exit_frame_index = nil
+                end
+            end
+        end
+    },
+    [17] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, level in ipairs(o.levels) do
+                if level.metadata.cutscene then
+                    local player_count = #level.frames[1].players
+                    local cutscene_last_frame_index = level.metadata.theme == THEME.OLMEC
+                        and common.OLMEC_CUTSCENE_LAST_FRAME or common.TIAMAT_CUTSCENE_LAST_FRAME
+                    local new_frames = {}
+                    for frame_index = 1, level.cutscene_skip_frame_index and level.cutscene_skip_frame_index - 1 or cutscene_last_frame_index do
+                        local frame = {
+                            players = {}
+                        }
+                        for player_index = 1, player_count do
+                            frame.players[player_index] = {}
+                        end
+                        new_frames[frame_index] = frame
+                        for player_index, player in ipairs(frame.players) do
+                            -- Player 1 is the leader here in all of my test TASes.
+                            if level.cutscene_skip_frame_index and frame_index == level.cutscene_skip_frame_index - 1 and player_index == 1 then
+                                player.input = level.cutscene_skip_input == "jump" and INPUTS.JUMP or INPUTS.BOMB
+                            else
+                                player.input = INPUTS.NONE
+                            end
+                        end
+                    end
+                    for frame_index = 1, #level.frames do
+                        new_frames[#new_frames + 1] = level.frames[frame_index]
+                    end
+                    level.frames = new_frames
+                    level.cutscene_skip_frame_index = nil
+                    level.cutscene_skip_input = nil
                 end
             end
         end
@@ -389,8 +425,6 @@ function Tas:to_raw(serial_mod)
     for level_index, self_level in ipairs(self.levels) do
         local copy_level = {
             metadata = common.deep_copy(self_level.metadata),
-            cutscene_skip_frame_index = self_level.cutscene_skip_frame_index,
-            cutscene_skip_input = self_level.cutscene_skip_input,
             transition_exit_frame_index = self_level.transition_exit_frame_index
         }
         copy.levels[level_index] = copy_level

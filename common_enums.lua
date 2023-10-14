@@ -73,9 +73,4 @@ for _, player_char in pairs(module.PLAYER_CHAR:values_by_id()) do
     module.PLAYER_CHAR_BY_ENT_TYPE[player_char.ent_type_id] = player_char
 end
 
-module.SKIP_INPUT = OrderedTable:new({
-    { id = "jump", name = "Jump", input = INPUTS.JUMP },
-    { id = "bomb", name = "Bomb", input = INPUTS.BOMB }
-})
-
 return module

@@ -71,11 +71,6 @@ module.PLAYBACK_FROM = {
     NEAREST_LEVEL = 3
 }
 
-module.CUTSCENE_SKIP_FIRST_FRAME = 2
-module.OLMEC_CUTSCENE_LAST_FRAME = 809
-module.TIAMAT_CUTSCENE_LAST_FRAME = 379
-module.TRANSITION_EXIT_FIRST_FRAME = 1
-
 local desync_callbacks = {}
 local next_callback_id = 0
 
@@ -717,35 +712,6 @@ local function on_pre_level_gen()
     end
 end
 
-local function get_cutscene_input(player_index, logic_cutscene, last_frame)
-    if logic_cutscene.timer == last_frame then
-        -- The cutscene will end naturally during this update. Defer to normal input handling.
-        return nil
-    elseif not active_tas_session.current_level_data.cutscene_skip_frame_index then
-        -- The cutscene should not be skipped.
-        return INPUTS.NONE
-    elseif logic_cutscene.timer == active_tas_session.current_level_data.cutscene_skip_frame_index - 1 then
-        -- The skip button needs to be pressed one frame early. The cutscene is skipped when the button is released on the next frame.
-        if player_index == state.items.leader then
-            if options.debug_print_input then
-                print("get_cutscene_input: Sending cutscene skip input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer.." player_index="..player_index)
-            end
-            return common_enums.SKIP_INPUT:value_by_id(active_tas_session.current_level_data.cutscene_skip_input).input
-        else
-            -- Only the leader player can skip the cutscene.
-            return INPUTS.NONE
-        end
-    elseif logic_cutscene.timer == active_tas_session.current_level_data.cutscene_skip_frame_index then
-        if options.debug_print_input then
-            print("get_cutscene_input: Deferring to recorded input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." timer="..logic_cutscene.timer.." player_index="..player_index)
-        end
-        return nil
-    else
-        -- Prevent the player from pressing any buttons and interfering with the cutscene.
-        return INPUTS.NONE
-    end
-end
-
 -- Called before every game update in a TASable screen, excluding the update which loads the screen.
 local function on_pre_update_tasable_screen()
     if (state.loading ~= 0 and state.loading ~= 3) or module.mode == common_enums.MODE.FREEPLAY
@@ -763,23 +729,17 @@ local function on_pre_update_tasable_screen()
     -- Gather player inputs from the TAS to submit for the upcoming update.
     local inputs
     if active_tas_session.current_tasable_screen.record_frames then
-        inputs = {}
-        for player_index = 1, active_tas_session.tas:get_player_count() do
-            local input
-            -- Record and playback modes should both automatically skip cutscenes.
-            if state.logic.olmec_cutscene then
-                input = get_cutscene_input(player_index, state.logic.olmec_cutscene, module.OLMEC_CUTSCENE_LAST_FRAME)
-            elseif state.logic.tiamat_cutscene then
-                input = get_cutscene_input(player_index, state.logic.tiamat_cutscene, module.TIAMAT_CUTSCENE_LAST_FRAME)
-            end
-            if not input and module.mode == common_enums.MODE.PLAYBACK then
-                -- Only playback mode should submit normal gameplay inputs. It's acceptable to not have frame data for the upcoming update as long as the game doesn't process inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
-                if active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1] then
-                    -- Submit the input from the upcoming frame.
-                    input = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1].players[player_index].input
+        -- Only playback mode should submit inputs.
+        if module.mode == common_enums.MODE.PLAYBACK then
+            -- It's acceptable to not have frame data for the upcoming update as long as the game doesn't process inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
+            local next_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1]
+            if next_frame_data then
+                inputs = {}
+                for player_index = 1, active_tas_session.tas:get_player_count() do
+                    -- Submit the input for the upcoming frame.
+                    inputs[player_index] = next_frame_data.players[player_index].input
                 end
             end
-            inputs[player_index] = input
         end
     elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
         -- Exiting is triggered during the first update where the exit input is seen being held down, not when it's released. The earliest update where inputs are processed is the final update of the fade-in. If an exit input is seen during the earliest update, then the fade-out is started in that same update. The update still executes entity state machines, so characters can be seen stepping forward for a single frame. This is the same behavior that occurs in normal gameplay by holding down the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
@@ -1072,9 +1032,7 @@ end
 local function on_post_update()
     if pre_update_loading == 2 then
         on_post_update_load_screen()
-    elseif module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session.current_level_index and state.screen ~= SCREEN.OPTIONS and did_entities_update()
-        and (active_tas_session.current_level_data.metadata.screen ~= SCREEN.LEVEL or (not state.logic.olmec_cutscene and not state.logic.tiamat_cutscene))
-    then
+    elseif module.mode ~= common_enums.MODE.FREEPLAY and active_tas_session.current_level_index and state.screen ~= SCREEN.OPTIONS and did_entities_update() then
         -- This update executed a TASable frame.
         active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
         on_post_update_frame_advanced()

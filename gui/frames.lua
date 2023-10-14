@@ -183,13 +183,7 @@ function module:draw_panel(ctx, is_window)
     if session.tas:get_player_count() == 1 then
         viewer_player_index = 1
     else
-        local player_chars = session.tas:get_player_chars()
-        local player_choices = {}
-        for i = 1, session.tas:get_player_count() do
-            player_choices[i] = i.." ("..common_enums.PLAYER_CHAR:value_by_id(player_chars[i]).name..")"
-        end
-        local player_combo = ComboInput:new(OrderedTable:new(player_choices))
-        viewer_player_index = player_combo:draw(ctx, "Player", viewer_player_index)
+        viewer_player_index = common_gui.draw_player_combo_input(ctx, session.tas, "Player", viewer_player_index)
         if edit_mode and bulk_operation ~= "none" then
             ctx:win_text("Note: Bulk edit operations affect all players. The player selector only controls whose inputs are shown below.")
         end

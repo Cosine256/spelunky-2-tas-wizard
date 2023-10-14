@@ -8,22 +8,96 @@ local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("tas_data", "TAS Data", "tas_data_window")
 
-local SKIP_INPUT_COMBO = ComboInput:new(common_enums.SKIP_INPUT)
+local CUTSCENE_SKIP_INPUT = OrderedTable:new({
+    { id = "jump", name = "Jump", input = INPUTS.JUMP },
+    { id = "bomb", name = "Bomb", input = INPUTS.BOMB },
+    { id = "both", name = "Jump & Bomb", input = INPUTS.JUMP | INPUTS.BOMB }
+})
+local CUTSCENE_SKIP_INPUT_COMBO = ComboInput:new(CUTSCENE_SKIP_INPUT)
 
 local selected_level_index = 0
 local level_index
+local leader_player_index = 1
+local new_cutscene_skip_active = true
+local new_cutscene_skip_frame_index = common.CUTSCENE_SKIP_FIRST_FRAME
+local new_cutscene_skip_input_id = "jump"
 
-local function draw_cutscene_skip_settings(ctx, level, name, last_frame_index)
-    local cutscene_skip = ctx:win_check("Skip "..name.." cutscene", level.cutscene_skip_frame_index ~= nil)
-    if cutscene_skip then
-        if not level.cutscene_skip_frame_index then
-            level.cutscene_skip_frame_index = game_controller.CUTSCENE_SKIP_FIRST_FRAME
+local function draw_cutscene_skip_editor(ctx, level)
+    ctx:win_section("More info", function()
+        ctx:win_indent(common_gui.INDENT_SECTION)
+        ctx:win_text("This editor allows easy modification of a level's Olmec and Tiamat cutscene skip behavior. It's a workaround for the inability to properly pause and frame advance during cutscenes. Recording a cutscene skip with precise timing is difficult without pauses, and directly modifying the inputs can be tedious and complicated.")
+        ctx:win_text("The editor operates directly on the level's frame data. The changes it makes can also be done manually in the Frames panel.")
+        ctx:win_text("A cutscene's \"skip frame\" is the first frame where a jump or bomb input is released.")
+        ctx:win_text("Only the leader player is able to skip a cutscene. The editor doesn't know who the leader is, so this information must be provided via the \"Leader player\" input. Be careful, as applying a cutscene skip with the wrong leader player can make undesirable changes to the frame data.")
+        ctx:win_indent(-common_gui.INDENT_SECTION)
+    end)
+
+    -- It can be complicated to determine who the leader is based on TAS data, and it may be impossible if this is not the current level. Keep it simple by always asking the user for this information.
+    leader_player_index = common_gui.draw_player_combo_input(ctx, active_tas_session.tas, "Leader player", leader_player_index)
+
+    -- Determine the current cutscene skip input and its release frame. The game skips the cutscene and processes inputs normally during the first update where a previously held skip input is released.
+    local cutscene_skip_frame_index
+    local cutscene_skip_input_id
+    local cutscene_last_frame_index = level.metadata.theme == THEME.OLMEC
+        and common.OLMEC_CUTSCENE_LAST_FRAME or common.TIAMAT_CUTSCENE_LAST_FRAME
+    for frame_index = common.CUTSCENE_SKIP_FIRST_FRAME, math.min(#level.frames, cutscene_last_frame_index) do
+        local prev_input = level.frames[frame_index - 1].players[leader_player_index].input
+        local this_input = level.frames[frame_index].players[leader_player_index].input
+        local skip_jump = prev_input & INPUTS.JUMP > 0 and this_input & INPUTS.JUMP == 0
+        local skip_bomb = prev_input & INPUTS.BOMB > 0 and this_input & INPUTS.BOMB == 0
+        if skip_jump or skip_bomb then
+            cutscene_skip_frame_index = frame_index
+            cutscene_skip_input_id = skip_jump and (skip_bomb and "both" or "jump") or "bomb"
+            break
         end
-        level.cutscene_skip_frame_index = common_gui.draw_drag_int_clamped(ctx, "Cutscene skip frame",
-            level.cutscene_skip_frame_index, game_controller.CUTSCENE_SKIP_FIRST_FRAME, last_frame_index)
-        level.cutscene_skip_input = SKIP_INPUT_COMBO:draw(ctx, "Cutscene skip input", level.cutscene_skip_input)
+    end
+
+    ctx:win_separator_text("Current skip behavior")
+    if cutscene_skip_frame_index then
+        ctx:win_text("Skip frame: "..cutscene_skip_frame_index)
+        ctx:win_text("Skip input: "..CUTSCENE_SKIP_INPUT:value_by_id(cutscene_skip_input_id).name)
     else
-        level.cutscene_skip_frame_index = nil
+        ctx:win_text("Not skipping cutscene.")
+    end
+
+    ctx:win_separator_text("New skip behavior")
+    local new_cutscene_skip_input
+    new_cutscene_skip_active = ctx:win_check("Skip cutscene", new_cutscene_skip_active)
+    if new_cutscene_skip_active then
+        new_cutscene_skip_frame_index = common_gui.draw_drag_int_clamped(ctx, "New skip frame",
+            new_cutscene_skip_frame_index, common.CUTSCENE_SKIP_FIRST_FRAME, cutscene_last_frame_index)
+        new_cutscene_skip_input_id = CUTSCENE_SKIP_INPUT_COMBO:draw(ctx, "New skip input", new_cutscene_skip_input_id)
+        new_cutscene_skip_input = CUTSCENE_SKIP_INPUT:value_by_id(new_cutscene_skip_input_id).input
+    end
+
+    local post_cutscene_frame_index = cutscene_skip_frame_index or cutscene_last_frame_index + 1
+    if new_cutscene_skip_active and level.frames[post_cutscene_frame_index]
+        and level.frames[post_cutscene_frame_index].players[leader_player_index].input & new_cutscene_skip_input == new_cutscene_skip_input
+    then
+        ctx:win_text("Invalid: New cutscene skip input will merge with existing player input on the skip frame. The skip input needs to be released for at least one frame for the skip to occur.")
+    elseif ctx:win_button("Apply") then
+        local new_frames = {}
+        -- Generate new cutscene inputs to skip the cutscene at the chosen frame, or to let the cutscene finish.
+        for frame_index = 1, new_cutscene_skip_active and new_cutscene_skip_frame_index - 1 or cutscene_last_frame_index do
+            local frame = active_tas_session.tas:create_frame_data()
+            new_frames[frame_index] = frame
+            for player_index, player in ipairs(frame.players) do
+                if new_cutscene_skip_active and frame_index == new_cutscene_skip_frame_index - 1 and player_index == leader_player_index then
+                    player.input = new_cutscene_skip_input
+                else
+                    player.input = INPUTS.NONE
+                end
+            end
+        end
+        -- Append the existing post-cutscene inputs.
+        for frame_index = post_cutscene_frame_index, #level.frames do
+            new_frames[#new_frames + 1] = level.frames[frame_index]
+        end
+        -- Use the new input sequence. Any previous cutscene inputs are discarded.
+        level.frames = new_frames
+        active_tas_session.desync = nil
+        game_controller.validate_current_frame()
+        game_controller.check_playback()
     end
 end
 
@@ -79,22 +153,22 @@ function module:draw_panel(ctx, is_window)
                 end
                 if level.metadata.screen == SCREEN.LEVEL then
                     if level.metadata.cutscene then
-                        ctx:win_separator_text("Cutscene settings")
-                        if level.metadata.theme == THEME.OLMEC then
-                            draw_cutscene_skip_settings(ctx, level, "Olmec", game_controller.OLMEC_CUTSCENE_LAST_FRAME)
-                        elseif level.metadata.theme == THEME.TIAMAT then
-                            draw_cutscene_skip_settings(ctx, level, "Tiamat", game_controller.TIAMAT_CUTSCENE_LAST_FRAME)
-                        end
+                        ctx:win_separator_text("Cutscene")
+                        ctx:win_section("Cutscene Skip Editor", function()
+                            ctx:win_indent(common_gui.INDENT_SECTION)
+                            draw_cutscene_skip_editor(ctx, level)
+                            ctx:win_indent(-common_gui.INDENT_SECTION)
+                        end)
                     end
                 elseif level.metadata.screen == SCREEN.TRANSITION then
                     ctx:win_separator_text("Transition settings")
                     local transition_exit = ctx:win_check("Automatically exit transition", level.transition_exit_frame_index ~= nil)
                     if transition_exit then
                         if not level.transition_exit_frame_index then
-                            level.transition_exit_frame_index = game_controller.TRANSITION_EXIT_FIRST_FRAME
+                            level.transition_exit_frame_index = common.TRANSITION_EXIT_FIRST_FRAME
                         end
                         level.transition_exit_frame_index = common_gui.draw_drag_int_clamped(ctx, "Transition exit frame",
-                            level.transition_exit_frame_index, game_controller.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
+                            level.transition_exit_frame_index, common.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
                     else
                         level.transition_exit_frame_index = nil
                     end

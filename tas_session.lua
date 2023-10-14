@@ -1,5 +1,5 @@
+local common = require("common_enums")
 local common_enums = require("common_enums")
-local game_controller = require("game_controller")
 
 ---@class TasSession
     ---@field tas table The TAS data for this TAS session.
@@ -72,13 +72,8 @@ function TasSession:create_end_level()
             level.players[player_index] = {}
         end
     end
-    if level.metadata.screen == SCREEN.LEVEL then
-        if level.metadata.cutscene then
-            level.cutscene_skip_frame_index = game_controller.CUTSCENE_SKIP_FIRST_FRAME
-            level.cutscene_skip_input = "jump"
-        end
-    elseif level.metadata.screen == SCREEN.TRANSITION then
-        level.transition_exit_frame_index = game_controller.TRANSITION_EXIT_FIRST_FRAME
+    if level.metadata.screen == SCREEN.TRANSITION then
+        level.transition_exit_frame_index = common.TRANSITION_EXIT_FIRST_FRAME
     end
 end
 
