@@ -28,12 +28,18 @@ local function draw_cutscene_skip_editor(ctx, level)
         ctx:win_text("This editor allows easy modification of a level's Olmec and Tiamat cutscene skip behavior. It's a workaround for the inability to properly pause and frame advance during cutscenes. Recording a cutscene skip with precise timing is difficult without pauses, and directly modifying the inputs can be tedious and complicated.")
         ctx:win_text("The editor operates directly on the level's frame data. The changes it makes can also be done manually in the Frames panel.")
         ctx:win_text("A cutscene's \"skip frame\" is the first frame where a jump or bomb input is released.")
-        ctx:win_text("Only the leader player is able to skip a cutscene. The editor doesn't know who the leader is, so this information must be provided via the \"Leader player\" input. Be careful, as applying a cutscene skip with the wrong leader player can make undesirable changes to the frame data.")
+        if active_tas_session.tas:get_player_count() > 1 then
+            ctx:win_text("Only the leader player is able to skip a cutscene. The editor doesn't know who the leader is, so this information must be provided via the \"Leader player\" input. Be careful, as applying a cutscene skip with the wrong leader player can make undesirable changes to the frame data.")
+        end
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
 
-    -- It can be complicated to determine who the leader is based on TAS data, and it may be impossible if this is not the current level. Keep it simple by always asking the user for this information.
-    leader_player_index = common_gui.draw_player_combo_input(ctx, active_tas_session.tas, "Leader player", leader_player_index)
+    if active_tas_session.tas:get_player_count() == 1 then
+        leader_player_index = 1
+    else
+        -- It can be complicated to determine who the leader is based on TAS data, and it may be impossible if this is not the current level. Keep it simple by always asking the user for this information.
+        leader_player_index = common_gui.draw_player_combo_input(ctx, active_tas_session.tas, "Leader player", leader_player_index)
+    end
 
     -- Determine the current cutscene skip input and its release frame. The game skips the cutscene and processes inputs normally during the first update where a previously held skip input is released.
     local cutscene_skip_frame_index
