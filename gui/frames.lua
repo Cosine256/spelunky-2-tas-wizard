@@ -139,11 +139,13 @@ function module:draw_panel(ctx, is_window)
                 local player_inputs = bulk_inputs[player_index]
                 if session.tas:get_player_count() == 1 then
                     player_inputs = common_gui.draw_inputs_editor(ctx, player_inputs)
+                    player_inputs = common.string_to_inputs(ctx:win_input_text("Inputs", common.inputs_to_string(player_inputs)))
                 else
                     ctx:win_section("Player "..player_index.." inputs", function()
                         ctx:win_pushid(player_index)
                         ctx:win_indent(common_gui.INDENT_SECTION)
                         player_inputs = common_gui.draw_inputs_editor(ctx, player_inputs)
+                        player_inputs = common.string_to_inputs(ctx:win_input_text("Inputs", common.inputs_to_string(player_inputs)))
                         ctx:win_indent(-common_gui.INDENT_SECTION)
                         ctx:win_popid()
                     end)
@@ -244,12 +246,19 @@ function module:draw_panel(ctx, is_window)
                     label = label.." (next)"
                 end
             end
-            ctx:win_input_text(label.."###inputs", common.inputs_to_string(inputs))
             if edit_mode then
+                local inputs_string = common.inputs_to_string(inputs)
+                local new_inputs_string = ctx:win_input_text(label.."###inputs", inputs_string)
+                if inputs_string ~= new_inputs_string then
+                    inputs = common.string_to_inputs(new_inputs_string)
+                    frames[frame_index].players[viewer_player_index].inputs = inputs
+                end
                 ctx:win_inline()
                 if ctx:win_button("Edit") then
                     tool_guis.single_frame_editor:open(self.level_index, frame_index, viewer_player_index, inputs)
                 end
+            else
+                ctx:win_input_text(label.."###inputs", common.inputs_to_string(inputs))
             end
         else
             ctx:win_input_text("##inputs", "")

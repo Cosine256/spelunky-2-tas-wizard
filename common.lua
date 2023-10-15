@@ -72,17 +72,46 @@ function module.string_to_adventure_seed_part(s)
     return tonumber(s, 16)
 end
 
+local INPUT_TO_CHAR = {
+    [INPUTS.LEFT] = "<",
+    [INPUTS.RIGHT] = ">",
+    [INPUTS.UP] = "^",
+    [INPUTS.DOWN] = "v",
+    [INPUTS.JUMP] = "J",
+    [INPUTS.WHIP] = "W",
+    [INPUTS.BOMB] = "B",
+    [INPUTS.ROPE] = "R",
+    [INPUTS.DOOR] = "D",
+    [INPUTS.RUN] = "+"
+}
+
+local CHAR_TO_INPUT = {}
+for input, c in pairs(INPUT_TO_CHAR) do
+    CHAR_TO_INPUT[c:upper()] = input
+end
+
 function module.inputs_to_string(inputs)
-    return ((inputs & INPUTS.LEFT > 0) and "<" or "_")
-        ..((inputs & INPUTS.RIGHT > 0) and ">" or "_")
-        ..((inputs & INPUTS.UP > 0) and "^" or "_")
-        ..((inputs & INPUTS.DOWN > 0) and "v" or "_")
-        ..((inputs & INPUTS.JUMP > 0) and "J" or "_")
-        ..((inputs & INPUTS.WHIP > 0) and "W" or "_")
-        ..((inputs & INPUTS.BOMB > 0) and "B" or "_")
-        ..((inputs & INPUTS.ROPE > 0) and "R" or "_")
-        ..((inputs & INPUTS.DOOR > 0) and "D" or "_")
-        ..((inputs & INPUTS.RUN > 0) and "+" or "_")
+    return ((inputs & INPUTS.LEFT > 0) and INPUT_TO_CHAR[INPUTS.LEFT] or "_")
+        ..((inputs & INPUTS.RIGHT > 0) and INPUT_TO_CHAR[INPUTS.RIGHT] or "_")
+        ..((inputs & INPUTS.UP > 0) and INPUT_TO_CHAR[INPUTS.UP] or "_")
+        ..((inputs & INPUTS.DOWN > 0) and INPUT_TO_CHAR[INPUTS.DOWN] or "_")
+        ..((inputs & INPUTS.JUMP > 0) and INPUT_TO_CHAR[INPUTS.JUMP] or "_")
+        ..((inputs & INPUTS.WHIP > 0) and INPUT_TO_CHAR[INPUTS.WHIP] or "_")
+        ..((inputs & INPUTS.BOMB > 0) and INPUT_TO_CHAR[INPUTS.BOMB] or "_")
+        ..((inputs & INPUTS.ROPE > 0) and INPUT_TO_CHAR[INPUTS.ROPE] or "_")
+        ..((inputs & INPUTS.DOOR > 0) and INPUT_TO_CHAR[INPUTS.DOOR] or "_")
+        ..((inputs & INPUTS.RUN > 0) and INPUT_TO_CHAR[INPUTS.RUN] or "_")
+end
+
+function module.string_to_inputs(s)
+    local inputs = INPUTS.NONE
+    for i = 1, #s do
+        local input = CHAR_TO_INPUT[s:sub(i, i):upper()]
+        if input then
+            inputs = inputs | input
+        end
+    end
+    return inputs
 end
 
 local function world_level_theme_to_string(world, level, theme)

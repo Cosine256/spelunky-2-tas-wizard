@@ -23,7 +23,7 @@ function module:draw_panel(ctx, is_window)
     ctx:win_text("Editing frame "..self.level_index.."-"..self.frame_index.." for player "..self.player_index..".")
     self.new_inputs = common_gui.draw_inputs_editor(ctx, self.new_inputs)
     ctx:win_input_text("Old inputs", common.inputs_to_string(self.old_inputs))
-    ctx:win_input_text("New inputs", common.inputs_to_string(self.new_inputs))
+    self.new_inputs = common.string_to_inputs(ctx:win_input_text("New inputs", common.inputs_to_string(self.new_inputs)))
     if ctx:win_button("OK") then
         -- TODO: This popup doesn't elegantly handle situations where the underlying TAS data changes after the popup is spawned. The popup should be closed automatically when this happens.
         if tas.levels[self.level_index] and tas.levels[self.level_index].frames[self.frame_index]
