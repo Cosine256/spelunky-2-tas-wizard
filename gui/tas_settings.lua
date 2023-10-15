@@ -11,7 +11,7 @@ local function draw_tas_settings(ctx, tas)
 
     ctx:win_separator_text("Start settings")
     if #tas.levels > 0 then
-        ctx:win_text("Warning: This TAS has recorded inputs. Modifying the start settings can change level generation and RNG, which may cause it to desynchronize.")
+        ctx:win_text("Warning: This TAS has recorded data. Modifying the start settings can change level generation and RNG, which may cause it to desynchronize.")
     end
     common_gui.draw_tas_start_settings(ctx, tas, false)
 

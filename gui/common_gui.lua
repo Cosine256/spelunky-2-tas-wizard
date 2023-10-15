@@ -270,7 +270,7 @@ local function draw_tas_start_settings_simple(ctx, tas)
                             frame.players[player_index] = nil
                         elseif not frame.players[player_index] then
                             frame.players[player_index] = {
-                                input = INPUTS.NONE
+                                inputs = INPUTS.NONE
                             }
                         end
                     end

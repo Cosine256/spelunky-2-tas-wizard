@@ -3,11 +3,11 @@ local OrderedTable = require("ordered_table")
 local module = {}
 
 module.MODE = {
-    -- Keep track of current level, but do not record or playback any frames, and do not execute configured skip inputs.
+    -- Keep track of current level, but do not record or playback any TAS frames, and do not execute configured transition exits.
     FREEPLAY = 0,
-    -- Record gameplay frames, and execute configured skip inputs.
+    -- Record TAS frames, and execute configured transition exits.
     RECORD = 1,
-    -- Playback recorded gameplay frames up to the chosen target, and execute configured skip inputs.
+    -- Playback recorded TAS frames up to the chosen target, and execute configured transition exits.
     PLAYBACK = 2
 }
 

@@ -12,7 +12,7 @@ local POSITION_DESYNC_EPSILON = 0.0000000001
 local TRANSITION_FADE_FRAMES = 18
 local WARP_FADE_OUT_FRAMES = 5
 -- Menu and journal inputs are not supported. They do not work correctly during recording and playback.
-local SUPPORTED_INPUT_MASK = INPUTS.JUMP | INPUTS.WHIP | INPUTS.BOMB | INPUTS.ROPE | INPUTS.RUN | INPUTS.DOOR | INPUTS.LEFT | INPUTS.RIGHT | INPUTS.UP | INPUTS.DOWN
+local SUPPORTED_INPUTS_MASK = INPUTS.JUMP | INPUTS.WHIP | INPUTS.BOMB | INPUTS.ROPE | INPUTS.RUN | INPUTS.DOOR | INPUTS.LEFT | INPUTS.RIGHT | INPUTS.UP | INPUTS.DOWN
 
 local SCREEN_WARP_HANDLER
 do
@@ -726,48 +726,48 @@ local function on_pre_update_tasable_screen()
         return
     end
 
-    -- Gather player inputs from the TAS to submit for the upcoming update.
-    local inputs
+    -- Gather inputs from the TAS to submit for the upcoming update.
+    local frame_inputs
     if active_tas_session.current_tasable_screen.record_frames then
         -- Only playback mode should submit inputs.
         if module.mode == common_enums.MODE.PLAYBACK then
-            -- It's acceptable to not have frame data for the upcoming update as long as the game doesn't process inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
+            -- It's acceptable to not have frame data for the upcoming update as long as the game doesn't process player inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
             local next_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1]
             if next_frame_data then
-                inputs = {}
+                frame_inputs = {}
                 for player_index = 1, active_tas_session.tas:get_player_count() do
-                    -- Submit the input for the upcoming frame.
-                    inputs[player_index] = next_frame_data.players[player_index].input
+                    -- Submit the inputs for the upcoming frame.
+                    frame_inputs[player_index] = next_frame_data.players[player_index].inputs
                 end
             end
         end
     elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
         -- Exiting is triggered during the first update where the exit input is seen being held down, not when it's released. The earliest update where inputs are processed is the final update of the fade-in. If an exit input is seen during the earliest update, then the fade-out is started in that same update. The update still executes entity state machines, so characters can be seen stepping forward for a single frame. This is the same behavior that occurs in normal gameplay by holding down the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
-        inputs = {}
+        frame_inputs = {}
         if not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index then
             for player_index = 1, active_tas_session.tas:get_player_count() do
                 -- By default, suppress inputs from every player.
-                inputs[player_index] = INPUTS.NONE
+                frame_inputs[player_index] = INPUTS.NONE
             end
             if active_tas_session.current_frame_index + 1 >= active_tas_session.current_level_data.transition_exit_frame_index then
                 -- Have player 1 provide the transition exit input.
                 if options.debug_print_input then
                     print("on_pre_update_tasable_screen: Submitting transition exit input.")
                 end
-                inputs[1] = INPUTS.JUMP
+                frame_inputs[1] = INPUTS.JUMP
             end
         end
     end
     -- Note: There is nothing to do on the SPACESHIP screen except wait for it to end.
 
-    if inputs then
-        -- Submit the desired inputs for the upcoming update. The script doesn't know whether this update will actually process player inputs. If it does process them, then it will use the submitted inputs. If it doesn't process them, such as due to the game being paused, then nothing will happen and the script can try again on the next update.
+    if frame_inputs then
+        -- Submit the TAS inputs for the upcoming update. The script doesn't know whether this update will actually process player inputs. If it does process them, then it will use the submitted inputs. If it doesn't process them, such as due to the game being paused, then nothing will happen and the script can try again on the next update.
         for player_index = 1, active_tas_session.tas:get_player_count() do
-            local input = inputs[player_index]
-            if input then
-                input = input & SUPPORTED_INPUT_MASK
-                state.player_inputs.player_slots[player_index].buttons = input
-                state.player_inputs.player_slots[player_index].buttons_gameplay = input
+            local player_inputs = frame_inputs[player_index]
+            if player_inputs then
+                player_inputs = player_inputs & SUPPORTED_INPUTS_MASK
+                state.player_inputs.player_slots[player_index].buttons = player_inputs
+                state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs
             end
         end
     end
@@ -960,7 +960,7 @@ end
 -- Called after every game update where the current frame index was incremented.
 local function on_post_update_frame_advanced()
     if options.debug_print_frame or options.debug_print_input then
-        print("on_post_update_frame_advanced: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." input="..common.input_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
+        print("on_post_update_frame_advanced: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." p1_inputs="..common.inputs_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
     end
 
     if active_tas_session.current_tasable_screen.record_frames then
@@ -998,12 +998,12 @@ local function on_post_update_frame_advanced()
             end
             if module.mode == common_enums.MODE.RECORD then
                 -- Record the current player inputs for the frame that just executed.
-                local input = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUT_MASK
+                local inputs = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUTS_MASK
                 if options.debug_print_frame or options.debug_print_input then
-                    print("on_post_update_frame_advanced: Recording input: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
-                        .." player="..player_index.." input="..common.input_to_string(input))
+                    print("on_post_update_frame_advanced: Recording inputs: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
+                        .." player="..player_index.." inputs="..common.inputs_to_string(inputs))
                 end
-                player.input = input
+                player.inputs = inputs
                 player.position = actual_pos
             elseif module.mode == common_enums.MODE.PLAYBACK then
                 local expected_pos = player.position

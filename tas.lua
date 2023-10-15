@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 18
+local CURRENT_FORMAT = 19
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -339,7 +339,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [17] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 18,
         update = function(o)
             for _, level in ipairs(o.levels) do
                 if level.metadata.cutscene then
@@ -373,7 +373,22 @@ local FORMAT_UPDATERS = {
                 end
             end
         end
-    }
+    },
+    [18] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, level in ipairs(o.levels) do
+                if level.frames then
+                    for _, frame in ipairs(level.frames) do
+                        for _, player in ipairs(frame.players) do
+                            player.inputs = player.input
+                            player.input = nil
+                        end
+                    end
+                end
+            end
+        end
+    },
 }
 
 -- Create a raw copy of this TAS, containing only tables and primitive types, with no functions or prototyping.
@@ -452,7 +467,7 @@ function Tas:to_raw(serial_mod)
                 copy_level.frames[frame_index] = copy_frame
                 for player_index, self_player in ipairs(self_frame.players) do
                     copy_frame.players[player_index] = {
-                        input = self_player.input
+                        inputs = self_player.inputs
                     }
                     if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
                         copy_frame.players[player_index].position = common.deep_copy(self_player.position)
@@ -534,7 +549,7 @@ function Tas:remove_frames_after(level_index, frame_index)
 end
 
 -- TODO: This inserts after the start frame. Would it make more sense to insert before? Does that mess with how I handle frame 0? Maybe "frame_start_index" isn't a good name since it's more of a cursor pointing to the boundary between two frames.
-function Tas:insert_frames(level_index, frame_start_index, frame_count, inputs)
+function Tas:insert_frames(level_index, frame_start_index, frame_count, frame_inputs)
     local level_data = self.levels[level_index]
     -- Shift existing frames to create space, and delete position data.
     local original_last_frame = #level_data.frames
@@ -548,7 +563,7 @@ function Tas:insert_frames(level_index, frame_start_index, frame_count, inputs)
     for i = frame_start_index + 1, frame_start_index + frame_count do
         local new_frame = self:create_frame_data()
         for player_index, player in ipairs(new_frame.players) do
-            player.input = inputs[player_index]
+            player.inputs = frame_inputs[player_index]
         end
         level_data.frames[i] = new_frame
     end

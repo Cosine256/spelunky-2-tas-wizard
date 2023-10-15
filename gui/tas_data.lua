@@ -9,9 +9,9 @@ local Tool_GUI = require("gui/tool_gui")
 local module = Tool_GUI:new("tas_data", "TAS Data", "tas_data_window")
 
 local CUTSCENE_SKIP_INPUT = OrderedTable:new({
-    { id = "jump", name = "Jump", input = INPUTS.JUMP },
-    { id = "bomb", name = "Bomb", input = INPUTS.BOMB },
-    { id = "both", name = "Jump & Bomb", input = INPUTS.JUMP | INPUTS.BOMB }
+    { id = "jump", name = "Jump", inputs = INPUTS.JUMP },
+    { id = "bomb", name = "Bomb", inputs = INPUTS.BOMB },
+    { id = "both", name = "Jump & Bomb", inputs = INPUTS.JUMP | INPUTS.BOMB }
 })
 local CUTSCENE_SKIP_INPUT_COMBO = ComboInput:new(CUTSCENE_SKIP_INPUT)
 
@@ -47,10 +47,10 @@ local function draw_cutscene_skip_editor(ctx, level)
     local cutscene_last_frame_index = level.metadata.theme == THEME.OLMEC
         and common.OLMEC_CUTSCENE_LAST_FRAME or common.TIAMAT_CUTSCENE_LAST_FRAME
     for frame_index = common.CUTSCENE_SKIP_FIRST_FRAME, math.min(#level.frames, cutscene_last_frame_index) do
-        local prev_input = level.frames[frame_index - 1].players[leader_player_index].input
-        local this_input = level.frames[frame_index].players[leader_player_index].input
-        local skip_jump = prev_input & INPUTS.JUMP > 0 and this_input & INPUTS.JUMP == 0
-        local skip_bomb = prev_input & INPUTS.BOMB > 0 and this_input & INPUTS.BOMB == 0
+        local prev_inputs = level.frames[frame_index - 1].players[leader_player_index].inputs
+        local this_inputs = level.frames[frame_index].players[leader_player_index].inputs
+        local skip_jump = prev_inputs & INPUTS.JUMP > 0 and this_inputs & INPUTS.JUMP == 0
+        local skip_bomb = prev_inputs & INPUTS.BOMB > 0 and this_inputs & INPUTS.BOMB == 0
         if skip_jump or skip_bomb then
             cutscene_skip_frame_index = frame_index
             cutscene_skip_input_id = skip_jump and (skip_bomb and "both" or "jump") or "bomb"
@@ -67,39 +67,39 @@ local function draw_cutscene_skip_editor(ctx, level)
     end
 
     ctx:win_separator_text("New skip behavior")
-    local new_cutscene_skip_input
+    local new_cutscene_skip_inputs
     new_cutscene_skip_active = ctx:win_check("Skip cutscene", new_cutscene_skip_active)
     if new_cutscene_skip_active then
         new_cutscene_skip_frame_index = common_gui.draw_drag_int_clamped(ctx, "New skip frame",
             new_cutscene_skip_frame_index, common.CUTSCENE_SKIP_FIRST_FRAME, cutscene_last_frame_index)
         new_cutscene_skip_input_id = CUTSCENE_SKIP_INPUT_COMBO:draw(ctx, "New skip input", new_cutscene_skip_input_id)
-        new_cutscene_skip_input = CUTSCENE_SKIP_INPUT:value_by_id(new_cutscene_skip_input_id).input
+        new_cutscene_skip_inputs = CUTSCENE_SKIP_INPUT:value_by_id(new_cutscene_skip_input_id).inputs
     end
 
     local post_cutscene_frame_index = cutscene_skip_frame_index or cutscene_last_frame_index + 1
     if new_cutscene_skip_active and level.frames[post_cutscene_frame_index]
-        and level.frames[post_cutscene_frame_index].players[leader_player_index].input & new_cutscene_skip_input == new_cutscene_skip_input
+        and level.frames[post_cutscene_frame_index].players[leader_player_index].inputs & new_cutscene_skip_inputs == new_cutscene_skip_inputs
     then
-        ctx:win_text("Invalid: New cutscene skip input will merge with existing player input on the skip frame. The skip input needs to be released for at least one frame for the skip to occur.")
+        ctx:win_text("Invalid: New cutscene skip input will merge with existing player inputs on the skip frame. The skip input needs to be released for at least one frame for the skip to occur.")
     elseif ctx:win_button("Apply") then
         local new_frames = {}
-        -- Generate new cutscene inputs to skip the cutscene at the chosen frame, or to let the cutscene finish.
+        -- Generate new cutscene frames to skip the cutscene at the chosen frame, or to let the cutscene finish.
         for frame_index = 1, new_cutscene_skip_active and new_cutscene_skip_frame_index - 1 or cutscene_last_frame_index do
             local frame = active_tas_session.tas:create_frame_data()
             new_frames[frame_index] = frame
             for player_index, player in ipairs(frame.players) do
                 if new_cutscene_skip_active and frame_index == new_cutscene_skip_frame_index - 1 and player_index == leader_player_index then
-                    player.input = new_cutscene_skip_input
+                    player.inputs = new_cutscene_skip_inputs
                 else
-                    player.input = INPUTS.NONE
+                    player.inputs = INPUTS.NONE
                 end
             end
         end
-        -- Append the existing post-cutscene inputs.
+        -- Append the existing post-cutscene frames.
         for frame_index = post_cutscene_frame_index, #level.frames do
             new_frames[#new_frames + 1] = level.frames[frame_index]
         end
-        -- Use the new input sequence. Any previous cutscene inputs are discarded.
+        -- Use the new frames. Any previous cutscene frames are discarded.
         level.frames = new_frames
         active_tas_session.desync = nil
         game_controller.validate_current_frame()

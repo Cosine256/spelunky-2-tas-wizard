@@ -128,28 +128,28 @@ function module:draw_panel(ctx, is_window)
                         if #frames == 0 then
                             bulk_inputs[player_index] = INPUTS.NONE
                         else
-                            bulk_inputs[player_index] = frames[1].players[player_index].input
+                            bulk_inputs[player_index] = frames[1].players[player_index].inputs
                         end
                     else
-                        bulk_inputs[player_index] = frames[bulk_start_index].players[player_index].input
+                        bulk_inputs[player_index] = frames[bulk_start_index].players[player_index].inputs
                     end
                 elseif not bulk_inputs[player_index] then
                     bulk_inputs[player_index] = INPUTS.NONE
                 end
-                local input = bulk_inputs[player_index]
+                local player_inputs = bulk_inputs[player_index]
                 if session.tas:get_player_count() == 1 then
-                    input = common_gui.draw_inputs_editor(ctx, input)
+                    player_inputs = common_gui.draw_inputs_editor(ctx, player_inputs)
                 else
                     ctx:win_section("Player "..player_index.." inputs", function()
                         ctx:win_pushid(player_index)
                         ctx:win_indent(common_gui.INDENT_SECTION)
-                        input = common_gui.draw_inputs_editor(ctx, input)
+                        player_inputs = common_gui.draw_inputs_editor(ctx, player_inputs)
                         ctx:win_indent(-common_gui.INDENT_SECTION)
                         ctx:win_popid()
                     end)
                 end
                 if not bulk_use_start_inputs then
-                    bulk_inputs[player_index] = input
+                    bulk_inputs[player_index] = player_inputs
                 end
             end
             if ctx:win_button("Insert") then
@@ -221,7 +221,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_pushid(frame_index)
         local draw_separator = false
         if frames[frame_index] then
-            local input = frames[frame_index].players[viewer_player_index].input
+            local inputs = frames[frame_index].players[viewer_player_index].inputs
             local label = tostring(frame_index)
             if edit_mode then
                 if bulk_operation == "insert" then
@@ -244,11 +244,11 @@ function module:draw_panel(ctx, is_window)
                     label = label.." (next)"
                 end
             end
-            ctx:win_input_text(label.."###inputs", common.input_to_string(input))
+            ctx:win_input_text(label.."###inputs", common.inputs_to_string(inputs))
             if edit_mode then
                 ctx:win_inline()
                 if ctx:win_button("Edit") then
-                    tool_guis.single_frame_editor:open(self.level_index, frame_index, viewer_player_index, input)
+                    tool_guis.single_frame_editor:open(self.level_index, frame_index, viewer_player_index, inputs)
                 end
             end
         else
