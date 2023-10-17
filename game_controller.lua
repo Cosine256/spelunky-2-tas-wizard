@@ -16,9 +16,11 @@ local SUPPORTED_INPUTS_MASK = INPUTS.JUMP | INPUTS.WHIP | INPUTS.BOMB | INPUTS.R
 
 local SCREEN_WARP_HANDLER
 do
-    local function menu_warp()
-        -- This OL warp function stops the main menu music, which can't currently be done with Lua. The caller is going to override everything else that the warp does to the state memory, so the destination level doesn't matter.
-        warp(1, 1, THEME.DWELLING)
+    local function stop_main_menu_music()
+        if game_manager.main_menu_music then
+            game_manager.main_menu_music.playing = false
+            game_manager.main_menu_music = nil
+        end
         return true
     end
     SCREEN_WARP_HANDLER = {
@@ -27,7 +29,7 @@ do
         [SCREEN.PROLOGUE] = false, -- Controls don't bind properly.
         [SCREEN.TITLE] = false, -- Controls don't bind properly.
         [SCREEN.MENU] = function()
-            menu_warp()
+            stop_main_menu_music()
             if game_manager.screen_menu.cthulhu_sound then
                 -- Stop the stone door sound effects that play the first time the main menu is loaded.
                 game_manager.screen_menu.cthulhu_sound.playing = false
@@ -35,9 +37,9 @@ do
             return true
         end,
         [SCREEN.OPTIONS] = false,
-        [SCREEN.PLAYER_PROFILE] = menu_warp,
-        [SCREEN.LEADERBOARD] = menu_warp,
-        [SCREEN.SEED_INPUT] = menu_warp,
+        [SCREEN.PLAYER_PROFILE] = stop_main_menu_music,
+        [SCREEN.LEADERBOARD] = stop_main_menu_music,
+        [SCREEN.SEED_INPUT] = stop_main_menu_music,
         [SCREEN.CHARACTER_SELECT] = false, -- Controls don't bind properly.
         [SCREEN.TEAM_SELECT] = false,
         [SCREEN.CAMP] = true,
