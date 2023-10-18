@@ -1,3 +1,4 @@
+local common = require("common")
 local common_gui = require("gui/common_gui")
 local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
@@ -36,7 +37,7 @@ local function draw_tas_settings(ctx, tas)
         tool_guis.frames.reset_vars()
         tool_guis.single_frame_editor:close()
         tas.levels = {}
-        tas.frame_tags = {}
+        tas.frame_tags = common.deep_copy(options.new_tas.frame_tags)
     end
     ctx:win_text("Resets the TAS to an empty state, clearing all recorded inputs and generated data. This does not reset the start settings.")
 end

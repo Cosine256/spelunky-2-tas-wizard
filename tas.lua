@@ -394,6 +394,16 @@ local FORMAT_UPDATERS = {
         update = function(o)
             o.frame_tags = o.tagged_frames
             o.tagged_frames = nil
+            table.insert(o.frame_tags, 1, {
+                name = "Start",
+                level = 1,
+                frame = 0
+            })
+            table.insert(o.frame_tags, 2, {
+                name = "End",
+                level = -1,
+                frame = -1
+            })
         end
     }
 }

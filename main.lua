@@ -87,7 +87,18 @@ default_options = {
         },
         start_full = {},
         levels = {},
-        frame_tags = {},
+        frame_tags = {
+            {
+                name = "Start",
+                level = 1,
+                frame = 0
+            },
+            {
+                name = "End",
+                level = -1,
+                frame = -1
+            }
+        },
         save_player_positions = true,
         save_level_snapshots = true
     },

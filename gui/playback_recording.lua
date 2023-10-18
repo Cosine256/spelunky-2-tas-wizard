@@ -23,54 +23,50 @@ local RECORD_FRAME_WRITE_TYPE = OrderedTable:new({
 })
 local RECORD_FRAME_WRITE_TYPE_COMBO = ComboInput:new(RECORD_FRAME_WRITE_TYPE)
 
-local START_FRAME_TAG = {
-    immutable = true,
-    name = "Start",
-    level = 1,
-    frame = 0
-}
-local END_FRAME_TAG = {
-    immutable = true,
-    name = "End",
-    level = -1,
-    frame = -1
-}
-
 local function draw_frame_tag(ctx, id, tas, frame_tag, level_choices, level_combo)
     ctx:win_pushid(id)
 
-    local level = frame_tag.level == -1 and #tas.levels or frame_tag.level
-    if frame_tag.immutable then
-        ctx:win_text(frame_tag.name)
-        ctx:win_input_text("##level", level_choices:value_by_id(level))
+    frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
+
+    local level_index
+    local new_level = level_combo:draw(ctx, "##level", frame_tag.level == -1 and #level_choices or frame_tag.level)
+    if new_level == #level_choices then
+        frame_tag.level = -1
+        level_index = #tas.levels
     else
-        frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
-        level = level_combo:draw(ctx, "##level", level)
-        frame_tag.level = level
+        frame_tag.level = new_level
+        level_index = new_level
     end
 
-    local end_frame = tas:get_end_frame_index(level)
-    local frame = frame_tag.frame == -1 and end_frame or frame_tag.frame
+    local end_frame_index = tas:get_end_frame_index(level_index)
+    local frame_index
+    local new_frame
     ctx:win_inline()
     ctx:win_width(0.25)
-    if frame_tag.immutable then
-        ctx:win_input_text("Frame", tostring(frame))
+    if frame_tag.frame == -1 then
+        ctx:win_drag_int("Frame", end_frame_index, end_frame_index, end_frame_index)
+        new_frame = end_frame_index
     else
-        frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame, 0, end_frame)
-        frame_tag.frame = frame
+        new_frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame_tag.frame, 0, end_frame_index)
+    end
+    local use_end_frame = ctx:win_check("End frame", frame_tag.frame == -1)
+    if use_end_frame then
+        frame_tag.frame = -1
+        frame_index = end_frame_index
+    else
+        frame_tag.frame = new_frame
+        frame_index = new_frame
     end
 
     if ctx:win_button("Playback to here") then
-        game_controller.playback_target_level = level
-        game_controller.playback_target_frame = frame
+        game_controller.playback_target_level = level_index
+        game_controller.playback_target_frame = frame_index
         game_controller.set_mode(common_enums.MODE.PLAYBACK)
     end
     local delete = false
-    if not frame_tag.immutable then
-        ctx:win_inline()
-        if ctx:win_button("Delete") then
-            delete = true
-        end
+    ctx:win_inline()
+    if ctx:win_button("Delete") then
+        delete = true
     end
 
     ctx:win_popid()
@@ -118,22 +114,19 @@ function module:draw_panel(ctx, is_window)
             for i = 1, #tas.levels do
                 level_choices[i] = common.level_to_string(tas, i, false)
             end
+            level_choices[#level_choices + 1] = "End level"
             level_choices = OrderedTable:new(level_choices)
             local level_combo = ComboInput:new(level_choices)
-            draw_frame_tag(ctx, -1, tas, START_FRAME_TAG, level_choices, level_combo)
-            ctx:win_separator()
-            draw_frame_tag(ctx, 0, tas, END_FRAME_TAG, level_choices, level_combo)
             local i = 1
             while i <= #tas.frame_tags do
                 local frame_tag = tas.frame_tags[i]
-                ctx:win_separator()
                 if draw_frame_tag(ctx, i, tas, frame_tag, level_choices, level_combo) then
                     table.remove(tas.frame_tags, i)
                 else
                     i = i + 1
                 end
+                ctx:win_separator()
             end
-            ctx:win_separator()
             if ctx:win_button("Create frame tag") then
                 table.insert(tas.frame_tags, {
                     name = "New",

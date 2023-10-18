@@ -86,7 +86,7 @@ function OrderedTable:index_by_id(id)
     return entry and entry.index or nil
 end
 
-function OrderedTable:count()
+function OrderedTable:__len()
     return #self._entries_by_index
 end
 

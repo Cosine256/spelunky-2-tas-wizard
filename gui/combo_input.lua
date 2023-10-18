@@ -11,7 +11,7 @@ end
 function ComboInput:set_choices(choices)
     self._choices = choices
     local choice_name_array = {}
-    for i = 1, choices:count() do
+    for i = 1, #choices do
         local choice_id = choices:id_by_index(i)
         local choice_value = choices:value_by_index(i)
         local name
