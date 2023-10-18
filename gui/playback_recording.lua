@@ -23,41 +23,41 @@ local RECORD_FRAME_WRITE_TYPE = OrderedTable:new({
 })
 local RECORD_FRAME_WRITE_TYPE_COMBO = ComboInput:new(RECORD_FRAME_WRITE_TYPE)
 
-local START_TAGGED_FRAME = {
+local START_FRAME_TAG = {
     immutable = true,
     name = "Start",
     level = 1,
     frame = 0
 }
-local END_TAGGED_FRAME = {
+local END_FRAME_TAG = {
     immutable = true,
     name = "End",
     level = -1,
     frame = -1
 }
 
-local function draw_tagged_frame(ctx, id, tas, tagged_frame, level_choices, level_combo)
+local function draw_frame_tag(ctx, id, tas, frame_tag, level_choices, level_combo)
     ctx:win_pushid(id)
 
-    local level = tagged_frame.level == -1 and #tas.levels or tagged_frame.level
-    if tagged_frame.immutable then
-        ctx:win_text(tagged_frame.name)
+    local level = frame_tag.level == -1 and #tas.levels or frame_tag.level
+    if frame_tag.immutable then
+        ctx:win_text(frame_tag.name)
         ctx:win_input_text("##level", level_choices:value_by_id(level))
     else
-        tagged_frame.name = ctx:win_input_text("Name", tagged_frame.name)
+        frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
         level = level_combo:draw(ctx, "##level", level)
-        tagged_frame.level = level
+        frame_tag.level = level
     end
 
     local end_frame = tas:get_end_frame_index(level)
-    local frame = tagged_frame.frame == -1 and end_frame or tagged_frame.frame
+    local frame = frame_tag.frame == -1 and end_frame or frame_tag.frame
     ctx:win_inline()
     ctx:win_width(0.25)
-    if tagged_frame.immutable then
+    if frame_tag.immutable then
         ctx:win_input_text("Frame", tostring(frame))
     else
         frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame, 0, end_frame)
-        tagged_frame.frame = frame
+        frame_tag.frame = frame
     end
 
     if ctx:win_button("Playback to here") then
@@ -66,7 +66,7 @@ local function draw_tagged_frame(ctx, id, tas, tagged_frame, level_choices, leve
         game_controller.set_mode(common_enums.MODE.PLAYBACK)
     end
     local delete = false
-    if not tagged_frame.immutable then
+    if not frame_tag.immutable then
         ctx:win_inline()
         if ctx:win_button("Delete") then
             delete = true
@@ -120,22 +120,22 @@ function module:draw_panel(ctx, is_window)
             end
             level_choices = OrderedTable:new(level_choices)
             local level_combo = ComboInput:new(level_choices)
-            draw_tagged_frame(ctx, -1, tas, START_TAGGED_FRAME, level_choices, level_combo)
+            draw_frame_tag(ctx, -1, tas, START_FRAME_TAG, level_choices, level_combo)
             ctx:win_separator()
-            draw_tagged_frame(ctx, 0, tas, END_TAGGED_FRAME, level_choices, level_combo)
+            draw_frame_tag(ctx, 0, tas, END_FRAME_TAG, level_choices, level_combo)
             local i = 1
-            while i <= #tas.tagged_frames do
-                local tagged_frame = tas.tagged_frames[i]
+            while i <= #tas.frame_tags do
+                local frame_tag = tas.frame_tags[i]
                 ctx:win_separator()
-                if draw_tagged_frame(ctx, i, tas, tagged_frame, level_choices, level_combo) then
-                    table.remove(tas.tagged_frames, i)
+                if draw_frame_tag(ctx, i, tas, frame_tag, level_choices, level_combo) then
+                    table.remove(tas.frame_tags, i)
                 else
                     i = i + 1
                 end
             end
             ctx:win_separator()
-            if ctx:win_button("Create tagged frame") then
-                table.insert(tas.tagged_frames, {
+            if ctx:win_button("Create frame tag") then
+                table.insert(tas.frame_tags, {
                     name = "New",
                     level = active_tas_session.current_level_index or 1,
                     frame = active_tas_session.current_frame_index or 0

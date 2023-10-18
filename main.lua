@@ -87,7 +87,7 @@ default_options = {
         },
         start_full = {},
         levels = {},
-        tagged_frames = {},
+        frame_tags = {},
         save_player_positions = true,
         save_level_snapshots = true
     },

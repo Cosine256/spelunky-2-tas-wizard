@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 19
+local CURRENT_FORMAT = 20
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -375,7 +375,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [18] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 19,
         update = function(o)
             for _, level in ipairs(o.levels) do
                 if level.frames then
@@ -389,6 +389,13 @@ local FORMAT_UPDATERS = {
             end
         end
     },
+    [19] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            o.frame_tags = o.tagged_frames
+            o.tagged_frames = nil
+        end
+    }
 }
 
 -- Create a raw copy of this TAS, containing only tables and primitive types, with no functions or prototyping.
@@ -401,7 +408,7 @@ function Tas:to_raw(serial_mod)
         start_simple = common.deep_copy(self.start_simple),
         start_full = common.deep_copy(self.start_full),
         levels = {},
-        tagged_frames = common.deep_copy(self.tagged_frames),
+        frame_tags = common.deep_copy(self.frame_tags),
         save_player_positions = self.save_player_positions,
         save_level_snapshots = self.save_level_snapshots
     }

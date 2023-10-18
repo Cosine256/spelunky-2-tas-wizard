@@ -36,7 +36,7 @@ local function draw_tas_settings(ctx, tas)
         tool_guis.frames.reset_vars()
         tool_guis.single_frame_editor:close()
         tas.levels = {}
-        tas.tagged_frames = {}
+        tas.frame_tags = {}
     end
     ctx:win_text("Resets the TAS to an empty state, clearing all recorded inputs and generated data. This does not reset the start settings.")
 end
