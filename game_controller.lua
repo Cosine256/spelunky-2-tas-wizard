@@ -947,13 +947,25 @@ local function on_post_update_load_screen()
         warp_level_index = nil
     end
 
-    if state.screen == SCREEN.TRANSITION and options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled) then
-        -- The transition screen couldn't be skipped entirely. It needed to be loaded in order for pet health to be applied to players. Now it can be immediately unloaded.
+    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP)
+        and options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled)
+    then
+        -- The screen couldn't be skipped entirely. The transition screen needed to be loaded in order for pet health to be applied to players. The spaceship screen is also handled in this way for simplicity, even though it doesn't affect pet health. Now the screen can be immediately unloaded.
         if options.debug_print_load then
-            print("on_post_update_load_screen: Skipping transition screen.")
+            print("on_post_update_load_screen: Skipping transition/spaceship screen.")
         end
-        state.screen_next = SCREEN.LEVEL
-        state.fadeout = 1 -- The fade-out will finish on the next update and the transition screen will unload.
+        if state.screen == SCREEN.TRANSITION then
+            state.screen_next = SCREEN.LEVEL
+        else
+            state.screen_next = SCREEN.TRANSITION
+            -- The spaceship screen initially loads as 6-1 BASE_CAMP for some reason. It sets these specific fields when the fade-out begins.
+            state.world = 6
+            state.level = 4
+            state.world_next = 7
+            state.level_next = 1
+            state.theme_next = THEME.SUNKEN_CITY
+        end
+        state.fadeout = 1 -- The fade-out will finish on the next update and the screen will unload.
         state.fadein = TRANSITION_FADE_FRAMES
         state.loading = 1
     end

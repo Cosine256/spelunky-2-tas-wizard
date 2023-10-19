@@ -25,7 +25,8 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Speed tweaks")
     tool_guis.playback_recording:draw_fast_update_playback_option(ctx, true)
-    options.transition_skip = ctx:win_check("Skip level transitions", options.transition_skip)
+    options.transition_skip = ctx:win_check("Skip transition screens", options.transition_skip)
+    ctx:win_text("Instantly skip transition screens instead of allowing them to fade in and out. This also skips the spaceship cutscene screen after exiting 6-4 via the spaceship.")
 
     ctx:win_separator_text("Automatic pausing")
     ctx:win_text("These options control automatic game engine pauses. The pauses are the same ones used by Overlunky for frame advancing. These pauses are not recommended for use in regular Playlunky, as you will not have controls to unpause or frame advance.")
