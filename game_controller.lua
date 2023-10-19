@@ -947,7 +947,7 @@ local function on_post_update_load_screen()
         warp_level_index = nil
     end
 
-    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP)
+    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not need_pause
         and options.transition_skip and not (module.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled)
     then
         -- The screen couldn't be skipped entirely. The transition screen needed to be loaded in order for pet health to be applied to players. The spaceship screen is also handled in this way for simplicity, even though it doesn't affect pet health. Now the screen can be immediately unloaded.
