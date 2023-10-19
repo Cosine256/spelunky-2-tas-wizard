@@ -405,8 +405,8 @@ function module.check_playback()
         on_playback_invalid("Target is later than end of level ("..module.playback_target_level.."-"..active_tas_session.tas:get_end_frame_index(module.playback_target_level)..").")
         return
     end
-    if warp_level_index then
-        -- Don't compare the playback target to the current level and frame while warping.
+    if warp_level_index and (state.loading == 1 or state.loading == 2) then
+        -- Don't compare the playback target to the current level and frame while warping out of the current level.
         return
     end
     local current_comparison = common.compare_level_frame_index(module.playback_target_level, module.playback_target_frame,
