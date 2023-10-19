@@ -73,4 +73,12 @@ function Tool_GUI:set_window_open(open)
     end
 end
 
+-- Called once when the script is loaded.
+function Tool_GUI:initialize()
+end
+
+-- Called when the active TAS session is reset, replaced, or cleared, and once when the script is loaded.
+function Tool_GUI:reset_session_vars()
+end
+
 return Tool_GUI

@@ -174,8 +174,9 @@ function set_active_tas(tas)
     else
         active_tas_session = nil
     end
-    tool_guis.frames.reset_vars()
-    tool_guis.single_frame_editor:close()
+    for _, tool_gui in pairs(tool_guis) do
+        tool_gui:reset_session_vars()
+    end
 end
 
 -- Set the TAS for a new ghost TAS session.
@@ -214,7 +215,8 @@ set_callback(function(ctx)
     register_option_callback("", options, function(ctx) tool_guis.options:draw_panel(ctx, false) end)
     set_callback(on_gui_frame, ON.GUIFRAME)
     game_controller.initialize()
-    tool_guis.root.initialize()
-    tool_guis.tas_root.initialize()
-    tool_guis.frames.reset_vars()
+    for _, tool_gui in pairs(tool_guis) do
+        tool_gui:initialize()
+        tool_gui:reset_session_vars()
+    end
 end, ON.LOAD)

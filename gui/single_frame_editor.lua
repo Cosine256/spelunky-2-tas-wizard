@@ -5,6 +5,10 @@ local Tool_GUI = require("gui/tool_gui")
 local module = Tool_GUI:new("single_frame_editor", "Edit Frame", "single_frame_editor_window")
 module.is_popup = true
 
+function module:reset_session_vars()
+    self:close()
+end
+
 function module:open(level_index, frame_index, player_index, inputs)
     self.level_index = level_index
     self.frame_index = frame_index

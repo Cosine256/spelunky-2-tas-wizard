@@ -9,7 +9,7 @@ function module:draw_panel(ctx, is_window)
     common_gui.draw_tool_gui_panels(ctx, ordered_tool_guis)
 end
 
-function module.initialize()
+function module:initialize()
     ordered_tool_guis = {
         tool_guis.file,
         tool_guis.options,

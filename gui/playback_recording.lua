@@ -23,54 +23,114 @@ local RECORD_FRAME_WRITE_TYPE = OrderedTable:new({
 })
 local RECORD_FRAME_WRITE_TYPE_COMBO = ComboInput:new(RECORD_FRAME_WRITE_TYPE)
 
-local function draw_frame_tag(ctx, id, tas, frame_tag, level_choices, level_combo)
-    ctx:win_pushid(id)
+-- The next unique ID for a frame tag in the GUI. The array index of the frame tag can't be used because it will confuse ImGui if they are reordered.
+local next_frame_tag_data_id = 1
+local frame_tag_datas
+local frame_tag_move_index
+local frame_tag_move_dir
 
-    frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
-
-    local level_index
-    local new_level = level_combo:draw(ctx, "##level", frame_tag.level == -1 and #level_choices or frame_tag.level)
-    if new_level == #level_choices then
-        frame_tag.level = -1
-        level_index = #tas.levels
-    else
-        frame_tag.level = new_level
-        level_index = new_level
+function module:reset_session_vars()
+    frame_tag_datas = {}
+    frame_tag_move_index = nil
+    frame_tag_move_dir = nil
+    if active_tas_session then
+        for i = 1, #active_tas_session.tas.frame_tags do
+            frame_tag_datas[i] = {
+                id = next_frame_tag_data_id
+            }
+            next_frame_tag_data_id = next_frame_tag_data_id + 1
+        end
     end
+end
 
+local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
+    local tas = active_tas_session.tas
+    local frame_tag = tas.frame_tags[frame_tag_index]
+    local frame_tag_data = frame_tag_datas[frame_tag_index]
+    ctx:win_pushid(frame_tag_data.id)
+
+    local end_level_index = tas:get_end_level_index()
+    local level_index = frame_tag.level == -1 and end_level_index or frame_tag.level
+    -- TODO: Validate and clean up frame tags immediately when TAS data is changed, not here in the GUI.
+    if level_index > end_level_index then
+        level_index = end_level_index
+        frame_tag.level = end_level_index
+    end
     local end_frame_index = tas:get_end_frame_index(level_index)
-    local frame_index
-    local new_frame
-    ctx:win_inline()
-    ctx:win_width(0.25)
-    if frame_tag.frame == -1 then
-        ctx:win_drag_int("Frame", end_frame_index, end_frame_index, end_frame_index)
-        new_frame = end_frame_index
-    else
-        new_frame = common_gui.draw_drag_int_clamped(ctx, "Frame", frame_tag.frame, 0, end_frame_index)
-    end
-    local use_end_frame = ctx:win_check("End frame", frame_tag.frame == -1)
-    if use_end_frame then
-        frame_tag.frame = -1
+    local frame_index = frame_tag.frame == -1 and end_frame_index or frame_tag.frame
+    -- TODO: Validate and clean up frame tags immediately when TAS data is changed, not here in the GUI.
+    if frame_index > end_frame_index then
         frame_index = end_frame_index
-    else
-        frame_tag.frame = new_frame
-        frame_index = new_frame
+        frame_tag.frame = end_frame_index
     end
+    local screen_records_frames = common_enums.TASABLE_SCREEN[tas.levels[level_index].metadata.screen].record_frames
 
-    if ctx:win_button("Playback to here") then
+    if ctx:win_button("Go") then
         game_controller.playback_target_level = level_index
         game_controller.playback_target_frame = frame_index
         game_controller.set_mode(common_enums.MODE.PLAYBACK)
     end
-    local delete = false
     ctx:win_inline()
-    if ctx:win_button("Delete") then
-        delete = true
-    end
 
+    local section_label = frame_tag.name.." [Lv "..common.level_to_string(tas, level_index, false)
+        ..(screen_records_frames and ", Fr "..frame_index or "").."]###section"
+    ctx:win_section(section_label, function()
+        ctx:win_indent(common_gui.INDENT_SECTION)
+
+        frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
+
+        local end_level_choice = #level_choices
+        local new_level = level_combo:draw(ctx, "Level", frame_tag.level == -1 and end_level_choice or frame_tag.level)
+        local old_level_index = level_index
+        if new_level == end_level_choice then
+            level_index = #tas.levels
+            frame_tag.level = -1
+        else
+            level_index = new_level
+            frame_tag.level = new_level
+        end
+
+        if old_level_index ~= level_index then
+            end_frame_index = tas:get_end_frame_index(level_index)
+            frame_index = frame_tag.frame == -1 and end_frame_index or frame_tag.frame
+            if frame_index > end_frame_index then
+                frame_index = end_frame_index
+                frame_tag.frame = end_frame_index
+            end
+            screen_records_frames = common_enums.TASABLE_SCREEN[tas.levels[level_index].metadata.screen].record_frames
+        end
+
+        if screen_records_frames then
+            local new_frame_index
+            ctx:win_width(0.25)
+            if frame_tag.frame == -1 then
+                ctx:win_drag_int("Frame", end_frame_index, end_frame_index, end_frame_index)
+                new_frame_index = end_frame_index
+            else
+                new_frame_index = common_gui.draw_drag_int_clamped(ctx, "Frame", frame_tag.frame, 0, end_frame_index)
+            end
+            ctx:win_inline()
+            local use_end_frame = ctx:win_check("End frame", frame_tag.frame == -1)
+            frame_tag.frame = use_end_frame and -1 or new_frame_index
+        end
+
+        if ctx:win_button("Move up") then
+            frame_tag_move_index = frame_tag_index
+            frame_tag_move_dir = -1
+        end
+        ctx:win_inline()
+        if ctx:win_button("Move down") then
+            frame_tag_move_index = frame_tag_index
+            frame_tag_move_dir = 1
+        end
+        ctx:win_inline()
+        if ctx:win_button("Delete") then
+            frame_tag_data.delete = true
+        end
+
+        ctx:win_indent(-common_gui.INDENT_SECTION)
+    end)
     ctx:win_popid()
-    return delete
 end
 
 function module:draw_fast_update_playback_option(ctx, include_desc)
@@ -119,22 +179,38 @@ function module:draw_panel(ctx, is_window)
             local level_combo = ComboInput:new(level_choices)
             local i = 1
             while i <= #tas.frame_tags do
-                local frame_tag = tas.frame_tags[i]
-                if draw_frame_tag(ctx, i, tas, frame_tag, level_choices, level_combo) then
+                draw_frame_tag(ctx, i, level_choices, level_combo)
+                local frame_tag_data = frame_tag_datas[i]
+                if frame_tag_data.delete then
                     table.remove(tas.frame_tags, i)
+                    table.remove(frame_tag_datas, i)
                 else
                     i = i + 1
                 end
-                ctx:win_separator()
             end
-            if ctx:win_button("Create frame tag") then
+            if frame_tag_move_index then
+                local other_move_index = frame_tag_move_index + frame_tag_move_dir
+                if frame_tag_datas[other_move_index] then
+                    tas.frame_tags[frame_tag_move_index], tas.frame_tags[other_move_index] = tas.frame_tags[other_move_index], tas.frame_tags[frame_tag_move_index]
+                    frame_tag_datas[frame_tag_move_index], frame_tag_datas[other_move_index] = frame_tag_datas[other_move_index], frame_tag_datas[frame_tag_move_index]
+                end
+                frame_tag_move_index = nil
+                frame_tag_move_dir = nil
+            end
+            if ctx:win_button("Add frame tag") then
                 table.insert(tas.frame_tags, {
                     name = "New",
                     level = active_tas_session.current_level_index or 1,
                     frame = active_tas_session.current_frame_index or 0
                 })
+                table.insert(frame_tag_datas, {
+                    id = next_frame_tag_data_id
+                })
+                next_frame_tag_data_id = next_frame_tag_data_id + 1
             end
+
             ctx:win_separator()
+
             if game_controller.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
             elseif game_controller.mode == common_enums.MODE.RECORD then

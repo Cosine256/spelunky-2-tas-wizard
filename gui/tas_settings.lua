@@ -34,10 +34,11 @@ local function draw_tas_settings(ctx, tas)
     if ctx:win_button("Reset TAS") then
         active_tas_session.desync = nil
         game_controller.reset_session_vars()
-        tool_guis.frames.reset_vars()
-        tool_guis.single_frame_editor:close()
         tas.levels = {}
         tas.frame_tags = common.deep_copy(options.new_tas.frame_tags)
+        for _, tool_gui in pairs(tool_guis) do
+            tool_gui:reset_session_vars()
+        end
     end
     ctx:win_text("Resets the TAS to an empty state, clearing all recorded inputs and generated data. This does not reset the start settings.")
 end

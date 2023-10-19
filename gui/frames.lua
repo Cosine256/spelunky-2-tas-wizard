@@ -27,8 +27,7 @@ local viewer_frame_index = 1
 local last_current_level_index
 local last_current_frame_index
 
--- Reset variables that shouldn't be persisted across TAS sessions or TAS resets.
-function module.reset_vars()
+function module:reset_session_vars()
     bulk_start_index = 0
     bulk_count = 1
     bulk_inputs = {}
