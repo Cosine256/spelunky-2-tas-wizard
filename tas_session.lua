@@ -25,11 +25,7 @@ local function metadata_matches_game_level(metadata)
     if metadata.screen == base_screen then
         if base_screen == SCREEN.LEVEL or base_screen == SCREEN.TRANSITION then
             if metadata.world == state.world and metadata.level == state.level and metadata.theme == state.theme then
-                if base_screen == SCREEN.LEVEL then
-                    return metadata.cutscene == nil or metadata.cutscene == (state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil)
-                else
-                    return true
-                end
+                return true
             end
         else
             return true
