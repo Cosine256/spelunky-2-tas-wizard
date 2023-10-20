@@ -1,4 +1,4 @@
-local common = require("common_enums")
+local common = require("common")
 local common_enums = require("common_enums")
 
 ---@class TasSession
@@ -11,6 +11,8 @@ local common_enums = require("common_enums")
     ---@field stored_level_snapshot table? Temporarily stores a level snapshot during a screen change update until a TAS level is ready to receive it.
 local TasSession = {}
 TasSession.__index = TasSession
+
+local POSITION_DESYNC_EPSILON = 0.0000000001
 
 function TasSession:new(tas)
     local o = {
@@ -106,6 +108,39 @@ function TasSession:unset_current_level()
     self.current_level_data = nil
     self.current_tasable_screen = nil
     self.current_frame_index = nil
+end
+
+-- Checks whether a player's expected position matches their actual position and sets position desync if they do not match. Does nothing if there is already desync. Returns whether desync was detected.
+function TasSession:check_position_desync(player_index, expected_pos, actual_pos)
+    if self.desync or (actual_pos and math.abs(expected_pos.x - actual_pos.x) <= POSITION_DESYNC_EPSILON
+        and math.abs(expected_pos.y - actual_pos.y) <= POSITION_DESYNC_EPSILON)
+    then
+        return false
+    end
+
+    self.desync = {
+        level_index = self.current_level_index,
+        frame_index = self.current_frame_index,
+        desc = "Actual player "..player_index.." position differs from expected position."
+    }
+    print("Desynchronized on frame "..self.desync.level_index.."-"..self.desync.frame_index..": "..self.desync.desc)
+    print("    Expected: x="..expected_pos.x.." y="..expected_pos.y)
+    if actual_pos then
+        print("    Actual: x="..actual_pos.x.." y="..actual_pos.y)
+        print("    Diff: dx="..(actual_pos.x - expected_pos.x).." dy="..(actual_pos.y - expected_pos.y))
+    else
+        print("    Actual: nil")
+    end
+    return true
+end
+
+function TasSession:set_level_end_desync()
+    self.desync = {
+        level_index = self.current_level_index,
+        frame_index = self.current_frame_index,
+        desc = "Expected end of level."
+    }
+    print("Desynchronized on frame "..self.desync.level_index.."-"..self.desync.frame_index..": "..self.desync.desc)
 end
 
 return TasSession

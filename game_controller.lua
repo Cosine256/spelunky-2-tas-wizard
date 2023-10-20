@@ -7,7 +7,6 @@ local GAME_TYPES = introspection.register_types({}, require("raw_game_types"))
 
 -- The maximum amount of time to spend executing one batch of fast updates, in milliseconds.
 local FAST_UPDATE_BATCH_DURATION = 100
-local POSITION_DESYNC_EPSILON = 0.0000000001
 -- Vanilla frames used to fade into and out of the transition screen.
 local TRANSITION_FADE_FRAMES = 18
 local WARP_FADE_OUT_FRAMES = 5
@@ -179,55 +178,6 @@ local function try_pause()
         if options.debug_print_pause then
             print("try_pause: Paused")
         end
-    end
-end
-
-local function check_position_desync(player_index, expected_pos, actual_pos)
-    if active_tas_session.desync then
-        return
-    end
-    if not actual_pos or math.abs(expected_pos.x - actual_pos.x) > POSITION_DESYNC_EPSILON
-        or math.abs(expected_pos.y - actual_pos.y) > POSITION_DESYNC_EPSILON
-    then
-        local desync = {
-            level_index = active_tas_session.current_level_index,
-            frame_index = active_tas_session.current_frame_index,
-            desc = "Actual player "..player_index.." position differs from expected position."
-        }
-        active_tas_session.desync = desync
-        print("Desynchronized on frame "..desync.level_index.."-"..desync.frame_index..": "..desync.desc)
-        print("    Expected: x="..expected_pos.x.." y="..expected_pos.y)
-        if actual_pos then
-            print("    Actual: x="..actual_pos.x.." y="..actual_pos.y)
-            print("    Diff: dx="..(actual_pos.x - expected_pos.x).." dy="..(actual_pos.y - expected_pos.y))
-        else
-            print("    Actual: nil")
-        end
-        if options.pause_desync then
-            if options.debug_print_pause then
-                prinspect("position_desync: pause", get_frame())
-            end
-            need_pause = true
-        end
-    end
-end
-
-local function set_level_end_desync()
-    if active_tas_session.desync then
-        return
-    end
-    local desync = {
-        level_index = active_tas_session.current_level_index,
-        frame_index = active_tas_session.current_frame_index,
-        desc = "Expected end of level."
-    }
-    active_tas_session.desync = desync
-    print("Desynchronized on frame "..desync.level_index.."-"..desync.frame_index..": "..desync.desc)
-    if options.pause_desync then
-        if options.debug_print_pause then
-            prinspect("level_end_desync: pause", get_frame())
-        end
-        need_pause = true
     end
 end
 
@@ -882,8 +832,11 @@ local function on_post_update_load_screen()
                     end
                     if module.mode == common_enums.MODE.RECORD or not player.start_position then
                         player.start_position = actual_pos
-                    else
-                        check_position_desync(player_index, player.start_position, actual_pos)
+                    elseif active_tas_session:check_position_desync(player_index, player.start_position, actual_pos) and options.pause_desync then
+                        if options.debug_print_pause then
+                            print("on_post_update_load_screen: Pausing due to start position desync.")
+                        end
+                        need_pause = true
                     end
                 end
             end
@@ -969,10 +922,15 @@ local function on_post_update_frame_advanced()
                 table.insert(active_tas_session.current_level_data.frames, active_tas_session.current_frame_index, current_frame_data)
             end
         elseif module.mode == common_enums.MODE.PLAYBACK and not current_frame_data then
-            -- A TASable frame just executed during playback without frame data.
-            if active_tas_session.current_level_index < active_tas_session.tas:get_end_level_index() then
-                -- The current level should be ending during this update instead of executing a TASable frame.
-                set_level_end_desync()
+            -- A TASable frame just executed during playback without frame data. This is normal on the last level of the TAS since it means the user played back past the end of the TAS. Otherwise, it's a desync scenario because the game should be switching to the next level instead of executing more TASable frames on the current level.
+            if not active_tas_session.desync and active_tas_session.current_level_index < active_tas_session.tas:get_end_level_index() then
+                active_tas_session:set_level_end_desync()
+                if options.pause_desync then
+                    if options.debug_print_pause then
+                        print("on_post_update_frame_advanced: Pausing due to level end desync.")
+                    end
+                    need_pause = true
+                end
             end
             if options.debug_print_mode then
                 print("on_post_update_frame_advanced: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
@@ -1000,7 +958,12 @@ local function on_post_update_frame_advanced()
             elseif module.mode == common_enums.MODE.PLAYBACK then
                 local expected_pos = player.position
                 if expected_pos then
-                    check_position_desync(player_index, expected_pos, actual_pos)
+                    if active_tas_session:check_position_desync(player_index, expected_pos, actual_pos) and options.pause_desync then
+                        if options.debug_print_pause then
+                            print("on_post_update_frame_advanced: Pausing due to position desync.")
+                        end
+                        need_pause = true
+                    end
                 else
                     -- No player positions are stored for this frame. Store the current positions.
                     player.position = actual_pos
