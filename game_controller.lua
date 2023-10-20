@@ -73,9 +73,6 @@ module.PLAYBACK_FROM = {
     NEAREST_LEVEL = 3
 }
 
-local desync_callbacks = {}
-local next_callback_id = 0
-
 -- Determines how the game controller and the active TAS session interact with the game engine. If this is set to anything other than freeplay, then it is assumed that there is an active TAS session in a valid state for a non-freeplay mode.
 module.mode = common_enums.MODE.FREEPLAY
 -- Target level index for playback. When in playback mode, this field should not be `nil`.
@@ -185,23 +182,6 @@ local function try_pause()
     end
 end
 
-local function set_desync_callback(callback)
-    local callback_id = next_callback_id
-    next_callback_id = next_callback_id + 1
-    desync_callbacks[callback_id] = callback
-    return callback_id
-end
-
-local function clear_desync_callback(callback_id)
-    desync_callbacks[callback_id] = nil
-end
-
-local function run_desync_callbacks()
-    for _, callback in pairs(desync_callbacks) do
-        callback()
-    end
-end
-
 local function check_position_desync(player_index, expected_pos, actual_pos)
     if active_tas_session.desync then
         return
@@ -229,7 +209,6 @@ local function check_position_desync(player_index, expected_pos, actual_pos)
             end
             need_pause = true
         end
-        run_desync_callbacks()
     end
 end
 
@@ -250,7 +229,6 @@ local function set_level_end_desync()
         end
         need_pause = true
     end
-    run_desync_callbacks()
 end
 
 -- Validates whether a warp can be performed and prepares for screen-specific warp behavior. Returns false if it isn't currently safe to warp from this screen.
@@ -1060,8 +1038,6 @@ function module.initialize()
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)
     set_callback(on_pre_level_gen, ON.PRE_LEVEL_GENERATION)
-    register_console_command("set_desync_callback", set_desync_callback)
-    register_console_command("clear_desync_callback", clear_desync_callback)
 end
 
 return module
