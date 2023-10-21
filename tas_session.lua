@@ -377,4 +377,58 @@ function TasSession:trigger_warp(level_index)
     return false
 end
 
+-- Called before a game update which is going to load a TASable screen.
+function TasSession:on_pre_update_load_tasable_screen()
+    if not game_controller:is_warping() and common_enums.TASABLE_SCREEN[state.screen_next].can_snapshot
+        and (self.mode == common_enums.MODE.RECORD or (self.mode == common_enums.MODE.PLAYBACK
+        and self.current_level_index < self.tas:get_end_level_index() and not self.tas.levels[self.current_level_index + 1].snapshot))
+    then
+        -- Request a level snapshot of the upcoming level.
+        game_controller.register_level_snapshot_request(function(level_snapshot)
+            -- The snapshot request will be fulfilled before the TAS session knows which level it belongs to. Temporarily store it until a TAS level is ready for it.
+            self.stored_level_snapshot = level_snapshot
+        end)
+    end
+end
+
+-- Called before every game update in a TASable screen, excluding the update which loads the screen.
+function TasSession:on_pre_update_tasable_screen()
+    -- Exclude updates where there is no chance of a TASable frame executing or where nothing needs to be done.
+    if not self:validate_current_frame() or (state.loading ~= 0 and state.loading ~= 3) or self.mode == common_enums.MODE.FREEPLAY
+        or not self.current_level_index or not self.current_frame_index
+    then
+        return
+    end
+
+    if self.current_tasable_screen.record_frames then
+        -- Only playback mode should submit inputs.
+        if self.mode == common_enums.MODE.PLAYBACK then
+            -- It's acceptable to not have frame data for the upcoming update as long as the game doesn't process player inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
+            local next_frame_data = self.current_level_data.frames[self.current_frame_index + 1]
+            if next_frame_data then
+                local frame_inputs = {}
+                for player_index = 1, self.tas:get_player_count() do
+                    frame_inputs[player_index] = next_frame_data.players[player_index].inputs
+                end
+                game_controller.submit_pre_update_inputs(frame_inputs)
+            end
+        end
+    elseif self.current_level_data.metadata.screen == SCREEN.TRANSITION then
+        -- Exiting is triggered during the first update where the exit input is seen being held down, not when it's released. The earliest update where inputs are processed is the final update of the fade-in. If an exit input is seen during the earliest update, then the fade-out is started in that same update. The update still executes entity state machines, so characters can be seen stepping forward for a single frame. This is the same behavior that occurs in normal gameplay by holding down the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
+        if self.current_level_data.transition_exit_frame_index then
+            local frame_inputs = {}
+            for player_index = 1, self.tas:get_player_count() do
+                -- By default, suppress inputs from every player.
+                frame_inputs[player_index] = INPUTS.NONE
+            end
+            if self.current_frame_index + 1 >= self.current_level_data.transition_exit_frame_index then
+                -- Have player 1 provide the transition exit input.
+                frame_inputs[1] = INPUTS.JUMP
+            end
+            game_controller.submit_pre_update_inputs(frame_inputs)
+        end
+    end
+    -- Note: There is nothing to do on the spaceship screen except wait for it to end.
+end
+
 return TasSession

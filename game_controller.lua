@@ -64,8 +64,8 @@ do
 end
 
 local need_pause
--- If true, then do not automatically exit the current transition screen even if the TAS is configured to do so.
-local suppress_auto_transition_exit
+-- Whether to ignore submitted TAS inputs for the current transition screen.
+local suppress_transition_tas_inputs
 local force_level_snapshot
 -- The active TAS level index currently being warped to. This is cleared at the end of screen change updates.
 local warp_level_index
@@ -85,7 +85,7 @@ local captured_level_snapshot = nil
 -- TODO: "session" is a confusing name since there are also TasSession objects.
 function module.reset_session_vars()
     need_pause = false
-    suppress_auto_transition_exit = false
+    suppress_transition_tas_inputs = false
     force_level_snapshot = nil
     warp_level_index = nil
     if active_tas_session then
@@ -140,11 +140,11 @@ local function try_pause()
         return
     end
     if state.screen == SCREEN.TRANSITION and options.pause_suppress_auto_transition_exit then
-        -- Suppress the automatic exit of the current transition screen instead of pausing.
+        -- Suppress TAS inputs for the current transition screen instead of pausing.
         need_pause = false
-        suppress_auto_transition_exit = true
+        suppress_transition_tas_inputs = true
         if options.debug_print_pause then
-            print("try_pause: Suppressing automatic exit of transition screen instead of pausing.")
+            print("try_pause: Suppressing TAS inputs for the current transition screen instead of pausing.")
         end
         return
     end
@@ -273,44 +273,12 @@ function module.trigger_level_snapshot_warp(level_snapshot, level_index)
     return true
 end
 
--- Called right before an update which is going to load a TASable screen.
-local function on_pre_update_load_tasable_screen()
-    if options.debug_print_load then
-        print("on_pre_update_load_tasable_screen: "..state.screen_next)
-    end
-
-    if common_enums.TASABLE_SCREEN[state.screen_next].can_snapshot then
-        if not force_level_snapshot and not warp_level_index and active_tas_session and (active_tas_session.mode == common_enums.MODE.RECORD
-            or (active_tas_session.mode == common_enums.MODE.PLAYBACK and active_tas_session.current_level_index < active_tas_session.tas:get_end_level_index()
-            and not active_tas_session.tas.levels[active_tas_session.current_level_index + 1].snapshot))
-        then
-            -- Request a level snapshot of the upcoming level for the active TAS.
-            module.register_level_snapshot_request(function(level_snapshot)
-                -- The snapshot request will be fulfilled before the TAS session knows which level it belongs to. Temporarily store it until a TAS level is ready for it.
-                active_tas_session.stored_level_snapshot = level_snapshot
-            end)
-        end
-
-        if level_snapshot_request_count > 0 then
-            -- Begin capturing a level snapshot for the upcoming level.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_load_tasable_screen: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
-            end
-            -- Capture a state memory snapshot.
-            captured_level_snapshot = {
-                state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
-            }
-            if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
-                -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
-                local part_1, part_2 = get_adventure_seed()
-                captured_level_snapshot.adventure_seed = { part_1, part_2 }
-            end
-        end
-    end
-end
-
 -- Called right before an update which is going to load a screen. The screen value itself might not change since the game may be loading the same type of screen. For screens that include level generation, this is the last place to read or write the adventure seed. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level generation.
 local function on_pre_update_load_screen()
+    if options.debug_print_load then
+        print("on_pre_update_load_screen: "..state.screen.." -> "..state.screen_next)
+    end
+
     if force_level_snapshot then
         -- Apply a level snapshot instead of loading the original destination for this screen change.
         if force_level_snapshot.state_memory then
@@ -329,14 +297,37 @@ local function on_pre_update_load_screen()
             end
             set_adventure_seed(table.unpack(force_level_snapshot.adventure_seed))
         end
+        if options.debug_print_load or options.debug_print_snapshot then
+            print("on_pre_update_load_screen: Screen change with snapshot: "..state.screen.." -> "..state.screen_next)
+        end
     end
     if state.screen_next == SCREEN.OPTIONS or state.screen == SCREEN.OPTIONS then
         -- This update is either entering or exiting the options screen. This does not change the underlying screen and is not a relevant event for this script.
         return
     end
-    suppress_auto_transition_exit = false
-    if common_enums.TASABLE_SCREEN[state.screen_next] then
-        on_pre_update_load_tasable_screen()
+
+    suppress_transition_tas_inputs = false
+
+    local tasable_screen = common_enums.TASABLE_SCREEN[state.screen_next]
+    if tasable_screen then
+        if active_tas_session then
+            active_tas_session:on_pre_update_load_tasable_screen()
+        end
+        if tasable_screen.can_snapshot and level_snapshot_request_count > 0 then
+            -- Begin capturing a level snapshot for the upcoming level.
+            if options.debug_print_load or options.debug_print_snapshot then
+                print("on_pre_update_load_screen: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
+            end
+            -- Capture a state memory snapshot.
+            captured_level_snapshot = {
+                state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
+            }
+            if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
+                -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
+                local part_1, part_2 = get_adventure_seed()
+                captured_level_snapshot.adventure_seed = { part_1, part_2 }
+            end
+        end
     end
 end
 
@@ -392,63 +383,12 @@ local function on_pre_level_gen()
     end
 end
 
--- Called before every game update in a TASable screen, excluding the update which loads the screen.
-local function on_pre_update_tasable_screen()
-    if (state.loading ~= 0 and state.loading ~= 3) or not active_tas_session
-        or active_tas_session.mode == common_enums.MODE.FREEPLAY or not active_tas_session.current_level_index
-    then
-        return
-    end
-
-    active_tas_session:validate_current_frame()
-
-    if active_tas_session.mode == common_enums.MODE.FREEPLAY then
-        return
-    end
-
-    -- Gather inputs from the TAS to submit for the upcoming update.
-    local frame_inputs
-    if active_tas_session.current_tasable_screen.record_frames then
-        -- Only playback mode should submit inputs.
-        if active_tas_session.mode == common_enums.MODE.PLAYBACK then
-            -- It's acceptable to not have frame data for the upcoming update as long as the game doesn't process player inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
-            local next_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index + 1]
-            if next_frame_data then
-                frame_inputs = {}
-                for player_index = 1, active_tas_session.tas:get_player_count() do
-                    -- Submit the inputs for the upcoming frame.
-                    frame_inputs[player_index] = next_frame_data.players[player_index].inputs
-                end
-            end
-        end
-    elseif active_tas_session.current_level_data.metadata.screen == SCREEN.TRANSITION then
-        -- Exiting is triggered during the first update where the exit input is seen being held down, not when it's released. The earliest update where inputs are processed is the final update of the fade-in. If an exit input is seen during the earliest update, then the fade-out is started in that same update. The update still executes entity state machines, so characters can be seen stepping forward for a single frame. This is the same behavior that occurs in normal gameplay by holding down the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
-        frame_inputs = {}
-        if not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index then
-            for player_index = 1, active_tas_session.tas:get_player_count() do
-                -- By default, suppress inputs from every player.
-                frame_inputs[player_index] = INPUTS.NONE
-            end
-            if active_tas_session.current_frame_index + 1 >= active_tas_session.current_level_data.transition_exit_frame_index then
-                -- Have player 1 provide the transition exit input.
-                if options.debug_print_input then
-                    print("on_pre_update_tasable_screen: Submitting transition exit input.")
-                end
-                frame_inputs[1] = INPUTS.JUMP
-            end
-        end
-    end
-    -- Note: There is nothing to do on the SPACESHIP screen except wait for it to end.
-
-    if frame_inputs then
-        -- Submit the TAS inputs for the upcoming update. The script doesn't know whether this update will actually process player inputs. If it does process them, then it will use the submitted inputs. If it doesn't process them, such as due to the game being paused, then nothing will happen and the script can try again on the next update.
-        for player_index = 1, active_tas_session.tas:get_player_count() do
-            local player_inputs = frame_inputs[player_index]
-            if player_inputs then
-                player_inputs = player_inputs & SUPPORTED_INPUTS_MASK
-                state.player_inputs.player_slots[player_index].buttons = player_inputs
-                state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs
-            end
+-- Applies the given inputs to the player slots in the state memory. The game sets the player inputs before pre-update, so calling this function in pre-update overwrites the game's inputs for the upcoming update. The script doesn't know whether an update will actually process player inputs. If it does process them, then it will use the submitted inputs. If it doesn't process them, such as due to the game being paused, then nothing will happen and the same inputs can be submitted in the next pre-update to try again.
+function module.submit_pre_update_inputs(frame_inputs)
+    if state.screen ~= SCREEN.TRANSITION or not suppress_transition_tas_inputs then
+        for player_index, player_inputs in ipairs(frame_inputs) do
+            state.player_inputs.player_slots[player_index].buttons = player_inputs & SUPPORTED_INPUTS_MASK
+            state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs & SUPPORTED_INPUTS_MASK
         end
     end
 end
@@ -457,7 +397,7 @@ local function can_fast_update()
     return options.fast_update_playback and not options.presentation_enabled and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
         and (not active_tas_session.current_level_data or active_tas_session.current_level_data.metadata.screen ~= SCREEN.TRANSITION
-            or (not suppress_auto_transition_exit and active_tas_session.current_level_data.transition_exit_frame_index ~= nil))
+            or (not suppress_transition_tas_inputs and active_tas_session.current_level_data.transition_exit_frame_index ~= nil))
 end
 
 local function on_pre_update()
@@ -493,8 +433,8 @@ local function on_pre_update()
 
     if state.loading == 2 then
         on_pre_update_load_screen()
-    elseif common_enums.TASABLE_SCREEN[state.screen] then
-        on_pre_update_tasable_screen()
+    elseif active_tas_session and common_enums.TASABLE_SCREEN[state.screen] then
+        active_tas_session:on_pre_update_tasable_screen()
     end
 end
 
