@@ -127,6 +127,13 @@ function module.clear_level_snapshot_request(request_id)
     end
 end
 
+function module.request_pause(debug_message)
+    if options.debug_print_pause then
+        print("request_pause: "..debug_message)
+    end
+    need_pause = true
+end
+
 -- Apply a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called on the next update to try again.
 local function try_pause()
     if not need_pause then
@@ -160,6 +167,10 @@ local function try_pause()
             print("try_pause: Paused")
         end
     end
+end
+
+function module.is_warping()
+    return warp_level_index ~= nil
 end
 
 -- Validates whether a warp can be performed and prepares for screen-specific warp behavior. Returns false if it isn't currently safe to warp from this screen.
@@ -290,87 +301,6 @@ function module.apply_level_snapshot(level_index)
     return true
 end
 
-local function on_playback_invalid(message)
-    print("Warning: Invalid playback target ("..active_tas_session:get_playback_target_string().."): "..message.." Switching to freeplay mode.")
-    module.set_mode(common_enums.MODE.FREEPLAY)
-    if options.debug_print_pause then
-        prinspect("on_playback_invalid: Invalid playback target pause", get_frame())
-    end
-    need_pause = true
-end
-
--- Checks the current playback status. If playback is invalid, then it is stopped. If playback is valid and the target matches the current level and frame, then the target action is executed. If not in playback mode, or if none of the prior conditions are met, then nothing happens.
-function module.check_playback()
-    if active_tas_session.mode ~= common_enums.MODE.PLAYBACK then
-        return
-    end
-    local end_level_index, end_frame_index = active_tas_session.tas:get_end_indices()
-    local end_comparison = common.compare_level_frame_index(active_tas_session.playback_target_level, active_tas_session.playback_target_frame, end_level_index, end_frame_index)
-    if end_comparison > 0 then
-        on_playback_invalid("Target is later than end of TAS ("..end_level_index.."-"..end_frame_index..").")
-        return
-    end
-    if active_tas_session.playback_target_frame > active_tas_session.tas:get_end_frame_index(active_tas_session.playback_target_level) then
-        on_playback_invalid("Target is later than end of level ("..active_tas_session.playback_target_level.."-"..active_tas_session.tas:get_end_frame_index(active_tas_session.playback_target_level)..").")
-        return
-    end
-    if warp_level_index and (state.loading == 1 or state.loading == 2) then
-        -- Don't compare the playback target to the current level and frame while warping out of the current level.
-        return
-    end
-    local current_comparison = common.compare_level_frame_index(active_tas_session.playback_target_level, active_tas_session.playback_target_frame,
-        active_tas_session.current_level_index, active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index or 0)
-    if current_comparison < 0 then
-        on_playback_invalid("Current frame ("..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index..") is later than playback target.")
-        return
-    elseif current_comparison > 0 then
-        -- The playback target is later than the current level and frame.
-        return
-    end
-
-    -- The playback target is the current level and frame.
-    local new_mode = common_enums.PLAYBACK_TARGET_MODE:value_by_id(options.playback_target_mode).mode
-    local allow_waiting_pause = false
-    if new_mode == common_enums.MODE.RECORD then
-        if options.debug_print_mode then
-            print("Playback target ("..active_tas_session:get_playback_target_string()..") reached. Switching to record mode.")
-        end
-        module.set_mode(common_enums.MODE.RECORD)
-    elseif new_mode == common_enums.MODE.FREEPLAY then
-        if options.debug_print_mode then
-            print("Playback target ("..active_tas_session:get_playback_target_string()..") reached. Switching to freeplay mode.")
-        end
-        module.set_mode(common_enums.MODE.FREEPLAY)
-    elseif new_mode == common_enums.MODE.PLAYBACK then
-        if end_comparison < 0 then
-            -- The playback target is earlier than the end of the TAS.
-            if active_tas_session.playback_waiting_at_end then
-                active_tas_session.playback_waiting_at_end = false
-                if options.debug_print_mode then
-                    print("Detected new frames while waiting in playback mode at end of TAS. Setting target to end of TAS.")
-                end
-            elseif options.debug_print_mode then
-                print("Playback target ("..active_tas_session:get_playback_target_string()..") reached. Staying in playback mode and setting target to end of TAS.")
-            end
-            active_tas_session.playback_target_level, active_tas_session.playback_target_frame = end_level_index, end_frame_index
-        elseif not active_tas_session.playback_waiting_at_end then
-            -- The playback target is the end of the TAS and playback had not reached it until now.
-            if options.debug_print_mode then
-                print("Playback target ("..active_tas_session:get_playback_target_string()..") reached. Staying in playback mode at end of TAS and waiting for new frames.")
-            end
-            active_tas_session.playback_waiting_at_end = true
-            allow_waiting_pause = true
-        end
-    end
-
-    if options.playback_target_pause and (not active_tas_session.playback_waiting_at_end or allow_waiting_pause) then
-        if options.debug_print_pause then
-            prinspect("check_playback: Reached playback target pause", get_frame())
-        end
-        need_pause = true
-    end
-end
-
 function module.set_mode(new_mode)
     if new_mode == common_enums.MODE.FREEPLAY then
         active_tas_session:reset_playback_vars()
@@ -469,7 +399,7 @@ function module.set_mode(new_mode)
     active_tas_session.mode = new_mode
     if active_tas_session.mode == common_enums.MODE.PLAYBACK then
         -- Immediately check playback in case the target already matches the current level and frame.
-        module.check_playback()
+        active_tas_session:check_playback()
     end
 end
 
@@ -490,11 +420,8 @@ function module.validate_current_frame()
     end
     if message then
         print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..tostring(active_tas_session.current_frame_index).."): "..message.." Switching to freeplay mode.")
-        if options.debug_print_pause then
-            prinspect("validate_current_frame: Invalid current frame pause", get_frame())
-        end
         module.set_mode(common_enums.MODE.FREEPLAY)
-        need_pause = true
+        module.request_pause("Invalid current frame.")
         if unset_current_level then
             active_tas_session:unset_current_level()
         end
@@ -814,10 +741,7 @@ local function on_post_update_load_screen()
                     if active_tas_session.mode == common_enums.MODE.RECORD or not player.start_position then
                         player.start_position = actual_pos
                     elseif active_tas_session:check_position_desync(player_index, player.start_position, actual_pos) and options.pause_desync then
-                        if options.debug_print_pause then
-                            print("on_post_update_load_screen: Pausing due to start position desync.")
-                        end
-                        need_pause = true
+                        module.request_pause("Detected start position desync.")
                     end
                 end
             end
@@ -830,13 +754,10 @@ local function on_post_update_load_screen()
             if (active_tas_session.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_screen_load)
                 or (active_tas_session.mode == common_enums.MODE.RECORD and options.pause_recording_on_screen_load)
             then
-                if options.debug_print_pause then
-                    print("on_post_update_load_screen: Pausing after screen load.")
-                end
-                need_pause = true
+                module.request_pause("New screen loaded.")
             end
             -- Check playback in case of a frame 0 playback target.
-            module.check_playback()
+            active_tas_session:check_playback()
         end
         if active_tas_session.stored_level_snapshot then
             active_tas_session.stored_level_snapshot = nil
@@ -907,10 +828,7 @@ local function on_post_update_frame_advanced()
             if not active_tas_session.desync and active_tas_session.current_level_index < active_tas_session.tas:get_end_level_index() then
                 active_tas_session:set_level_end_desync()
                 if options.pause_desync then
-                    if options.debug_print_pause then
-                        print("on_post_update_frame_advanced: Pausing due to level end desync.")
-                    end
-                    need_pause = true
+                    module.request_pause("Detected level end desync.")
                 end
             end
             if options.debug_print_mode then
@@ -940,10 +858,7 @@ local function on_post_update_frame_advanced()
                 local expected_pos = player.position
                 if expected_pos then
                     if active_tas_session:check_position_desync(player_index, expected_pos, actual_pos) and options.pause_desync then
-                        if options.debug_print_pause then
-                            print("on_post_update_frame_advanced: Pausing due to position desync.")
-                        end
-                        need_pause = true
+                        module.request_pause("Detected position desync.")
                     end
                 else
                     -- No player positions are stored for this frame. Store the current positions.
@@ -953,7 +868,7 @@ local function on_post_update_frame_advanced()
         end
     end
 
-    module.check_playback()
+    active_tas_session:check_playback()
 end
 
 -- Gets whether entity state machines were executed during the most recent non-screen-change update.

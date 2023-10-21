@@ -1,5 +1,6 @@
 local common = require("common")
 local common_enums = require("common_enums")
+local game_controller = require("game_controller")
 
 ---@class TasSession
     ---@field tas table The TAS data for this TAS session.
@@ -36,6 +37,81 @@ function TasSession:reset_playback_vars()
     self.playback_waiting_at_end = false
     self.playback_force_full_run = false
     self.playback_force_current_frame = false
+end
+
+function TasSession:_on_playback_invalid(message)
+    print("Warning: Invalid playback target ("..self:get_playback_target_string().."): "..message.." Switching to freeplay mode.")
+    game_controller.set_mode(common_enums.MODE.FREEPLAY)
+    game_controller.request_pause("Invalid playback target.")
+end
+
+-- Checks the current playback status. If playback is invalid, then it is stopped. If playback is valid and the target matches the current level and frame, then the target action is executed. If not in playback mode, or if none of the prior conditions are met, then nothing happens.
+function TasSession:check_playback()
+    if self.mode ~= common_enums.MODE.PLAYBACK then
+        return
+    end
+    local end_level_index, end_frame_index = self.tas:get_end_indices()
+    local end_comparison = common.compare_level_frame_index(self.playback_target_level, self.playback_target_frame, end_level_index, end_frame_index)
+    if end_comparison > 0 then
+        self:_on_playback_invalid("Target is later than end of TAS ("..end_level_index.."-"..end_frame_index..").")
+        return
+    end
+    if self.playback_target_frame > self.tas:get_end_frame_index(self.playback_target_level) then
+        self:_on_playback_invalid("Target is later than end of level ("..self.playback_target_level.."-"..self.tas:get_end_frame_index(self.playback_target_level)..").")
+        return
+    end
+    if game_controller.is_warping() and (state.loading == 1 or state.loading == 2) then
+        -- Don't compare the playback target to the current level and frame while warping out of the current level.
+        return
+    end
+    local current_comparison = common.compare_level_frame_index(self.playback_target_level, self.playback_target_frame,
+    self.current_level_index, self.current_tasable_screen.record_frames and self.current_frame_index or 0)
+    if current_comparison < 0 then
+        self:_on_playback_invalid("Current frame ("..self.current_level_index.."-"..self.current_frame_index..") is later than playback target.")
+        return
+    elseif current_comparison > 0 then
+        -- The playback target is later than the current level and frame.
+        return
+    end
+
+    -- The playback target is the current level and frame.
+    local new_mode = common_enums.PLAYBACK_TARGET_MODE:value_by_id(options.playback_target_mode).mode
+    local allow_waiting_pause = false
+    if new_mode == common_enums.MODE.RECORD then
+        if options.debug_print_mode then
+            print("Playback target ("..self:get_playback_target_string()..") reached. Switching to record mode.")
+        end
+        game_controller.set_mode(common_enums.MODE.RECORD)
+    elseif new_mode == common_enums.MODE.FREEPLAY then
+        if options.debug_print_mode then
+            print("Playback target ("..self:get_playback_target_string()..") reached. Switching to freeplay mode.")
+        end
+        game_controller.set_mode(common_enums.MODE.FREEPLAY)
+    elseif new_mode == common_enums.MODE.PLAYBACK then
+        if end_comparison < 0 then
+            -- The playback target is earlier than the end of the TAS.
+            if self.playback_waiting_at_end then
+                self.playback_waiting_at_end = false
+                if options.debug_print_mode then
+                    print("Detected new frames while waiting in playback mode at end of TAS. Setting target to end of TAS.")
+                end
+            elseif options.debug_print_mode then
+                print("Playback target ("..self:get_playback_target_string()..") reached. Staying in playback mode and setting target to end of TAS.")
+            end
+            self.playback_target_level, self.playback_target_frame = end_level_index, end_frame_index
+        elseif not self.playback_waiting_at_end then
+            -- The playback target is the end of the TAS and playback had not reached it until now.
+            if options.debug_print_mode then
+                print("Playback target ("..self:get_playback_target_string()..") reached. Staying in playback mode at end of TAS and waiting for new frames.")
+            end
+            self.playback_waiting_at_end = true
+            allow_waiting_pause = true
+        end
+    end
+
+    if options.playback_target_pause and (not self.playback_waiting_at_end or allow_waiting_pause) then
+        game_controller.request_pause("Reached playback target.")
+    end
 end
 
 local function metadata_matches_game_level(metadata)

@@ -103,7 +103,7 @@ local function draw_cutscene_skip_editor(ctx, level)
         level.frames = new_frames
         active_tas_session.desync = nil
         game_controller.validate_current_frame()
-        game_controller.check_playback()
+        active_tas_session:check_playback()
     end
 end
 

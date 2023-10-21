@@ -158,7 +158,7 @@ function module:draw_panel(ctx, is_window)
                 bulk_start_index = bulk_start_index + bulk_count
                 session.desync = nil
                 game_controller.validate_current_frame()
-                game_controller.check_playback()
+                session:check_playback()
             end
         elseif bulk_operation == "delete" then
             if #frames == 0 then
@@ -172,7 +172,7 @@ function module:draw_panel(ctx, is_window)
                     session.tas:delete_frames(self.level_index, bulk_start_index, bulk_count)
                     session.desync = nil
                     game_controller.validate_current_frame()
-                    game_controller.check_playback()
+                    session:check_playback()
                 end
             end
         end
