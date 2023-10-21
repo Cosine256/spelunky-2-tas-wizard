@@ -98,18 +98,12 @@ function TasSession:set_mode_playback(target_level_index, target_frame_index, fo
     end
 
     if load_level_index then
-        -- Load a level to reach the playback target.
+        -- Warp to a level to reach the playback target.
         if options.debug_print_mode then
-            print("Loading level "..load_level_index.." to reach playback target "..target_level_index.."-"..target_frame_index..".")
+            print("Warping to level "..load_level_index.." to reach playback target "..target_level_index.."-"..target_frame_index..".")
         end
-        local load_success
-        if load_level_index == 1 then
-            load_success = game_controller.apply_start_state()
-        else
-            load_success = game_controller.apply_level_snapshot(load_level_index)
-        end
-        if not load_success then
-            print("Warning: Failed to load level "..load_level_index.." to reach playback target "..target_level_index.."-"..target_frame_index..".")
+        if not self:trigger_warp(load_level_index) then
+            print("Warning: Failed to warp to level "..load_level_index.." to reach playback target "..target_level_index.."-"..target_frame_index..".")
             return
         end
     else
@@ -360,6 +354,27 @@ function TasSession:set_level_end_desync()
         desc = "Expected end of level."
     }
     print("Desynchronized on frame "..self.desync.level_index.."-"..self.desync.frame_index..": "..self.desync.desc)
+end
+
+-- Triggers a warp to the specified TAS level. If warping to level 1, then the TAS start settings will be used. Otherwise, a level snapshot will be used. No warp will occur if the TAS does not contain the necessary data to warp to the specified level. Returns whether the warp was triggered successfully.
+function TasSession:trigger_warp(level_index)
+    if level_index == 1 then
+        if self.tas:is_start_configured() then
+            if self.tas.start_type == "simple" then
+                return game_controller.trigger_start_simple_warp(self.tas)
+            elseif self.tas.start_type == "full" then
+                return game_controller.trigger_level_snapshot_warp(self.tas.start_full, 1)
+            end
+        end
+    else
+        local level = self.tas.levels[level_index]
+        if not level or not level.snapshot then
+            print("Cannot trigger warp to level "..level_index..": Missing level snapshot.")
+            return false
+        end
+        return game_controller.trigger_level_snapshot_warp(level.snapshot, level_index)
+    end
+    return false
 end
 
 return TasSession

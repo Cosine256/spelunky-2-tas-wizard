@@ -186,10 +186,14 @@ local function trigger_warp_unload()
     state.fadein = WARP_FADE_OUT_FRAMES
 end
 
--- Forces the game to warp to a level initialized with the simple start settings of the given TAS. This sets the run reset flag, prepares the game state, and then triggers the game to start unloading the current screen. The reset flag handles the most of the process on its own.
-local function trigger_start_simple_warp(tas)
+-- Forces the game to warp to a level initialized with the simple start settings of the given TAS. This sets the run reset flag, prepares the game state, and then triggers the game to start unloading the current screen. The reset flag handles the most of the process on its own. Returns whether the warp was triggered successfully.
+function module.trigger_start_simple_warp(tas)
     if options.debug_print_load then
         print("trigger_start_simple_warp")
+    end
+
+    if not prepare_warp_from_screen() then
+        return false
     end
 
     local start = tas.start_simple
@@ -247,48 +251,25 @@ local function trigger_start_simple_warp(tas)
     trigger_warp_unload()
     active_tas_session.desync = nil
     warp_level_index = 1
+
+    return true
 end
 
--- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot.
-local function trigger_level_snapshot_warp(level_snapshot, level_index)
+-- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Returns whether the warp was triggered successfully.
+function module.trigger_level_snapshot_warp(level_snapshot, level_index)
+    if options.debug_print_load then
+        print("trigger_level_snapshot_warp: level_index="..level_index)
+    end
+
+    if not prepare_warp_from_screen() then
+        return false
+    end
+
     trigger_warp_unload()
     active_tas_session.desync = nil
     force_level_snapshot = level_snapshot
     warp_level_index = level_index
-end
 
--- Prepares the game state and triggers the loading sequence for loading from the TAS's starting state.
--- TODO: This fades in really fast if warping from another level. I use a fast fade-out for these warps, but I'm not sure how the game decides how many fade-in frames to use after that.
-function module.apply_start_state()
-    if not prepare_warp_from_screen() then
-        return false
-    end
-    local tas = active_tas_session.tas
-    if tas:is_start_configured() then
-        if tas.start_type == "simple" then
-            trigger_start_simple_warp(tas)
-            return true
-        elseif tas.start_type == "full" then
-            if tas:is_start_configured() then
-                trigger_level_snapshot_warp(tas.start_full, 1)
-                return true
-            end
-        end
-    end
-    return false
-end
-
--- Prepares the game state and triggers the loading sequence for loading a level snapshot.
-function module.apply_level_snapshot(level_index)
-    if not prepare_warp_from_screen() then
-        return false
-    end
-    local level_snapshot = active_tas_session.tas.levels[level_index].snapshot
-    if not level_snapshot then
-        print("Warning: Missing snapshot for level index "..level_index..".")
-        return false
-    end
-    trigger_level_snapshot_warp(level_snapshot, level_index)
     return true
 end
 

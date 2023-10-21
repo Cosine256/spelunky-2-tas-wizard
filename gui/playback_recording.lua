@@ -253,7 +253,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_separator_text("Recording")
 
         if #tas.levels == 0 then
-            if ctx:win_button("Start recording") and game_controller.apply_start_state() then
+            if ctx:win_button("Start recording") and active_tas_session:trigger_warp(1) then
                 active_tas_session:set_mode_record()
             end
         else
