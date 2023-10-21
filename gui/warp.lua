@@ -1,5 +1,4 @@
 local common = require("common")
-local common_enums = require("common_enums")
 local game_controller = require("game_controller")
 local ComboInput = require("gui/combo_input")
 local OrderedTable = require("ordered_table")
@@ -29,11 +28,11 @@ function module:draw_panel(ctx, is_window)
         if ctx:win_button("Warp##warp_level_button") then
             if warp_level == 1 then
                 if game_controller.apply_start_state() then
-                    game_controller.set_mode(common_enums.MODE.FREEPLAY)
+                    active_tas_session:set_mode_freeplay()
                 end
             elseif tas.levels[warp_level].snapshot then
                 if game_controller.apply_level_snapshot(warp_level) then
-                    game_controller.set_mode(common_enums.MODE.FREEPLAY)
+                    active_tas_session:set_mode_freeplay()
                 end
             else
                 print("Cannot warp to level: No level snapshot stored.")

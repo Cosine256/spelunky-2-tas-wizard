@@ -63,15 +63,6 @@ do
     }
 end
 
-module.PLAYBACK_FROM = {
-    -- Use current frame or load the nearest level to reach the target, preferring whichever is closer.
-    HERE_OR_NEAREST_LEVEL = 1,
-    -- Prefer current frame if it can reach the target. Otherwise, load the nearest level.
-    HERE_ELSE_NEAREST_LEVEL = 2,
-    -- Load the nearest level to reach the target.
-    NEAREST_LEVEL = 3
-}
-
 local need_pause
 -- If true, then do not automatically exit the current transition screen even if the TAS is configured to do so.
 local suppress_auto_transition_exit
@@ -98,7 +89,7 @@ function module.reset_session_vars()
     force_level_snapshot = nil
     warp_level_index = nil
     if active_tas_session then
-        module.set_mode(common_enums.MODE.FREEPLAY)
+        active_tas_session:set_mode_freeplay()
         active_tas_session:unset_current_level()
     end
     if ghost_tas_session then
@@ -301,108 +292,6 @@ function module.apply_level_snapshot(level_index)
     return true
 end
 
-function module.set_mode(new_mode)
-    if new_mode == common_enums.MODE.FREEPLAY then
-        active_tas_session:reset_playback_vars()
-        active_tas_session.current_frame_index = nil
-
-    elseif new_mode == common_enums.MODE.RECORD then
-        if active_tas_session.mode == common_enums.MODE.PLAYBACK then
-            active_tas_session:reset_playback_vars()
-            if active_tas_session.current_frame_index then
-                if options.record_frame_clear_action == "remaining_level" then
-                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index)
-                elseif options.record_frame_clear_action == "remaining_run" then
-                    active_tas_session.tas:remove_frames_after(active_tas_session.current_level_index, active_tas_session.current_frame_index)
-                    active_tas_session.tas:remove_levels_after(active_tas_session.current_level_index)
-                end
-            end
-        end
-
-    elseif new_mode == common_enums.MODE.PLAYBACK then
-        local can_use_current_frame = not active_tas_session.playback_force_full_run and active_tas_session.mode ~= common_enums.MODE.FREEPLAY
-            and (active_tas_session.playback_force_current_frame or options.playback_from == module.PLAYBACK_FROM.HERE_OR_NEAREST_LEVEL
-                or options.playback_from == module.PLAYBACK_FROM.HERE_ELSE_NEAREST_LEVEL)
-            and active_tas_session.current_level_index and active_tas_session.current_frame_index
-            and common.compare_level_frame_index(active_tas_session.playback_target_level, active_tas_session.playback_target_frame,
-                active_tas_session.current_level_index, active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index or 0) >= 0
-
-        local load_level_index
-        if active_tas_session.playback_force_full_run then
-            load_level_index = 1
-        elseif not active_tas_session.playback_force_current_frame then
-            if options.playback_from <= 3 then
-                load_level_index = 1
-                for level_index = active_tas_session.playback_target_level, 2, -1 do
-                    if active_tas_session.tas.levels[level_index].snapshot then
-                        load_level_index = level_index
-                        break
-                    end
-                end
-            else
-                local playback_from_level_index = options.playback_from - 3
-                if playback_from_level_index <= active_tas_session.playback_target_level
-                    and (playback_from_level_index == 1 or active_tas_session.tas.levels[playback_from_level_index].snapshot)
-                then
-                    load_level_index = playback_from_level_index
-                end
-            end
-        end
-
-        active_tas_session.playback_waiting_at_end = false
-        active_tas_session.playback_force_full_run = false
-        active_tas_session.playback_force_current_frame = false
-
-        if options.debug_print_mode then
-            print("Evaluating playback method: can_use_current_frame="..tostring(can_use_current_frame).." load_level_index="..tostring(load_level_index))
-        end
-        if can_use_current_frame then
-            -- The current frame can be used. Decide whether a level should be loaded instead.
-            if load_level_index and (options.playback_from ~= module.PLAYBACK_FROM.HERE_OR_NEAREST_LEVEL
-                or load_level_index <= active_tas_session.current_level_index)
-            then
-                -- Use the current frame.
-                load_level_index = nil
-            end
-        elseif not load_level_index then
-            -- Can neither use current frame nor load a level state.
-            -- TODO: Give the caller a way to check whether this will happen before they change the playback target.
-            print("Warning: Cannot reach playback target with current options. Switching to freeplay mode.")
-            module.set_mode(common_enums.MODE.FREEPLAY)
-            return
-        end
-
-        if load_level_index then
-            -- Load a level to reach the playback target.
-            if options.debug_print_mode then
-                print("Loading level "..load_level_index.." to reach playback target "..active_tas_session:get_playback_target_string()..".")
-            end
-            local load_success
-            if load_level_index == 1 then
-                load_success = module.apply_start_state()
-            else
-                load_success = module.apply_level_snapshot(load_level_index)
-            end
-            if not load_success then
-                -- TODO: Give the caller a way to check whether this will happen before they change the playback target.
-                print("Warning: Failed to load level "..load_level_index.." to reach playback target. Switching to freeplay mode.")
-                module.set_mode(common_enums.MODE.FREEPLAY)
-                return
-            end
-        else
-            -- Playback from the current frame to reach the playback target.
-            if options.debug_print_mode then
-                print("Playing back from current frame to reach playback target "..active_tas_session:get_playback_target_string()..".")
-            end
-        end
-    end
-    active_tas_session.mode = new_mode
-    if active_tas_session.mode == common_enums.MODE.PLAYBACK then
-        -- Immediately check playback in case the target already matches the current level and frame.
-        active_tas_session:check_playback()
-    end
-end
-
 -- Validates whether the current level and frame indices are within the TAS. Prints a warning, switches to freeplay mode, and pauses if the current frame is invalid.
 -- Returns whether the current frame valid. Returns true if the current frame is already undefined.
 function module.validate_current_frame()
@@ -420,7 +309,7 @@ function module.validate_current_frame()
     end
     if message then
         print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..tostring(active_tas_session.current_frame_index).."): "..message.." Switching to freeplay mode.")
-        module.set_mode(common_enums.MODE.FREEPLAY)
+        active_tas_session:set_mode_freeplay()
         module.request_pause("Invalid current frame.")
         if unset_current_level then
             active_tas_session:unset_current_level()
@@ -674,7 +563,7 @@ local function on_post_update_load_screen()
                 if options.debug_print_mode then
                     print("Loaded non-TASable screen. Switching to freeplay mode.")
                 end
-                module.set_mode(common_enums.MODE.FREEPLAY)
+                active_tas_session:set_mode_freeplay()
             end
         elseif warp_level_index then
             -- This screen change was a warp.
@@ -689,7 +578,7 @@ local function on_post_update_load_screen()
                         active_tas_session:create_end_level()
                     else
                         print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..". Switching to freeplay mode.")
-                        module.set_mode(common_enums.MODE.FREEPLAY)
+                        active_tas_session:set_mode_freeplay()
                     end
                 end
             end
@@ -707,11 +596,11 @@ local function on_post_update_load_screen()
                             if options.debug_print_mode then
                                 print("Loaded new screen during playback after end of TAS. Switching to freeplay mode.")
                             end
-                            module.set_mode(common_enums.MODE.FREEPLAY)
+                            active_tas_session:set_mode_freeplay()
                         end
                     else
                         print("Warning: Loaded unexpected screen after screen change from level index "..prev_level_index..". Switching to freeplay mode.")
-                        module.set_mode(common_enums.MODE.FREEPLAY)
+                        active_tas_session:set_mode_freeplay()
                     end
                 end
             end
@@ -722,7 +611,7 @@ local function on_post_update_load_screen()
             else
                 -- Note: This case should not be possible. Playback and recording should always know either the previous level index or the new level index.
                 print("Warning: Loaded new screen during playback or recording with unknown previous level index and unknown new level index. Switching to freeplay mode.")
-                module.set_mode(common_enums.MODE.FREEPLAY)
+                active_tas_session:set_mode_freeplay()
             end
         end
         if options.debug_print_load then
@@ -834,7 +723,7 @@ local function on_post_update_frame_advanced()
             if options.debug_print_mode then
                 print("on_post_update_frame_advanced: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
             end
-            module.set_mode(common_enums.MODE.FREEPLAY)
+            active_tas_session:set_mode_freeplay()
             return
         end
 

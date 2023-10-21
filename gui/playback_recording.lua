@@ -66,9 +66,7 @@ local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
     local screen_records_frames = common_enums.TASABLE_SCREEN[tas.levels[level_index].metadata.screen].record_frames
 
     if ctx:win_button("Go") then
-        active_tas_session.playback_target_level = level_index
-        active_tas_session.playback_target_frame = frame_index
-        game_controller.set_mode(common_enums.MODE.PLAYBACK)
+        active_tas_session:set_mode_playback(level_index, frame_index)
     end
     ctx:win_inline()
 
@@ -163,9 +161,7 @@ function module:draw_panel(ctx, is_window)
             ctx:win_text("No data to playback.")
         else
             if ctx:win_button("Playback entire run") then
-                active_tas_session.playback_target_level, active_tas_session.playback_target_frame = tas:get_end_indices()
-                active_tas_session.playback_force_full_run = true
-                game_controller.set_mode(common_enums.MODE.PLAYBACK)
+                active_tas_session:set_mode_playback(tas:get_end_level_index(), tas:get_end_frame_index(), true, false)
             end
 
             ctx:win_separator()
@@ -220,16 +216,14 @@ function module:draw_panel(ctx, is_window)
                     if options.debug_print_mode then
                         print("Switching to playback mode.")
                     end
-                    active_tas_session.playback_target_level, active_tas_session.playback_target_frame = tas:get_end_indices()
-                    active_tas_session.playback_force_current_frame = true
-                    game_controller.set_mode(common_enums.MODE.PLAYBACK)
+                    active_tas_session:set_mode_playback(tas:get_end_level_index(), tas:get_end_frame_index(), false, true)
                 end
             elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then
                 if ctx:win_button("Switch to record mode") then
                     if options.debug_print_mode then
                         print("Switching to record mode.")
                     end
-                    game_controller.set_mode(common_enums.MODE.RECORD)
+                    active_tas_session:set_mode_record()
                 end
             end
             if active_tas_session.mode ~= common_enums.MODE.FREEPLAY then
@@ -237,7 +231,7 @@ function module:draw_panel(ctx, is_window)
                     if options.debug_print_mode then
                         print("Switching to freeplay mode.")
                     end
-                    game_controller.set_mode(common_enums.MODE.FREEPLAY)
+                    active_tas_session:set_mode_freeplay()
                 end
             end
         end
@@ -260,7 +254,7 @@ function module:draw_panel(ctx, is_window)
 
         if #tas.levels == 0 then
             if ctx:win_button("Start recording") and game_controller.apply_start_state() then
-                game_controller.set_mode(common_enums.MODE.RECORD)
+                active_tas_session:set_mode_record()
             end
         else
             options.record_frame_clear_action = RECORD_FRAME_CLEAR_ACTION_COMBO:draw(ctx, "Clear frames on record", options.record_frame_clear_action)

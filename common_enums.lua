@@ -2,6 +2,7 @@ local OrderedTable = require("ordered_table")
 
 local module = {}
 
+-- The game interaction mode for a TAS session.
 module.MODE = {
     -- Keep track of current level, but do not record or playback any TAS frames, and do not execute configured transition exits.
     FREEPLAY = 0,
@@ -9,6 +10,16 @@ module.MODE = {
     RECORD = 1,
     -- Playback recorded TAS frames up to the chosen target, and execute configured transition exits.
     PLAYBACK = 2
+}
+
+-- The point in the TAS to start playback from.
+module.PLAYBACK_FROM = {
+    -- Use current frame or load the nearest level to reach the target, preferring whichever is closer.
+    HERE_OR_NEAREST_LEVEL = 1,
+    -- Prefer current frame if it can reach the target. Otherwise, load the nearest level.
+    HERE_ELSE_NEAREST_LEVEL = 2,
+    -- Load the nearest level to reach the target.
+    NEAREST_LEVEL = 3
 }
 
 module.PLAYBACK_TARGET_MODE = OrderedTable:new({
