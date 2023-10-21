@@ -292,34 +292,6 @@ function module.apply_level_snapshot(level_index)
     return true
 end
 
--- Validates whether the current level and frame indices are within the TAS. Prints a warning, switches to freeplay mode, and pauses if the current frame is invalid.
--- Returns whether the current frame valid. Returns true if the current frame is already undefined.
-function module.validate_current_frame()
-    local unset_current_level = false
-    local message
-    if active_tas_session.current_level_index then
-        if active_tas_session.current_level_index > active_tas_session.tas:get_end_level_index() then
-            message = "Current level is later than end of TAS ("..active_tas_session.tas:get_end_level_index().."-"..active_tas_session.tas:get_end_frame_index()..")."
-            unset_current_level = true
-        elseif active_tas_session.current_tasable_screen.record_frames and active_tas_session.current_frame_index
-            and active_tas_session.current_frame_index > active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)
-        then
-            message = "Current frame is later than end of level ("..active_tas_session.current_level_index.."-"..active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)..")."
-        end
-    end
-    if message then
-        print("Warning: Invalid current frame ("..active_tas_session.current_level_index.."-"..tostring(active_tas_session.current_frame_index).."): "..message.." Switching to freeplay mode.")
-        active_tas_session:set_mode_freeplay()
-        module.request_pause("Invalid current frame.")
-        if unset_current_level then
-            active_tas_session:unset_current_level()
-        end
-        return false
-    else
-        return true
-    end
-end
-
 -- Called right before an update which is going to load a TASable screen.
 local function on_pre_update_load_tasable_screen()
     if options.debug_print_load then
@@ -447,7 +419,7 @@ local function on_pre_update_tasable_screen()
         return
     end
 
-    module.validate_current_frame()
+    active_tas_session:validate_current_frame()
 
     if active_tas_session.mode == common_enums.MODE.FREEPLAY then
         return

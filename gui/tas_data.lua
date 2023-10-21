@@ -1,7 +1,6 @@
 local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local ComboInput = require("gui/combo_input")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
@@ -102,7 +101,7 @@ local function draw_cutscene_skip_editor(ctx, level)
         -- Use the new frames. Any previous cutscene frames are discarded.
         level.frames = new_frames
         active_tas_session.desync = nil
-        game_controller.validate_current_frame()
+        active_tas_session:validate_current_frame()
         active_tas_session:check_playback()
     end
 end

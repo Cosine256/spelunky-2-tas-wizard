@@ -301,6 +301,34 @@ function TasSession:unset_current_level()
     self.current_frame_index = nil
 end
 
+-- Validates whether the current level and frame indices are within the TAS. Prints a warning, switches to freeplay mode, and requests a pause if the current frame is invalid.
+-- Returns whether the current frame valid. Returns true if the current frame is already undefined.
+function TasSession:validate_current_frame()
+    local unset_current_level = false
+    local message
+    if self.current_level_index then
+        if self.current_level_index > self.tas:get_end_level_index() then
+            message = "Current level is later than end of TAS ("..self.tas:get_end_level_index().."-"..self.tas:get_end_frame_index()..")."
+            unset_current_level = true
+        elseif self.current_tasable_screen.record_frames and self.current_frame_index
+            and self.current_frame_index > self.tas:get_end_frame_index(self.current_level_index)
+        then
+            message = "Current frame is later than end of level ("..self.current_level_index.."-"..self.tas:get_end_frame_index(self.current_level_index)..")."
+        end
+    end
+    if message then
+        print("Warning: Invalid current frame ("..self.current_level_index.."-"..tostring(self.current_frame_index).."): "..message.." Switching to freeplay mode.")
+        self:set_mode_freeplay()
+        game_controller.request_pause("Invalid current frame.")
+        if unset_current_level then
+            self:unset_current_level()
+        end
+        return false
+    else
+        return true
+    end
+end
+
 -- Checks whether a player's expected position matches their actual position and sets position desync if they do not match. Does nothing if there is already desync. Returns whether desync was detected.
 function TasSession:check_position_desync(player_index, expected_pos, actual_pos)
     if self.desync or (actual_pos and math.abs(expected_pos.x - actual_pos.x) <= POSITION_DESYNC_EPSILON

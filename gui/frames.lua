@@ -2,7 +2,6 @@ local ComboInput = require("gui/combo_input")
 local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
@@ -157,7 +156,7 @@ function module:draw_panel(ctx, is_window)
                 session.tas:insert_frames(self.level_index, bulk_start_index, bulk_count, bulk_inputs)
                 bulk_start_index = bulk_start_index + bulk_count
                 session.desync = nil
-                game_controller.validate_current_frame()
+                session:validate_current_frame()
                 session:check_playback()
             end
         elseif bulk_operation == "delete" then
@@ -171,7 +170,7 @@ function module:draw_panel(ctx, is_window)
                 if ctx:win_button("Delete") then
                     session.tas:delete_frames(self.level_index, bulk_start_index, bulk_count)
                     session.desync = nil
-                    game_controller.validate_current_frame()
+                    session:validate_current_frame()
                     session:check_playback()
                 end
             end
