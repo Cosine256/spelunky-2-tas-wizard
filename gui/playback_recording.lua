@@ -66,8 +66,8 @@ local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
     local screen_records_frames = common_enums.TASABLE_SCREEN[tas.levels[level_index].metadata.screen].record_frames
 
     if ctx:win_button("Go") then
-        game_controller.playback_target_level = level_index
-        game_controller.playback_target_frame = frame_index
+        active_tas_session.playback_target_level = level_index
+        active_tas_session.playback_target_frame = frame_index
         game_controller.set_mode(common_enums.MODE.PLAYBACK)
     end
     ctx:win_inline()
@@ -163,8 +163,8 @@ function module:draw_panel(ctx, is_window)
             ctx:win_text("No data to playback.")
         else
             if ctx:win_button("Playback entire run") then
-                game_controller.playback_target_level, game_controller.playback_target_frame = tas:get_end_indices()
-                game_controller.playback_force_full_run = true
+                active_tas_session.playback_target_level, active_tas_session.playback_target_frame = tas:get_end_indices()
+                active_tas_session.playback_force_full_run = true
                 game_controller.set_mode(common_enums.MODE.PLAYBACK)
             end
 
@@ -220,8 +220,8 @@ function module:draw_panel(ctx, is_window)
                     if options.debug_print_mode then
                         print("Switching to playback mode.")
                     end
-                    game_controller.playback_target_level, game_controller.playback_target_frame = tas:get_end_indices()
-                    game_controller.playback_force_current_frame = true
+                    active_tas_session.playback_target_level, active_tas_session.playback_target_frame = tas:get_end_indices()
+                    active_tas_session.playback_force_current_frame = true
                     game_controller.set_mode(common_enums.MODE.PLAYBACK)
                 end
             elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then

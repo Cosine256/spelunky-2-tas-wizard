@@ -8,6 +8,11 @@ local common_enums = require("common_enums")
     ---@field current_level_data table? Reference to the TAS's level data for the `current_level_index`, if the index is defined.
     ---@field current_tasable_screen TasableScreen? Reference to the TASable screen object for the current level's metadata, if the level is defined.
     ---@field current_frame_index integer? Index of the current frame in the TAS, or `nil` if undefined. The "current frame" is the TASable frame that the game most recently executed. The definition of a TASable frame varies depending on the current screen. Generally, its value is incremented after each update where player inputs are processed, but there are some exceptions during screen loading. A value of 0 means that no TASable frames have executed in the current level. This index is defined if and only if all of the following conditions are met: <br> - `current_level_index` is defined. <br> - The current frame has been continuously tracked since the level loaded. <br> - The TAS either contains frame data for this frame, or has general handling for any frame on the current screen.
+    ---@field playback_target_level integer? Target level index for playback. When in playback mode, this field should not be `nil`.
+    ---@field playback_target_frame integer? Target frame index for playback. When in playback mode, this field should not be `nil`. A value of 0 means that the playback target is reached as soon at the target level is loaded.
+    ---@field playback_waiting_at_end boolean Whether playback has reached the end of the TAS. This flag is used to prevent "playback target reached" behavior from being repeated every time playback is checked. If frames are added to the end of the TAS, then the playback target will be set to the new end and this flag will be cleared.
+    ---@field playback_force_full_run boolean
+    ---@field playback_force_current_frame boolean
     ---@field desync table? Data for a TAS desynchronization event.
     ---@field stored_level_snapshot table? Temporarily stores a level snapshot during a screen change update until a TAS level is ready to receive it.
 local TasSession = {}
@@ -21,7 +26,16 @@ function TasSession:new(tas)
         mode = common_enums.MODE.FREEPLAY
     }
     setmetatable(o, self)
+    o:reset_playback_vars()
     return o
+end
+
+function TasSession:reset_playback_vars()
+    self.playback_target_level = nil
+    self.playback_target_frame = nil
+    self.playback_waiting_at_end = false
+    self.playback_force_full_run = false
+    self.playback_force_current_frame = false
 end
 
 local function metadata_matches_game_level(metadata)
@@ -110,6 +124,10 @@ function TasSession:unset_current_level()
     self.current_level_data = nil
     self.current_tasable_screen = nil
     self.current_frame_index = nil
+end
+
+function TasSession:get_playback_target_string()
+    return self.playback_target_level.."-"..self.playback_target_frame
 end
 
 -- Checks whether a player's expected position matches their actual position and sets position desync if they do not match. Does nothing if there is already desync. Returns whether desync was detected.

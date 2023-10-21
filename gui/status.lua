@@ -22,7 +22,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_width(-0.000001)
         ctx:win_input_text("##mode", mode_string)
         if active_tas_session.mode == common_enums.MODE.PLAYBACK then
-            ctx:win_text("Playing back to frame: "..game_controller.playback_target_level.."-"..game_controller.playback_target_frame)
+            ctx:win_text("Playing back to frame: "..active_tas_session:get_playback_target_string())
         end
 
         ctx:win_text("Level")
