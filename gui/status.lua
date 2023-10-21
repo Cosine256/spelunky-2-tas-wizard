@@ -9,11 +9,11 @@ local module = Tool_GUI:new("status", "Status", "status_window")
 function module:draw_panel(ctx, is_window)
     if active_tas_session then
         local mode_string
-        if game_controller.mode == common_enums.MODE.FREEPLAY then
+        if active_tas_session.mode == common_enums.MODE.FREEPLAY then
             mode_string = "Freeplay"
-        elseif game_controller.mode == common_enums.MODE.RECORD then
+        elseif active_tas_session.mode == common_enums.MODE.RECORD then
             mode_string = "Record"
-        elseif game_controller.mode == common_enums.MODE.PLAYBACK then
+        elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then
             mode_string = "Playback"
         end
 
@@ -21,7 +21,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_inline()
         ctx:win_width(-0.000001)
         ctx:win_input_text("##mode", mode_string)
-        if game_controller.mode == common_enums.MODE.PLAYBACK then
+        if active_tas_session.mode == common_enums.MODE.PLAYBACK then
             ctx:win_text("Playing back to frame: "..game_controller.playback_target_level.."-"..game_controller.playback_target_frame)
         end
 

@@ -211,9 +211,9 @@ function module:draw_panel(ctx, is_window)
 
             ctx:win_separator()
 
-            if game_controller.mode == common_enums.MODE.FREEPLAY then
+            if active_tas_session.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
-            elseif game_controller.mode == common_enums.MODE.RECORD then
+            elseif active_tas_session.mode == common_enums.MODE.RECORD then
                 if active_tas_session.current_level_index and active_tas_session.current_frame_index
                     and ctx:win_button("Switch to playback mode")
                 then
@@ -224,7 +224,7 @@ function module:draw_panel(ctx, is_window)
                     game_controller.playback_force_current_frame = true
                     game_controller.set_mode(common_enums.MODE.PLAYBACK)
                 end
-            elseif game_controller.mode == common_enums.MODE.PLAYBACK then
+            elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then
                 if ctx:win_button("Switch to record mode") then
                     if options.debug_print_mode then
                         print("Switching to record mode.")
@@ -232,7 +232,7 @@ function module:draw_panel(ctx, is_window)
                     game_controller.set_mode(common_enums.MODE.RECORD)
                 end
             end
-            if game_controller.mode ~= common_enums.MODE.FREEPLAY then
+            if active_tas_session.mode ~= common_enums.MODE.FREEPLAY then
                 if ctx:win_button("Switch to freeplay mode") then
                     if options.debug_print_mode then
                         print("Switching to freeplay mode.")

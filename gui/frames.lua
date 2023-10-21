@@ -202,7 +202,7 @@ function module:draw_panel(ctx, is_window)
         return
     end
     if follow_current then
-        if game_controller.mode == common_enums.MODE.FREEPLAY then
+        if session.mode == common_enums.MODE.FREEPLAY then
             last_current_level_index = nil
             last_current_frame_index = nil
         elseif session.current_level_index == module.level_index and session.current_frame_index

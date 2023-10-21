@@ -12,7 +12,7 @@ function module:draw_panel(ctx, is_window)
         -- TODO: Can't distinguish between whether this is embedded in the options dropdown or the TAS Tool window.
         if ctx:win_button("Show TAS Tool window") then
             if tool_guis.root:is_window_open() then
-                if game_controller.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
+                if active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
                     -- This is a shortcut for the user to disable the presentation mode setting during playback.
                     options.presentation_enabled = false
                 end

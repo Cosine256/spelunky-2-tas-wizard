@@ -3,6 +3,7 @@ local common_enums = require("common_enums")
 
 ---@class TasSession
     ---@field tas table The TAS data for this TAS session.
+    ---@field mode integer The game interaction mode.
     ---@field current_level_index integer? Index of the current level in the TAS, or `nil` if undefined. This index is defined if and only if the TAS contains a level with metadata matching the game's current level.
     ---@field current_level_data table? Reference to the TAS's level data for the `current_level_index`, if the index is defined.
     ---@field current_tasable_screen TasableScreen? Reference to the TASable screen object for the current level's metadata, if the level is defined.
@@ -16,7 +17,8 @@ local POSITION_DESYNC_EPSILON = 0.0000000001
 
 function TasSession:new(tas)
     local o = {
-        tas = tas
+        tas = tas,
+        mode = common_enums.MODE.FREEPLAY
     }
     setmetatable(o, self)
     return o

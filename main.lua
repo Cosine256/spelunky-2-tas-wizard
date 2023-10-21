@@ -190,7 +190,7 @@ function set_ghost_tas(tas)
 end
 
 local function on_gui_frame(ctx)
-    if game_controller.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
+    if active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
         return
     end
 
