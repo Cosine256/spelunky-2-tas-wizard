@@ -379,9 +379,10 @@ function TasSession:trigger_warp(level_index)
     return false
 end
 
--- Called before a game update which is going to load a TASable screen, excluding unloading the options screen.
-function TasSession:on_pre_update_load_tasable_screen()
-    if not game_controller:is_warping() and common_enums.TASABLE_SCREEN[state.screen_next].can_snapshot
+-- Called before a game update which will load a screen, excluding loading or unloading the options screen.
+function TasSession:on_pre_update_load_screen()
+    local tasable_screen = common_enums.TASABLE_SCREEN[state.screen_next]
+    if not game_controller:is_warping() and tasable_screen and tasable_screen.can_snapshot
         and (self.mode == common_enums.MODE.RECORD or (self.mode == common_enums.MODE.PLAYBACK
         and self.current_level_index < self.tas:get_end_level_index() and not self.tas.levels[self.current_level_index + 1].snapshot))
     then
@@ -493,11 +494,11 @@ function TasSession:on_post_update_load_screen(warp_level_index)
     end
 end
 
--- Called before every game update in a TASable screen, excluding the update which loads the screen.
-function TasSession:on_pre_update_tasable_screen()
+-- Called before every game update, excluding screen load updates.
+function TasSession:on_pre_update()
     -- Exclude updates where there is no chance of a TASable frame executing or where nothing needs to be done.
-    if not self:validate_current_frame() or (state.loading ~= 0 and state.loading ~= 3) or self.mode == common_enums.MODE.FREEPLAY
-        or not self.current_level_index or not self.current_frame_index
+    if not self:validate_current_frame() or self.mode == common_enums.MODE.FREEPLAY or not self.current_level_index or not self.current_frame_index
+        or state.screen == SCREEN.OPTIONS or (state.loading ~= 0 and state.loading ~= 3)
     then
         return
     end
@@ -533,9 +534,11 @@ function TasSession:on_pre_update_tasable_screen()
     -- Note: There is nothing to do on the spaceship screen except wait for it to end.
 end
 
--- Called after every game update, excluding the update which loaded the screen.
+-- Called after every game update, excluding screen load updates.
 function TasSession:on_post_update()
-    if self.mode == common_enums.MODE.FREEPLAY or not self.current_level_index or state.screen == SCREEN.OPTIONS or not game_controller.did_entities_update() then
+    if self.mode == common_enums.MODE.FREEPLAY or not self.current_level_index or not self.current_frame_index
+        or state.screen == SCREEN.OPTIONS or not game_controller.did_entities_update()
+    then
         return
     end
 

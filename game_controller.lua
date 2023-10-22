@@ -299,6 +299,7 @@ local function on_pre_update_load_screen()
             print("on_pre_update_load_screen: Screen change with snapshot: "..state.screen.." -> "..state.screen_next)
         end
     end
+
     if state.screen_next == SCREEN.OPTIONS or state.screen == SCREEN.OPTIONS then
         -- This update is either entering or exiting the options screen. This does not change the underlying screen and is not a relevant event for this script.
         return
@@ -306,25 +307,24 @@ local function on_pre_update_load_screen()
 
     suppress_transition_tas_inputs = false
 
+    if active_tas_session then
+        active_tas_session:on_pre_update_load_screen()
+    end
+
     local tasable_screen = common_enums.TASABLE_SCREEN[state.screen_next]
-    if tasable_screen then
-        if active_tas_session then
-            active_tas_session:on_pre_update_load_tasable_screen()
+    if tasable_screen and tasable_screen.can_snapshot and level_snapshot_request_count > 0 then
+        -- Begin capturing a level snapshot for the upcoming level.
+        if options.debug_print_load or options.debug_print_snapshot then
+            print("on_pre_update_load_screen: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
         end
-        if tasable_screen.can_snapshot and level_snapshot_request_count > 0 then
-            -- Begin capturing a level snapshot for the upcoming level.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_load_screen: Starting capture of level snapshot for "..level_snapshot_request_count.." requests.")
-            end
-            -- Capture a state memory snapshot.
-            captured_level_snapshot = {
-                state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
-            }
-            if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
-                -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
-                local part_1, part_2 = get_adventure_seed()
-                captured_level_snapshot.adventure_seed = { part_1, part_2 }
-            end
+        -- Capture a state memory snapshot.
+        captured_level_snapshot = {
+            state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_LevelSnapshot)
+        }
+        if not (test_flag(state.quest_flags, QUEST_FLAG.RESET) and test_flag(state.quest_flags, QUEST_FLAG.SEEDED)) then
+            -- Capture the adventure seed, unless the upcoming level is a reset for a seeded run. The current adventure seed is irrelevant for that scenario.
+            local part_1, part_2 = get_adventure_seed()
+            captured_level_snapshot.adventure_seed = { part_1, part_2 }
         end
     end
 end
@@ -431,8 +431,8 @@ local function on_pre_update()
 
     if state.loading == 2 then
         on_pre_update_load_screen()
-    elseif active_tas_session and common_enums.TASABLE_SCREEN[state.screen] then
-        active_tas_session:on_pre_update_tasable_screen()
+    elseif active_tas_session then
+        active_tas_session:on_pre_update()
     end
 end
 
