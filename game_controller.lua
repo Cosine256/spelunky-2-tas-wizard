@@ -10,8 +10,6 @@ local FAST_UPDATE_BATCH_DURATION = 100
 -- Vanilla frames used to fade into and out of the transition screen.
 local TRANSITION_FADE_FRAMES = 18
 local WARP_FADE_OUT_FRAMES = 5
--- Menu and journal inputs are not supported. They do not work correctly during recording and playback.
-local SUPPORTED_INPUTS_MASK = INPUTS.JUMP | INPUTS.WHIP | INPUTS.BOMB | INPUTS.ROPE | INPUTS.RUN | INPUTS.DOOR | INPUTS.LEFT | INPUTS.RIGHT | INPUTS.UP | INPUTS.DOWN
 
 local SCREEN_WARP_HANDLER
 do
@@ -387,8 +385,8 @@ end
 function module.submit_pre_update_inputs(frame_inputs)
     if state.screen ~= SCREEN.TRANSITION or not suppress_transition_tas_inputs then
         for player_index, player_inputs in ipairs(frame_inputs) do
-            state.player_inputs.player_slots[player_index].buttons = player_inputs & SUPPORTED_INPUTS_MASK
-            state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs & SUPPORTED_INPUTS_MASK
+            state.player_inputs.player_slots[player_index].buttons = player_inputs
+            state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs
         end
     end
 end
@@ -449,101 +447,7 @@ local function on_post_update_load_screen()
     end
 
     if active_tas_session then
-        if not common_enums.TASABLE_SCREEN[state.screen] then
-            -- The new screen is not TASable.
-            active_tas_session:unset_current_level()
-            if active_tas_session.mode ~= common_enums.MODE.FREEPLAY then
-                if options.debug_print_mode then
-                    print("Loaded non-TASable screen. Switching to freeplay mode.")
-                end
-                active_tas_session:set_mode_freeplay()
-            end
-        elseif warp_level_index then
-            -- This screen change was a warp.
-            if not active_tas_session:set_current_level(warp_level_index) then
-                if active_tas_session.mode == common_enums.MODE.FREEPLAY then
-                    -- The level won't exist yet if freeplay warping to level 1 in a TAS with no recorded data.
-                    if warp_level_index ~= 1 or #active_tas_session.tas.levels > 0 then
-                        print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..".")
-                    end
-                else
-                    if active_tas_session.mode == common_enums.MODE.RECORD and warp_level_index == #active_tas_session.tas.levels + 1 then
-                        active_tas_session:create_end_level()
-                    else
-                        print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..". Switching to freeplay mode.")
-                        active_tas_session:set_mode_freeplay()
-                    end
-                end
-            end
-        elseif active_tas_session.current_level_index then
-            -- This screen change was not a warp and the previous level index is known.
-            local prev_level_index = active_tas_session.current_level_index
-            if not active_tas_session:set_current_level(prev_level_index + 1) then
-                if active_tas_session.mode == common_enums.MODE.FREEPLAY then
-                    active_tas_session:find_current_level()
-                else
-                    if prev_level_index == #active_tas_session.tas.levels then
-                        if active_tas_session.mode == common_enums.MODE.RECORD then
-                            active_tas_session:create_end_level()
-                        else
-                            if options.debug_print_mode then
-                                print("Loaded new screen during playback after end of TAS. Switching to freeplay mode.")
-                            end
-                            active_tas_session:set_mode_freeplay()
-                        end
-                    else
-                        print("Warning: Loaded unexpected screen after screen change from level index "..prev_level_index..". Switching to freeplay mode.")
-                        active_tas_session:set_mode_freeplay()
-                    end
-                end
-            end
-        else
-            -- This screen change was not a warp and the previous level index is not known.
-            if active_tas_session.mode == common_enums.MODE.FREEPLAY then
-                active_tas_session:find_current_level()
-            else
-                -- Note: This case should not be possible. Playback and recording should always know either the previous level index or the new level index.
-                print("Warning: Loaded new screen during playback or recording with unknown previous level index and unknown new level index. Switching to freeplay mode.")
-                active_tas_session:set_mode_freeplay()
-            end
-        end
-        if options.debug_print_load then
-            print("on_post_update_load_screen: Current TAS level updated to "..tostring(active_tas_session.current_level_index)..".")
-        end
-        if active_tas_session.mode ~= common_enums.MODE.FREEPLAY then
-            active_tas_session.current_frame_index = 0
-            if active_tas_session.current_tasable_screen.record_frames then
-                for player_index, player in ipairs(active_tas_session.current_level_data.players) do
-                    local player_ent = get_player(player_index, true)
-                    local actual_pos
-                    if player_ent then
-                        local x, y, l = get_position(player_ent.uid)
-                        actual_pos = { x = x, y = y, l = l }
-                    end
-                    if active_tas_session.mode == common_enums.MODE.RECORD or not player.start_position then
-                        player.start_position = actual_pos
-                    elseif active_tas_session:check_position_desync(player_index, player.start_position, actual_pos) and options.pause_desync then
-                        module.request_pause("Detected start position desync.")
-                    end
-                end
-            end
-            if active_tas_session.current_tasable_screen.can_snapshot and active_tas_session.stored_level_snapshot then
-                active_tas_session.current_level_data.snapshot = active_tas_session.stored_level_snapshot
-                if options.debug_print_load or options.debug_print_snapshot then
-                    print("on_post_update_load_screen: Transferred stored level snapshot into TAS level "..active_tas_session.current_level_index..".")
-                end
-            end
-            if (active_tas_session.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_screen_load)
-                or (active_tas_session.mode == common_enums.MODE.RECORD and options.pause_recording_on_screen_load)
-            then
-                module.request_pause("New screen loaded.")
-            end
-            -- Check playback in case of a frame 0 playback target.
-            active_tas_session:check_playback()
-        end
-        if active_tas_session.stored_level_snapshot then
-            active_tas_session.stored_level_snapshot = nil
-        end
+        active_tas_session:on_post_update_load_screen(warp_level_index)
     end
 
     if ghost_tas_session then
@@ -586,75 +490,8 @@ local function on_post_update_load_screen()
     end
 end
 
--- Called after every game update where the current frame index was incremented.
-local function on_post_update_frame_advanced()
-    if options.debug_print_frame or options.debug_print_input then
-        print("on_post_update_frame_advanced: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index.." p1_inputs="..common.inputs_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
-    end
-
-    if active_tas_session.current_tasable_screen.record_frames then
-        local current_frame_data = active_tas_session.current_level_data.frames[active_tas_session.current_frame_index]
-        if active_tas_session.mode == common_enums.MODE.RECORD then
-            -- Only record mode can create new frames. Playback mode should only be active during frames that already exist.
-            if options.record_frame_write_type == "overwrite" then
-                if not current_frame_data then
-                    current_frame_data = active_tas_session.tas:create_frame_data()
-                    active_tas_session.current_level_data.frames[active_tas_session.current_frame_index] = current_frame_data
-                end
-            elseif options.record_frame_write_type == "insert" then
-                current_frame_data = active_tas_session.tas:create_frame_data()
-                table.insert(active_tas_session.current_level_data.frames, active_tas_session.current_frame_index, current_frame_data)
-            end
-        elseif active_tas_session.mode == common_enums.MODE.PLAYBACK and not current_frame_data then
-            -- A TASable frame just executed during playback without frame data. This is normal on the last level of the TAS since it means the user played back past the end of the TAS. Otherwise, it's a desync scenario because the game should be switching to the next level instead of executing more TASable frames on the current level.
-            if not active_tas_session.desync and active_tas_session.current_level_index < active_tas_session.tas:get_end_level_index() then
-                active_tas_session:set_level_end_desync()
-                if options.pause_desync then
-                    module.request_pause("Detected level end desync.")
-                end
-            end
-            if options.debug_print_mode then
-                print("on_post_update_frame_advanced: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
-            end
-            active_tas_session:set_mode_freeplay()
-            return
-        end
-
-        for player_index, player in ipairs(current_frame_data.players) do
-            local player_ent = get_player(player_index, true)
-            local actual_pos
-            if player_ent then
-                local x, y, l = get_position(player_ent.uid)
-                actual_pos = { x = x, y = y, l = l }
-            end
-            if active_tas_session.mode == common_enums.MODE.RECORD then
-                -- Record the current player inputs for the frame that just executed.
-                local inputs = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUTS_MASK
-                if options.debug_print_frame or options.debug_print_input then
-                    print("on_post_update_frame_advanced: Recording inputs: frame="..active_tas_session.current_level_index.."-"..active_tas_session.current_frame_index
-                        .." player="..player_index.." inputs="..common.inputs_to_string(inputs))
-                end
-                player.inputs = inputs
-                player.position = actual_pos
-            elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then
-                local expected_pos = player.position
-                if expected_pos then
-                    if active_tas_session:check_position_desync(player_index, expected_pos, actual_pos) and options.pause_desync then
-                        module.request_pause("Detected position desync.")
-                    end
-                else
-                    -- No player positions are stored for this frame. Store the current positions.
-                    player.position = actual_pos
-                end
-            end
-        end
-    end
-
-    active_tas_session:check_playback()
-end
-
 -- Gets whether entity state machines were executed during the most recent non-screen-change update.
-local function did_entities_update()
+function module.did_entities_update()
     -- TODO: This logic is only guessing whether entities were updated based on the state memory before and after the update. This seems to work for vanilla game behavior, but it doesn't properly handle OL freeze pauses and other scripted scenarios. It would be better if it could check whether the entities were actually updated. Is there a way to do this for any screen capable of having entities, even if it has 0 entities in it?
     -- TODO: There is an entity update that seems to occur when loading screens that generate entities. Does it always happen for these screens? It should count as an entity update here even if it isn't a TASable frame.
     return ((pre_update_loading == 3 and (state.loading == 0 or state.loading == 1)) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
@@ -665,12 +502,8 @@ end
 local function on_post_update()
     if pre_update_loading == 2 then
         on_post_update_load_screen()
-    elseif active_tas_session and active_tas_session.mode ~= common_enums.MODE.FREEPLAY and active_tas_session.current_level_index
-        and state.screen ~= SCREEN.OPTIONS and did_entities_update()
-    then
-        -- This update executed a TASable frame.
-        active_tas_session.current_frame_index = active_tas_session.current_frame_index + 1
-        on_post_update_frame_advanced()
+    elseif active_tas_session then
+        active_tas_session:on_post_update()
     end
 
     try_pause()
