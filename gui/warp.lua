@@ -16,10 +16,10 @@ function module:draw_panel(ctx, is_window)
     else
         local tas = active_tas_session.tas
         local warp_choices = {}
-        if #tas.levels == 0 then
+        if #tas.screens == 0 then
             warp_choices[1] = "1"
         else
-            for i = 1, #tas.levels do
+            for i = 1, #tas.screens do
                 warp_choices[i] = common.level_to_string(tas, i, false)
             end
         end

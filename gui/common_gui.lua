@@ -255,7 +255,7 @@ local function draw_tas_start_settings_simple(ctx, tas)
             end
         end
         -- Update all level and frame data to match the new player count.
-        for _, level in ipairs(tas.levels) do
+        for _, level in ipairs(tas.screens) do
             if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
                 for player_index = 1, CONST.MAX_PLAYERS do
                     if player_index > new_player_count then

@@ -140,9 +140,9 @@ end
 function module.level_to_string(tas, level_index, include_total)
     local text = tostring(level_index)
     if include_total then
-        text = text.."/"..#tas.levels
+        text = text.."/"..#tas.screens
     end
-    local level = tas.levels[level_index]
+    local level = tas.screens[level_index]
     if level then
         text = text.." ("..module.level_metadata_to_string(level.metadata)..")"
     end

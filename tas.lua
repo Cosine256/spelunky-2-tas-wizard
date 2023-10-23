@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 20
+local CURRENT_FORMAT = 21
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -390,7 +390,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [19] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 20,
         update = function(o)
             o.frame_tags = o.tagged_frames
             o.tagged_frames = nil
@@ -405,6 +405,19 @@ local FORMAT_UPDATERS = {
                 frame = -1
             })
         end
+    },
+    [20] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            o.screens = o.levels
+            o.levels = nil
+            for _, frame_tag in ipairs(o.frame_tags) do
+                frame_tag.screen = frame_tag.level
+                frame_tag.level = nil
+            end
+            o.save_screen_snapshots = o.save_level_snapshots
+            o.save_level_snapshots = nil
+        end
     }
 }
 
@@ -417,10 +430,10 @@ function Tas:to_raw(serial_mod)
         start_type = self.start_type,
         start_simple = common.deep_copy(self.start_simple),
         start_full = common.deep_copy(self.start_full),
-        levels = {},
+        screens = {},
         frame_tags = common.deep_copy(self.frame_tags),
         save_player_positions = self.save_player_positions,
-        save_level_snapshots = self.save_level_snapshots
+        save_screen_snapshots = self.save_screen_snapshots
     }
     if serial_mod ~= Tas.SERIAL_MODS.NONE then
         copy.format = CURRENT_FORMAT
@@ -454,34 +467,34 @@ function Tas:to_raw(serial_mod)
             copy.start_full.adventure_seed = common.adventure_seed_to_string(copy.start_full.adventure_seed)
         end
     end
-    for level_index, self_level in ipairs(self.levels) do
-        local copy_level = {
-            metadata = common.deep_copy(self_level.metadata),
-            transition_exit_frame_index = self_level.transition_exit_frame_index
+    for screen_index, self_screen in ipairs(self.screens) do
+        local copy_screen = {
+            metadata = common.deep_copy(self_screen.metadata),
+            transition_exit_frame_index = self_screen.transition_exit_frame_index
         }
-        copy.levels[level_index] = copy_level
-        if self_level.players then
-            copy_level.players = {}
-            for player_index, self_player in ipairs(self_level.players) do
-                copy_level.players[player_index] = {}
+        copy.screens[screen_index] = copy_screen
+        if self_screen.players then
+            copy_screen.players = {}
+            for player_index, self_player in ipairs(self_screen.players) do
+                copy_screen.players[player_index] = {}
                 if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
-                    copy_level.players[player_index].start_position = common.deep_copy(self_player.start_position)
+                    copy_screen.players[player_index].start_position = common.deep_copy(self_player.start_position)
                 end
             end
         end
-        if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_level_snapshots) and self_level.snapshot then
-            copy_level.snapshot = common.deep_copy(self_level.snapshot)
-            if serial_mod ~= Tas.SERIAL_MODS.NONE and copy_level.snapshot.adventure_seed then
-                copy_level.snapshot.adventure_seed = common.adventure_seed_to_string(copy_level.snapshot.adventure_seed)
+        if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_screen_snapshots) and self_screen.snapshot then
+            copy_screen.snapshot = common.deep_copy(self_screen.snapshot)
+            if serial_mod ~= Tas.SERIAL_MODS.NONE and copy_screen.snapshot.adventure_seed then
+                copy_screen.snapshot.adventure_seed = common.adventure_seed_to_string(copy_screen.snapshot.adventure_seed)
             end
         end
-        if self_level.frames then
-            copy_level.frames = {}
-            for frame_index, self_frame in ipairs(self_level.frames) do
+        if self_screen.frames then
+            copy_screen.frames = {}
+            for frame_index, self_frame in ipairs(self_screen.frames) do
                 local copy_frame = {
                     players = {}
                 }
-                copy_level.frames[frame_index] = copy_frame
+                copy_screen.frames[frame_index] = copy_frame
                 for player_index, self_player in ipairs(self_frame.players) do
                     copy_frame.players[player_index] = {
                         inputs = self_player.inputs
@@ -510,10 +523,10 @@ function Tas:from_raw(raw, serial_mod)
         if raw.start_full and raw.start_full.adventure_seed then
             raw.start_full.adventure_seed = common.string_to_adventure_seed(raw.start_full.adventure_seed)
         end
-        if raw.levels then
-            for _, level in ipairs(raw.levels) do
-                if level.snapshot and level.snapshot.adventure_seed then
-                    level.snapshot.adventure_seed = common.string_to_adventure_seed(level.snapshot.adventure_seed)
+        if raw.screens then
+            for _, screen in ipairs(raw.screens) do
+                if screen.snapshot and screen.snapshot.adventure_seed then
+                    screen.snapshot.adventure_seed = common.string_to_adventure_seed(screen.snapshot.adventure_seed)
                 end
             end
         end
@@ -531,48 +544,42 @@ function Tas:create_frame_data()
     return frame_data
 end
 
--- Gets the final level index.
-function Tas:get_end_level_index()
-    return #self.levels
+-- Gets the final screen index.
+function Tas:get_end_screen_index()
+    return #self.screens
 end
 
--- Gets the final frame index of the specified level, or the final level if `nil`. Returns 0 if the level does not store frame data.
-function Tas:get_end_frame_index(level_index)
-    local level = self.levels[level_index or #self.levels]
-    return common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames and #level.frames or 0
+-- Gets the final frame index of the specified screen, or the final screen if `nil`. Returns 0 if the screen does not store frame data.
+function Tas:get_end_frame_index(screen_index)
+    local screen = self.screens[screen_index or #self.screens]
+    return common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames and #screen.frames or 0
 end
 
--- Gets the final level index and frame index. The frame index will be 0 if the final level does not store frame data.
-function Tas:get_end_indices()
-    local end_level = self.levels[#self.levels]
-    return #self.levels, common_enums.TASABLE_SCREEN[end_level.metadata.screen].record_frames and #end_level.frames or 0
-end
-
--- Removes levels after (but not including) the specified level.
-function Tas:remove_levels_after(level_index)
-    for i = level_index + 1, #self.levels do
-        self.levels[i] = nil
+-- Removes screens after (but not including) the specified screen.
+function Tas:remove_screens_after(screen_index)
+    for i = screen_index + 1, #self.screens do
+        self.screens[i] = nil
     end
 end
 
--- Removes frames after (but not including) the specified frame within only the specified level.
-function Tas:remove_frames_after(level_index, frame_index)
-    local level = self.levels[level_index]
-    if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
-        for i = frame_index + 1, #level.frames do
-            level.frames[i] = nil
+-- Removes frames after (but not including) the specified frame within only the specified screen.
+function Tas:remove_frames_after(screen_index, frame_index)
+    local screen = self.screens[screen_index]
+    if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
+        for i = frame_index + 1, #screen.frames do
+            screen.frames[i] = nil
         end
     end
 end
 
 -- TODO: This inserts after the start frame. Would it make more sense to insert before? Does that mess with how I handle frame 0? Maybe "frame_start_index" isn't a good name since it's more of a cursor pointing to the boundary between two frames.
-function Tas:insert_frames(level_index, frame_start_index, frame_count, frame_inputs)
-    local level_data = self.levels[level_index]
+function Tas:insert_frames(screen_index, frame_start_index, frame_count, frame_inputs)
+    local screen = self.screens[screen_index]
     -- Shift existing frames to create space, and delete position data.
-    local original_last_frame = #level_data.frames
+    local original_last_frame = #screen.frames
     for i = original_last_frame, frame_start_index + 1, -1 do
-        level_data.frames[i + frame_count] = level_data.frames[i]
-        for _, player in ipairs(level_data.frames[i].players) do
+        screen.frames[i + frame_count] = screen.frames[i]
+        for _, player in ipairs(screen.frames[i].players) do
             player.position = nil
         end
     end
@@ -582,33 +589,33 @@ function Tas:insert_frames(level_index, frame_start_index, frame_count, frame_in
         for player_index, player in ipairs(new_frame.players) do
             player.inputs = frame_inputs[player_index]
         end
-        level_data.frames[i] = new_frame
+        screen.frames[i] = new_frame
     end
 end
 
-function Tas:delete_frames(level_index, frame_start_index, frame_count)
-    local level_data = self.levels[level_index]
+function Tas:delete_frames(screen_index, frame_start_index, frame_count)
+    local screen = self.screens[screen_index]
     -- Delete position data.
-    for i = frame_start_index, #level_data.frames do
-        for _, player in ipairs(level_data.frames[i].players) do
+    for i = frame_start_index, #screen.frames do
+        for _, player in ipairs(screen.frames[i].players) do
             player.position = nil
         end
     end
     -- Shift existing frames into the deleted space.
-    local shift_count = math.max(frame_count, #level_data.frames - frame_count - frame_start_index + 1)
+    local shift_count = math.max(frame_count, #screen.frames - frame_count - frame_start_index + 1)
     for i = frame_start_index, frame_start_index + shift_count - 1 do
-        level_data.frames[i] = level_data.frames[i + frame_count]
-        level_data.frames[i + frame_count] = nil
+        screen.frames[i] = screen.frames[i + frame_count]
+        screen.frames[i + frame_count] = nil
     end
 end
 
-function Tas:clear_player_positions(level_index)
-    local level = self.levels[level_index]
-    if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
-        for _, player in ipairs(level.players) do
+function Tas:clear_player_positions(screen_index)
+    local screen = self.screens[screen_index]
+    if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
+        for _, player in ipairs(screen.players) do
             player.start_position = nil
         end
-        for _, frame in ipairs(level.frames) do
+        for _, frame in ipairs(screen.frames) do
             for _, player in ipairs(frame.players) do
                 player.position = nil
             end
@@ -617,18 +624,18 @@ function Tas:clear_player_positions(level_index)
 end
 
 function Tas:clear_all_player_positions()
-    for level_index = 1, #self.levels do
-        self:clear_player_positions(level_index)
+    for screen_index = 1, #self.screens do
+        self:clear_player_positions(screen_index)
     end
 end
 
-function Tas:clear_level_snapshot(level_index)
-    self.levels[level_index].snapshot = nil
+function Tas:clear_screen_snapshot(screen_index)
+    self.screens[screen_index].snapshot = nil
 end
 
-function Tas:clear_all_level_snapshots()
-    for _, level in ipairs(self.levels) do
-        level.snapshot = nil
+function Tas:clear_all_screen_snapshots()
+    for _, screen in ipairs(self.screens) do
+        screen.snapshot = nil
     end
 end
 

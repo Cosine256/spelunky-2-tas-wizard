@@ -86,21 +86,21 @@ default_options = {
             players = { "ana", "margaret", "colin", "roffy" },
         },
         start_full = {},
-        levels = {},
+        screens = {},
         frame_tags = {
             {
                 name = "Start",
-                level = 1,
+                screen = 1,
                 frame = 0
             },
             {
                 name = "End",
-                level = -1,
+                screen = -1,
                 frame = -1
             }
         },
         save_player_positions = true,
-        save_level_snapshots = true
+        save_screen_snapshots = true
     },
     debug_print_load = false,
     debug_print_fast_update = false,

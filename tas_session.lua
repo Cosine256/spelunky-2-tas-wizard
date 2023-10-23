@@ -48,7 +48,7 @@ function TasSession:set_mode_record()
                 self.tas:remove_frames_after(self.current_level_index, self.current_frame_index)
             elseif options.record_frame_clear_action == "remaining_run" then
                 self.tas:remove_frames_after(self.current_level_index, self.current_frame_index)
-                self.tas:remove_levels_after(self.current_level_index)
+                self.tas:remove_screens_after(self.current_level_index)
             end
         end
     end
@@ -73,14 +73,14 @@ function TasSession:set_mode_playback(target_level_index, target_frame_index, fo
         if options.playback_from <= 3 then
             load_level_index = 1
             for level_index = target_level_index, 2, -1 do
-                if self.tas.levels[level_index].snapshot then
+                if self.tas.screens[level_index].snapshot then
                     load_level_index = level_index
                     break
                 end
             end
         else
             local playback_from_level_index = options.playback_from - 3
-            if playback_from_level_index <= target_level_index and (playback_from_level_index == 1 or self.tas.levels[playback_from_level_index].snapshot) then
+            if playback_from_level_index <= target_level_index and (playback_from_level_index == 1 or self.tas.screens[playback_from_level_index].snapshot) then
                 load_level_index = playback_from_level_index
             end
         end
@@ -144,7 +144,8 @@ function TasSession:check_playback()
     if self.mode ~= common_enums.MODE.PLAYBACK then
         return
     end
-    local end_level_index, end_frame_index = self.tas:get_end_indices()
+    local end_level_index = self.tas:get_end_screen_index()
+    local end_frame_index = self.tas:get_end_frame_index()
     local end_comparison = common.compare_level_frame_index(self.playback_target_level, self.playback_target_frame, end_level_index, end_frame_index)
     if end_comparison > 0 then
         self:_on_playback_invalid("Target is later than end of TAS ("..end_level_index.."-"..end_frame_index..").")
@@ -245,12 +246,12 @@ end
 -- Creates a new level at the end of the TAS, sets it as the current level, and initializes its metadata based on the game's current level.
 function TasSession:create_end_level()
     self:unset_current_level()
-    self.current_level_index = #self.tas.levels + 1
+    self.current_level_index = #self.tas.screens + 1
     print("Creating new TAS level: "..self.current_level_index)
     local level = {
         metadata = generate_level_metadata()
     }
-    self.tas.levels[self.current_level_index] = level
+    self.tas.screens[self.current_level_index] = level
     self.current_level_data = level
     self.current_tasable_screen = common_enums.TASABLE_SCREEN[level.metadata.screen]
     if self.current_tasable_screen.record_frames then
@@ -269,8 +270,8 @@ end
 function TasSession:find_current_level()
     self:unset_current_level()
     if common_enums.TASABLE_SCREEN[state.screen] then
-        for level_index = 1, #self.tas.levels do
-            local level = self.tas.levels[level_index]
+        for level_index = 1, #self.tas.screens do
+            local level = self.tas.screens[level_index]
             if metadata_matches_game_level(level.metadata) then
                 self.current_level_index = level_index
                 self.current_level_data = level
@@ -284,7 +285,7 @@ end
 -- Sets the current level to the TAS level with the given index. If the TAS does not contain this level index, or if the TAS level's metadata does not match the game's current level, then the current level will be unset. Returns whether the current level is defined after this operation.
 function TasSession:set_current_level(level_index)
     self:unset_current_level()
-    local level = self.tas.levels[level_index]
+    local level = self.tas.screens[level_index]
     if level and metadata_matches_game_level(level.metadata) then
         self.current_level_index = level_index
         self.current_level_data = level
@@ -306,8 +307,8 @@ function TasSession:validate_current_frame()
     local unset_current_level = false
     local message
     if self.current_level_index then
-        if self.current_level_index > self.tas:get_end_level_index() then
-            message = "Current level is later than end of TAS ("..self.tas:get_end_level_index().."-"..self.tas:get_end_frame_index()..")."
+        if self.current_level_index > self.tas:get_end_screen_index() then
+            message = "Current level is later than end of TAS ("..self.tas:get_end_screen_index().."-"..self.tas:get_end_frame_index()..")."
             unset_current_level = true
         elseif self.current_tasable_screen.record_frames and self.current_frame_index
             and self.current_frame_index > self.tas:get_end_frame_index(self.current_level_index)
@@ -373,7 +374,7 @@ function TasSession:trigger_warp(level_index)
             end
         end
     else
-        local level = self.tas.levels[level_index]
+        local level = self.tas.screens[level_index]
         if level and level.snapshot then
             warp_triggered = game_controller.trigger_level_snapshot_warp(level.snapshot)
         else
@@ -391,7 +392,7 @@ function TasSession:on_pre_update_load_screen()
     local tasable_screen = common_enums.TASABLE_SCREEN[state.screen_next]
     if not self.warp_level_index and tasable_screen and tasable_screen.can_snapshot
         and (self.mode == common_enums.MODE.RECORD or (self.mode == common_enums.MODE.PLAYBACK
-        and self.current_level_index < self.tas:get_end_level_index() and not self.tas.levels[self.current_level_index + 1].snapshot))
+        and self.current_level_index < self.tas:get_end_screen_index() and not self.tas.screens[self.current_level_index + 1].snapshot))
     then
         -- Request a level snapshot of the upcoming level.
         game_controller.register_level_snapshot_request(function(level_snapshot)
@@ -417,11 +418,11 @@ function TasSession:on_post_update_load_screen()
         if not self:set_current_level(self.warp_level_index) then
             if self.mode == common_enums.MODE.FREEPLAY then
                 -- The level won't exist yet if freeplay warping to level 1 in a TAS with no recorded data.
-                if self.warp_level_index ~= 1 or #self.tas.levels > 0 then
+                if self.warp_level_index ~= 1 or #self.tas.screens > 0 then
                     print("Warning: Loaded unexpected screen when warping to level index "..self.warp_level_index..".")
                 end
             else
-                if self.mode == common_enums.MODE.RECORD and self.warp_level_index == #self.tas.levels + 1 then
+                if self.mode == common_enums.MODE.RECORD and self.warp_level_index == #self.tas.screens + 1 then
                     self:create_end_level()
                 else
                     print("Warning: Loaded unexpected screen when warping to level index "..self.warp_level_index..". Switching to freeplay mode.")
@@ -436,7 +437,7 @@ function TasSession:on_post_update_load_screen()
             if self.mode == common_enums.MODE.FREEPLAY then
                 self:find_current_level()
             else
-                if prev_level_index == #self.tas.levels then
+                if prev_level_index == #self.tas.screens then
                     if self.mode == common_enums.MODE.RECORD then
                         self:create_end_level()
                     else
@@ -571,7 +572,7 @@ function TasSession:on_post_update()
             end
         elseif self.mode == common_enums.MODE.PLAYBACK and not current_frame_data then
             -- A TASable frame just executed during playback without frame data. This is normal on the last level of the TAS since it means the user played back past the end of the TAS. Otherwise, it's a desync scenario because the game should be switching to the next level instead of executing more TASable frames on the current level.
-            if not self.desync and self.current_level_index < self.tas:get_end_level_index() then
+            if not self.desync and self.current_level_index < self.tas:get_end_screen_index() then
                 self:_set_level_end_desync()
                 if options.pause_desync then
                     game_controller.request_pause("Detected level end desync.")

@@ -109,14 +109,14 @@ end
 function module:draw_panel(ctx, is_window)
     if not active_tas_session then
         ctx:win_text("No TAS loaded.")
-    elseif #active_tas_session.tas.levels == 0 then
+    elseif #active_tas_session.tas.screens == 0 then
         ctx:win_text("TAS contains no recorded or generated data.")
     else
         local tas = active_tas_session.tas
         local level_choices = {
             [0] = "Current level"
         }
-        for i = 1, #tas.levels do
+        for i = 1, #tas.screens do
             level_choices[i] = common.level_to_string(tas, i, false)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
@@ -140,7 +140,7 @@ function module:draw_panel(ctx, is_window)
             ctx:win_pushid("level_data")
             ctx:win_section("Level Data", function()
                 ctx:win_indent(common_gui.INDENT_SECTION)
-                local level = tas.levels[level_index]
+                local level = tas.screens[level_index]
                 local tasable_screen = common_enums.TASABLE_SCREEN[level.metadata.screen]
                 ctx:win_separator_text("Metadata")
                 ctx:win_text("Screen: "..tasable_screen.name)
@@ -189,7 +189,7 @@ function module:draw_panel(ctx, is_window)
                     if level.snapshot then
                         ctx:win_text("Level snapshot captured.")
                         if ctx:win_button("Clear level snapshot") then
-                            tas:clear_level_snapshot(level_index)
+                            tas:clear_screen_snapshot(level_index)
                         end
                     else
                         ctx:win_text("No level snapshot captured.")

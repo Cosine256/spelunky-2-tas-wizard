@@ -49,12 +49,12 @@ local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
     local frame_tag_data = frame_tag_datas[frame_tag_index]
     ctx:win_pushid(frame_tag_data.id)
 
-    local end_level_index = tas:get_end_level_index()
-    local level_index = frame_tag.level == -1 and end_level_index or frame_tag.level
+    local end_level_index = tas:get_end_screen_index()
+    local level_index = frame_tag.screen == -1 and end_level_index or frame_tag.screen
     -- TODO: Validate and clean up frame tags immediately when TAS data is changed, not here in the GUI.
     if level_index > end_level_index then
         level_index = end_level_index
-        frame_tag.level = end_level_index
+        frame_tag.screen = end_level_index
     end
     local end_frame_index = tas:get_end_frame_index(level_index)
     local frame_index = frame_tag.frame == -1 and end_frame_index or frame_tag.frame
@@ -63,7 +63,7 @@ local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
         frame_index = end_frame_index
         frame_tag.frame = end_frame_index
     end
-    local screen_records_frames = common_enums.TASABLE_SCREEN[tas.levels[level_index].metadata.screen].record_frames
+    local screen_records_frames = common_enums.TASABLE_SCREEN[tas.screens[level_index].metadata.screen].record_frames
 
     if ctx:win_button("Go") then
         active_tas_session:set_mode_playback(level_index, frame_index)
@@ -78,14 +78,14 @@ local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
         frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
 
         local end_level_choice = #level_choices
-        local new_level = level_combo:draw(ctx, "Level", frame_tag.level == -1 and end_level_choice or frame_tag.level)
+        local new_level = level_combo:draw(ctx, "Level", frame_tag.screen == -1 and end_level_choice or frame_tag.screen)
         local old_level_index = level_index
         if new_level == end_level_choice then
-            level_index = #tas.levels
-            frame_tag.level = -1
+            level_index = #tas.screens
+            frame_tag.screen = -1
         else
             level_index = new_level
-            frame_tag.level = new_level
+            frame_tag.screen = new_level
         end
 
         if old_level_index ~= level_index then
@@ -95,7 +95,7 @@ local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
                 frame_index = end_frame_index
                 frame_tag.frame = end_frame_index
             end
-            screen_records_frames = common_enums.TASABLE_SCREEN[tas.levels[level_index].metadata.screen].record_frames
+            screen_records_frames = common_enums.TASABLE_SCREEN[tas.screens[level_index].metadata.screen].record_frames
         end
 
         if screen_records_frames then
@@ -157,17 +157,17 @@ function module:draw_panel(ctx, is_window)
 
         ctx:win_separator_text("Playback")
 
-        if #tas.levels == 0 then
+        if #tas.screens == 0 then
             ctx:win_text("No data to playback.")
         else
             if ctx:win_button("Playback entire run") then
-                active_tas_session:set_mode_playback(tas:get_end_level_index(), tas:get_end_frame_index(), true, false)
+                active_tas_session:set_mode_playback(tas:get_end_screen_index(), tas:get_end_frame_index(), true, false)
             end
 
             ctx:win_separator()
 
             local level_choices = {}
-            for i = 1, #tas.levels do
+            for i = 1, #tas.screens do
                 level_choices[i] = common.level_to_string(tas, i, false)
             end
             level_choices[#level_choices + 1] = "End level"
@@ -216,7 +216,7 @@ function module:draw_panel(ctx, is_window)
                     if options.debug_print_mode then
                         print("Switching to playback mode.")
                     end
-                    active_tas_session:set_mode_playback(tas:get_end_level_index(), tas:get_end_frame_index(), false, true)
+                    active_tas_session:set_mode_playback(tas:get_end_screen_index(), tas:get_end_frame_index(), false, true)
                 end
             elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then
                 if ctx:win_button("Switch to record mode") then
@@ -241,7 +241,7 @@ function module:draw_panel(ctx, is_window)
             "Here, else nearest level",
             "Nearest level"
         }
-        for i = 1, #tas.levels do
+        for i = 1, #tas.screens do
             playback_from_choices[i + 3] = "Level "..common.level_to_string(tas, i, false)
         end
         local playback_from_combo = ComboInput:new(OrderedTable:new(playback_from_choices))
@@ -252,7 +252,7 @@ function module:draw_panel(ctx, is_window)
 
         ctx:win_separator_text("Recording")
 
-        if #tas.levels == 0 then
+        if #tas.screens == 0 then
             if ctx:win_button("Start recording") and active_tas_session:trigger_warp(1) then
                 active_tas_session:set_mode_record()
             end

@@ -77,7 +77,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_text("No TAS loaded.")
         return
     end
-    if #session.tas.levels == 0 then
+    if #session.tas.screens == 0 then
         ctx:win_text("TAS contains no recorded data.")
         return
     end
@@ -87,7 +87,7 @@ function module:draw_panel(ctx, is_window)
         local level_choices = {
             [0] = "Current level"
         }
-        for i = 1, #session.tas.levels do
+        for i = 1, #session.tas.screens do
             level_choices[i] = common.level_to_string(session.tas, i, false)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
@@ -99,13 +99,13 @@ function module:draw_panel(ctx, is_window)
         self.level_index = selected_level_index == 0 and session.current_level_index or selected_level_index
     end
 
-    local tasable_screen = common_enums.TASABLE_SCREEN[session.tas.levels[self.level_index].metadata.screen]
+    local tasable_screen = common_enums.TASABLE_SCREEN[session.tas.screens[self.level_index].metadata.screen]
     if not tasable_screen.record_frames then
         ctx:win_text(tasable_screen.name.." screen does not record frames.")
         return
     end
 
-    local frames = session.tas.levels[self.level_index].frames
+    local frames = session.tas.screens[self.level_index].frames
 
     edit_mode = ctx:win_check("Enable editing", edit_mode)
 
