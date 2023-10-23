@@ -62,8 +62,6 @@ do
 end
 
 local need_pause = false
--- Whether to ignore submitted TAS inputs for the current transition screen.
-local suppress_transition_tas_inputs = false
 local force_level_snapshot
 -- Whether a new screen is being warped to. This is cleared at the end of screen change updates.
 local is_warping = false
@@ -130,10 +128,12 @@ local function try_pause()
         need_pause = false
         return
     end
-    if state.screen == SCREEN.TRANSITION and options.pause_suppress_auto_transition_exit then
+    if state.screen == SCREEN.TRANSITION and options.pause_suppress_transition_tas_inputs then
         -- Suppress TAS inputs for the current transition screen instead of pausing.
         need_pause = false
-        suppress_transition_tas_inputs = true
+        if active_tas_session then
+            active_tas_session.suppress_screen_tas_inputs = true
+        end
         if options.debug_print_pause then
             print("try_pause: Suppressing TAS inputs for the current transition screen instead of pausing.")
         end
@@ -298,8 +298,6 @@ local function on_pre_update_load_screen()
         return
     end
 
-    suppress_transition_tas_inputs = false
-
     if active_tas_session then
         active_tas_session:on_pre_update_load_screen()
     end
@@ -376,19 +374,17 @@ end
 
 -- Applies the given inputs to the player slots in the state memory. The game sets the player inputs before pre-update, so calling this function in pre-update overwrites the game's inputs for the upcoming update. The script doesn't know whether an update will actually process player inputs. If it does process them, then it will use the submitted inputs. If it doesn't process them, such as due to the game being paused, then nothing will happen and the same inputs can be submitted in the next pre-update to try again.
 function module.submit_pre_update_inputs(frame_inputs)
-    if state.screen ~= SCREEN.TRANSITION or not suppress_transition_tas_inputs then
-        for player_index, player_inputs in ipairs(frame_inputs) do
-            state.player_inputs.player_slots[player_index].buttons = player_inputs
-            state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs
-        end
+    for player_index, player_inputs in ipairs(frame_inputs) do
+        state.player_inputs.player_slots[player_index].buttons = player_inputs
+        state.player_inputs.player_slots[player_index].buttons_gameplay = player_inputs
     end
 end
 
 local function can_fast_update()
     return options.fast_update_playback and not options.presentation_enabled and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
-        and (not active_tas_session.current_level_data or active_tas_session.current_level_data.metadata.screen ~= SCREEN.TRANSITION
-            or (not suppress_transition_tas_inputs and active_tas_session.current_level_data.transition_exit_frame_index ~= nil))
+        and not active_tas_session.suppress_screen_tas_inputs and (not active_tas_session.current_level_data
+            or active_tas_session.current_level_data.metadata.screen ~= SCREEN.TRANSITION or active_tas_session.current_level_data.transition_exit_frame_index ~= nil)
 end
 
 local function on_pre_update()

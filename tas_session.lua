@@ -15,6 +15,7 @@ local game_controller = require("game_controller")
     ---@field desync table? Data for a TAS desynchronization event.
     ---@field warp_level_index integer? The level index being warped to when this session triggers a warp.
     ---@field stored_level_snapshot table? Temporarily stores a level snapshot during a screen change update until a TAS level is ready to receive it.
+    ---@field suppress_screen_tas_inputs boolean If true, then do not submit TAS inputs for the current screen. This is cleared when the current screen unloads.
 local TasSession = {}
 TasSession.__index = TasSession
 
@@ -25,7 +26,8 @@ local SUPPORTED_INPUTS_MASK = INPUTS.JUMP | INPUTS.WHIP | INPUTS.BOMB | INPUTS.R
 function TasSession:new(tas)
     local o = {
         tas = tas,
-        mode = common_enums.MODE.FREEPLAY
+        mode = common_enums.MODE.FREEPLAY,
+        suppress_screen_tas_inputs = false
     }
     setmetatable(o, self)
     o:_reset_playback_vars()
@@ -496,13 +498,14 @@ function TasSession:on_post_update_load_screen()
 
     self.warp_level_index = nil
     self.stored_level_snapshot = nil
+    self.suppress_screen_tas_inputs = false
 end
 
 -- Called before every game update, excluding screen load updates.
 function TasSession:on_pre_update()
     -- Exclude updates where there is no chance of a TASable frame executing or where nothing needs to be done.
     if not self:validate_current_frame() or self.mode == common_enums.MODE.FREEPLAY or not self.current_level_index or not self.current_frame_index
-        or state.screen == SCREEN.OPTIONS or (state.loading ~= 0 and state.loading ~= 3)
+        or self.suppress_screen_tas_inputs or state.screen == SCREEN.OPTIONS or (state.loading ~= 0 and state.loading ~= 3)
     then
         return
     end

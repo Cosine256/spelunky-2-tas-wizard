@@ -33,8 +33,8 @@ function module:draw_panel(ctx, is_window)
     options.pause_playback_on_screen_load = ctx:win_check("Pause after screen loads during playback", options.pause_playback_on_screen_load)
     options.pause_recording_on_screen_load = ctx:win_check("Pause after screen loads during recording", options.pause_recording_on_screen_load)
     options.pause_desync = ctx:win_check("Pause when desync is detected", options.pause_desync)
-    options.pause_suppress_auto_transition_exit = ctx:win_check("Suppress transition auto-exit instead of pausing", options.pause_suppress_auto_transition_exit)
-    ctx:win_text("Instead of pausing in a transition screen, temporarily suppress automatically exiting the transition.")
+    options.pause_suppress_transition_tas_inputs = ctx:win_check("Suppress transition TAS inputs instead of pausing", options.pause_suppress_transition_tas_inputs)
+    ctx:win_text("Instead of pausing in a transition screen, temporarily suppress TAS inputs and wait for the user to exit it manually.")
 
     ctx:win_separator_text("Player paths")
     -- TODO: This only controls visibility of the active TAS path, not the ghost TAS path. Maybe have this setting apply globally to all paths, and then add a new TAS setting for showing its own path.
