@@ -161,13 +161,13 @@ end
 
 -- Set the TAS for a new active TAS session.
 function set_active_tas(tas)
+    game_controller.cancel_requested_pause()
     if active_tas_session then
         if active_tas_session.tas.level_snapshot_request_id then
             game_controller.clear_level_snapshot_request(active_tas_session.tas.level_snapshot_request_id)
             active_tas_session.tas.level_snapshot_request_id = nil
         end
     end
-    game_controller.reset_session_vars()
     if tas then
         active_tas_session = TasSession:new(tas)
         active_tas_session:find_current_level()

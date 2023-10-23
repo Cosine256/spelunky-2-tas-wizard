@@ -32,8 +32,10 @@ local function draw_tas_settings(ctx, tas)
 
     ctx:win_separator_text("Reset")
     if ctx:win_button("Reset TAS") then
+        game_controller.cancel_requested_pause()
+        active_tas_session:set_mode_freeplay()
+        active_tas_session:unset_current_level()
         active_tas_session.desync = nil
-        game_controller.reset_session_vars()
         tas.levels = {}
         tas.frame_tags = common.deep_copy(options.new_tas.frame_tags)
         for _, tool_gui in pairs(tool_guis) do

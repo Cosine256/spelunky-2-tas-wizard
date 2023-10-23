@@ -61,12 +61,12 @@ do
     }
 end
 
-local need_pause
+local need_pause = false
 -- Whether to ignore submitted TAS inputs for the current transition screen.
-local suppress_transition_tas_inputs
+local suppress_transition_tas_inputs = false
 local force_level_snapshot
 -- Whether a new screen is being warped to. This is cleared at the end of screen change updates.
-local is_warping
+local is_warping = false
 
 -- The start time of the current fast update batch. Any game updates that occur while this is set are fast updates initiated by `update_frame()`.
 local fast_update_start_time
@@ -78,22 +78,6 @@ local level_snapshot_requests = {}
 local level_snapshot_request_count = 0
 local level_snapshot_request_next_id = 1
 local captured_level_snapshot = nil
-
--- Reset the entire TAS session by resetting all session and level variables. Does not unload the active TAS.
--- TODO: "session" is a confusing name since there are also TasSession objects.
-function module.reset_session_vars()
-    need_pause = false
-    suppress_transition_tas_inputs = false
-    force_level_snapshot = nil
-    is_warping = false
-    if active_tas_session then
-        active_tas_session:set_mode_freeplay()
-        active_tas_session:unset_current_level()
-    end
-    if ghost_tas_session then
-        ghost_tas_session:unset_current_level()
-    end
-end
 
 function module.register_level_snapshot_request(callback)
     local request_id = level_snapshot_request_next_id
@@ -116,6 +100,7 @@ function module.clear_level_snapshot_request(request_id)
     end
 end
 
+-- Requests a game engine pause. The pause will be applied after a game update as soon as it's safe to do so.
 function module.request_pause(debug_message)
     if options.debug_print_pause then
         print("request_pause: "..debug_message)
@@ -123,7 +108,15 @@ function module.request_pause(debug_message)
     need_pause = true
 end
 
--- Apply a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called on the next update to try again.
+-- Cancels a requested pause that hasn't be applied to the game engine yet. Does nothing if there is no requested pause. Does not unpause the game engine if it is already paused.
+function module.cancel_requested_pause()
+    if options.debug_print_pause then
+        print("cancel_requested_pause")
+    end
+    need_pause = false
+end
+
+-- Apply a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called after the next game update to try again.
 local function try_pause()
     if not need_pause then
         return
@@ -500,7 +493,6 @@ local function on_post_update()
 end
 
 function module.initialize()
-    module.reset_session_vars()
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)
     set_callback(on_pre_level_gen, ON.PRE_LEVEL_GENERATION)
