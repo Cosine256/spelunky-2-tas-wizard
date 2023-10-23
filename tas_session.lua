@@ -13,6 +13,7 @@ local game_controller = require("game_controller")
     ---@field current_tasable_screen TasableScreen? Reference to the TASable screen object for the current level's metadata, if the level is defined.
     ---@field current_frame_index integer? Index of the current frame in the TAS, or `nil` if undefined. The "current frame" is the TASable frame that the game most recently executed. The definition of a TASable frame varies depending on the current screen. Generally, its value is incremented after each update where player inputs are processed, but there are some exceptions during screen loading. A value of 0 means that no TASable frames have executed in the current level. This index is defined if and only if all of the following conditions are met: <br> - `current_level_index` is defined. <br> - The current frame has been continuously tracked since the level loaded. <br> - The TAS either contains frame data for this frame, or has general handling for any frame on the current screen.
     ---@field desync table? Data for a TAS desynchronization event.
+    ---@field warp_level_index integer? The level index being warped to when this session triggers a warp.
     ---@field stored_level_snapshot table? Temporarily stores a level snapshot during a screen change update until a TAS level is ready to receive it.
 local TasSession = {}
 TasSession.__index = TasSession
@@ -360,29 +361,33 @@ end
 
 -- Triggers a warp to the specified TAS level. If warping to level 1, then the TAS start settings will be used. Otherwise, a level snapshot will be used. No warp will occur if the TAS does not contain the necessary data to warp to the specified level. Returns whether the warp was triggered successfully.
 function TasSession:trigger_warp(level_index)
+    local warp_triggered = false
     if level_index == 1 then
         if self.tas:is_start_configured() then
             if self.tas.start_type == "simple" then
-                return game_controller.trigger_start_simple_warp(self.tas)
+                warp_triggered = game_controller.trigger_start_simple_warp(self.tas)
             elseif self.tas.start_type == "full" then
-                return game_controller.trigger_level_snapshot_warp(self.tas.start_full, 1)
+                warp_triggered = game_controller.trigger_level_snapshot_warp(self.tas.start_full)
             end
         end
     else
         local level = self.tas.levels[level_index]
-        if not level or not level.snapshot then
+        if level and level.snapshot then
+            warp_triggered = game_controller.trigger_level_snapshot_warp(level.snapshot)
+        else
             print("Cannot trigger warp to level "..level_index..": Missing level snapshot.")
-            return false
         end
-        return game_controller.trigger_level_snapshot_warp(level.snapshot, level_index)
     end
-    return false
+    if warp_triggered then
+        self.warp_level_index = level_index
+    end
+    return warp_triggered
 end
 
 -- Called before a game update which will load a screen, excluding loading or unloading the options screen.
 function TasSession:on_pre_update_load_screen()
     local tasable_screen = common_enums.TASABLE_SCREEN[state.screen_next]
-    if not game_controller:is_warping() and tasable_screen and tasable_screen.can_snapshot
+    if not self.warp_level_index and tasable_screen and tasable_screen.can_snapshot
         and (self.mode == common_enums.MODE.RECORD or (self.mode == common_enums.MODE.PLAYBACK
         and self.current_level_index < self.tas:get_end_level_index() and not self.tas.levels[self.current_level_index + 1].snapshot))
     then
@@ -395,36 +400,35 @@ function TasSession:on_pre_update_load_screen()
 end
 
 -- Called after a game update which loaded a screen, excluding loading or unloading the options screen.
--- `warp_level_index`: The level index of the active TAS session being warped to, or `nil` if the screen change was not a warp.
-function TasSession:on_post_update_load_screen(warp_level_index)
+function TasSession:on_post_update_load_screen()
     if not common_enums.TASABLE_SCREEN[state.screen] then
         -- The new screen is not TASable.
         self:unset_current_level()
         if self.mode ~= common_enums.MODE.FREEPLAY then
             if options.debug_print_mode then
-                print("Loaded non-TASable screen. Switching to freeplay mode.")
+                print("on_post_update_load_screen: Loaded non-TASable screen. Switching to freeplay mode.")
             end
             self:set_mode_freeplay()
         end
-    elseif warp_level_index then
-        -- This screen change was a warp.
-        if not self:set_current_level(warp_level_index) then
+    elseif self.warp_level_index then
+        -- This screen change was a known warp.
+        if not self:set_current_level(self.warp_level_index) then
             if self.mode == common_enums.MODE.FREEPLAY then
                 -- The level won't exist yet if freeplay warping to level 1 in a TAS with no recorded data.
-                if warp_level_index ~= 1 or #self.tas.levels > 0 then
-                    print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..".")
+                if self.warp_level_index ~= 1 or #self.tas.levels > 0 then
+                    print("Warning: Loaded unexpected screen when warping to level index "..self.warp_level_index..".")
                 end
             else
-                if self.mode == common_enums.MODE.RECORD and warp_level_index == #self.tas.levels + 1 then
+                if self.mode == common_enums.MODE.RECORD and self.warp_level_index == #self.tas.levels + 1 then
                     self:create_end_level()
                 else
-                    print("Warning: Loaded unexpected screen when warping to level index "..warp_level_index..". Switching to freeplay mode.")
+                    print("Warning: Loaded unexpected screen when warping to level index "..self.warp_level_index..". Switching to freeplay mode.")
                     self:set_mode_freeplay()
                 end
             end
         end
     elseif self.current_level_index then
-        -- This screen change was not a warp and the previous level index is known.
+        -- This screen change was not a known warp and the previous level index is known.
         local prev_level_index = self.current_level_index
         if not self:set_current_level(prev_level_index + 1) then
             if self.mode == common_enums.MODE.FREEPLAY then
@@ -446,7 +450,7 @@ function TasSession:on_post_update_load_screen(warp_level_index)
             end
         end
     else
-        -- This screen change was not a warp and the previous level index is not known.
+        -- This screen change was not a known warp and the previous level index is not known.
         if self.mode == common_enums.MODE.FREEPLAY then
             self:find_current_level()
         else
@@ -489,9 +493,9 @@ function TasSession:on_post_update_load_screen(warp_level_index)
         -- Check playback in case of a frame 0 playback target.
         self:check_playback()
     end
-    if self.stored_level_snapshot then
-        self.stored_level_snapshot = nil
-    end
+
+    self.warp_level_index = nil
+    self.stored_level_snapshot = nil
 end
 
 -- Called before every game update, excluding screen load updates.

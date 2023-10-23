@@ -65,8 +65,8 @@ local need_pause
 -- Whether to ignore submitted TAS inputs for the current transition screen.
 local suppress_transition_tas_inputs
 local force_level_snapshot
--- The active TAS level index currently being warped to. This is cleared at the end of screen change updates.
-local warp_level_index
+-- Whether a new screen is being warped to. This is cleared at the end of screen change updates.
+local is_warping
 
 -- The start time of the current fast update batch. Any game updates that occur while this is set are fast updates initiated by `update_frame()`.
 local fast_update_start_time
@@ -85,7 +85,7 @@ function module.reset_session_vars()
     need_pause = false
     suppress_transition_tas_inputs = false
     force_level_snapshot = nil
-    warp_level_index = nil
+    is_warping = false
     if active_tas_session then
         active_tas_session:set_mode_freeplay()
         active_tas_session:unset_current_level()
@@ -159,7 +159,7 @@ local function try_pause()
 end
 
 function module.is_warping()
-    return warp_level_index ~= nil
+    return is_warping
 end
 
 -- Validates whether a warp can be performed and prepares for screen-specific warp behavior. Returns false if it isn't currently safe to warp from this screen.
@@ -248,15 +248,15 @@ function module.trigger_start_simple_warp(tas)
 
     trigger_warp_unload()
     active_tas_session.desync = nil
-    warp_level_index = 1
+    is_warping = true
 
     return true
 end
 
 -- Forces the game to warp to a level initialized with the given level snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Returns whether the warp was triggered successfully.
-function module.trigger_level_snapshot_warp(level_snapshot, level_index)
+function module.trigger_level_snapshot_warp(level_snapshot)
     if options.debug_print_load then
-        print("trigger_level_snapshot_warp: level_index="..level_index)
+        print("trigger_level_snapshot_warp")
     end
 
     if not prepare_warp_from_screen() then
@@ -266,7 +266,7 @@ function module.trigger_level_snapshot_warp(level_snapshot, level_index)
     trigger_warp_unload()
     active_tas_session.desync = nil
     force_level_snapshot = level_snapshot
-    warp_level_index = level_index
+    is_warping = true
 
     return true
 end
@@ -447,7 +447,7 @@ local function on_post_update_load_screen()
     end
 
     if active_tas_session then
-        active_tas_session:on_post_update_load_screen(warp_level_index)
+        active_tas_session:on_post_update_load_screen()
     end
 
     if ghost_tas_session then
@@ -462,9 +462,7 @@ local function on_post_update_load_screen()
         end
     end
 
-    if warp_level_index then
-        warp_level_index = nil
-    end
+    is_warping = false
 
     if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not need_pause and options.transition_skip
         and not (active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled)
