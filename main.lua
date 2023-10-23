@@ -164,7 +164,7 @@ function set_active_tas(tas)
     game_controller.cancel_requested_pause()
     if active_tas_session then
         if active_tas_session.tas.screen_snapshot_request_id then
-            game_controller.clear_level_snapshot_request(active_tas_session.tas.screen_snapshot_request_id)
+            game_controller.clear_screen_snapshot_request(active_tas_session.tas.screen_snapshot_request_id)
             active_tas_session.tas.screen_snapshot_request_id = nil
         end
     end

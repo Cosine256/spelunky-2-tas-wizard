@@ -1,8 +1,8 @@
 local introspection = require("introspection")
 
 local CLASSES = {
-    -- This is a subset of the StateMemory class containing only necessary fields for level snapshots.
-    StateMemory_LevelSnapshot = {
+    -- This is a subset of the StateMemory class containing only necessary fields for TASable screen snapshots.
+    StateMemory_ScreenSnapshot = {
         fields = {
             { type = "SCREEN", name = "screen_next" },
             { type = "int", name = "kali_favor" },

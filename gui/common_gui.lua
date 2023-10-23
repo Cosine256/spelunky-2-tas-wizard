@@ -317,13 +317,13 @@ local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
         if tas.screen_snapshot_request_id then
             ctx:win_text("Capture status: Awaiting level start. A snapshot of the next level you load into will be captured.")
             if ctx:win_button("Cancel capture") then
-                game_controller.clear_level_snapshot_request(tas.screen_snapshot_request_id)
+                game_controller.clear_screen_snapshot_request(tas.screen_snapshot_request_id)
                 tas.screen_snapshot_request_id = nil
             end
             ctx:win_text("Cancel the requested level snapshot capture.")
         else
             if ctx:win_button("Request capture") then
-                tas.screen_snapshot_request_id = game_controller.register_level_snapshot_request(function(level_snapshot)
+                tas.screen_snapshot_request_id = game_controller.register_screen_snapshot_request(function(level_snapshot)
                     tas.screen_snapshot_request_id = nil
                     tas.start_full = level_snapshot
                 end)
@@ -341,7 +341,7 @@ function module.draw_tas_start_settings(ctx, tas, is_options_tas)
                 tas.start_simple = common.deep_copy(options.new_tas.start_simple)
             end
             if tas.screen_snapshot_request_id then
-                game_controller.clear_level_snapshot_request(tas.screen_snapshot_request_id)
+                game_controller.clear_screen_snapshot_request(tas.screen_snapshot_request_id)
                 tas.screen_snapshot_request_id = nil
             end
         elseif new_choice_id == "full" then

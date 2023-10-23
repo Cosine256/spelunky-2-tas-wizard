@@ -370,13 +370,13 @@ function TasSession:trigger_warp(screen_index)
             if self.tas.start_type == "simple" then
                 warp_triggered = game_controller.trigger_start_simple_warp(self.tas)
             elseif self.tas.start_type == "full" then
-                warp_triggered = game_controller.trigger_level_snapshot_warp(self.tas.start_full)
+                warp_triggered = game_controller.trigger_screen_snapshot_warp(self.tas.start_full)
             end
         end
     else
         local screen = self.tas.screens[screen_index]
         if screen and screen.snapshot then
-            warp_triggered = game_controller.trigger_level_snapshot_warp(screen.snapshot)
+            warp_triggered = game_controller.trigger_screen_snapshot_warp(screen.snapshot)
         else
             print("Cannot trigger warp to screen "..screen_index..": Missing screen snapshot.")
         end
@@ -395,7 +395,7 @@ function TasSession:on_pre_update_load_screen()
         and self.current_screen_index < self.tas:get_end_screen_index() and not self.tas.screens[self.current_screen_index + 1].snapshot))
     then
         -- Request a screen snapshot of the upcoming screen.
-        game_controller.register_level_snapshot_request(function(screen_snapshot)
+        game_controller.register_screen_snapshot_request(function(screen_snapshot)
             -- The snapshot request will be fulfilled before the TAS session knows which screen it belongs to. Temporarily store it until a TAS screen is ready for it.
             self.stored_screen_snapshot = screen_snapshot
         end)
