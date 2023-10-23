@@ -449,17 +449,9 @@ local function on_post_update_load_screen()
     if active_tas_session then
         active_tas_session:on_post_update_load_screen()
     end
-
     if ghost_tas_session then
-        ghost_tas_session:unset_current_level()
-        if common_enums.TASABLE_SCREEN[state.screen] then
-            -- Check whether the active TAS's level is also the ghost TAS's level. If not, then search for any valid ghost TAS level.
-            if not active_tas_session or not active_tas_session.current_level_index
-                or not ghost_tas_session:set_current_level(active_tas_session.current_level_index)
-            then
-                ghost_tas_session:find_current_level()
-            end
-        end
+        -- The ghost TAS session updates its current level index in the same way as the active TAS session, except it's always in freeplay mode.
+        ghost_tas_session:on_post_update_load_screen()
     end
 
     is_warping = false
