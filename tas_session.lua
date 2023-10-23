@@ -2,7 +2,7 @@ local common = require("common")
 local common_enums = require("common_enums")
 local game_controller = require("game_controller")
 
----@class TasSession
+---@class TasSession A TAS session encapsulates a TAS object and all of the state and functionality it needs in order to interact with the game engine and GUI.
     ---@field tas table The TAS data for this TAS session.
     ---@field mode integer The game interaction mode.
     ---@field playback_target_level integer? Target level index for playback. When in playback mode, this field should not be `nil`.

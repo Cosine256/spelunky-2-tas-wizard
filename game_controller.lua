@@ -1,3 +1,5 @@
+-- The game controller provides additional game engine controls and functionality. This includes snapshot capturing, snapshot warping, game engine pauses, and fast updates. All game update callbacks are handled here, with calls forwarded to TAS sessions as needed. The calls must always occur in a consistent order in order to work properly with TAS sessions and game controller features. The game controller is also the only module that directly modifies the game state.
+
 local module = {}
 
 local common = require("common")
