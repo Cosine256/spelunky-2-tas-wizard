@@ -92,11 +92,11 @@ function module:draw_panel(ctx, is_window)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
         selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
-        if selected_level_index == 0 and not session.current_level_index then
+        if selected_level_index == 0 and not session.current_screen_index then
             ctx:win_text("Current level is undefined.")
             return
         end
-        self.level_index = selected_level_index == 0 and session.current_level_index or selected_level_index
+        self.level_index = selected_level_index == 0 and session.current_screen_index or selected_level_index
     end
 
     local tasable_screen = common_enums.TASABLE_SCREEN[session.tas.screens[self.level_index].metadata.screen]
@@ -204,10 +204,10 @@ function module:draw_panel(ctx, is_window)
         if session.mode == common_enums.MODE.FREEPLAY then
             last_current_level_index = nil
             last_current_frame_index = nil
-        elseif session.current_level_index == module.level_index and session.current_frame_index
-            and (session.current_level_index ~= last_current_level_index or session.current_frame_index ~= last_current_frame_index)
+        elseif session.current_screen_index == module.level_index and session.current_frame_index
+            and (session.current_screen_index ~= last_current_level_index or session.current_frame_index ~= last_current_frame_index)
         then
-            last_current_level_index = session.current_level_index
+            last_current_level_index = session.current_screen_index
             last_current_frame_index = session.current_frame_index
             viewer_frame_index = math.min(session.current_frame_index - math.ceil(options.frames_viewer_page_size / 2) + 1, compute_last_page_frame_index())
         end
@@ -234,7 +234,7 @@ function module:draw_panel(ctx, is_window)
                     end
                 end
             end
-            if session.current_level_index == self.level_index and session.current_frame_index then
+            if session.current_screen_index == self.level_index and session.current_frame_index then
                 if frame_index == session.current_frame_index then
                     label = label.." (prev)"
                     if frame_index ~= end_frame_index then

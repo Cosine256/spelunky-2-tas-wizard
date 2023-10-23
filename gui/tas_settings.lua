@@ -34,7 +34,7 @@ local function draw_tas_settings(ctx, tas)
     if ctx:win_button("Reset TAS") then
         game_controller.cancel_requested_pause()
         active_tas_session:set_mode_freeplay()
-        active_tas_session:unset_current_level()
+        active_tas_session:unset_current_screen()
         active_tas_session.desync = nil
         tas.screens = {}
         tas.frame_tags = common.deep_copy(options.new_tas.frame_tags)

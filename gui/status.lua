@@ -27,8 +27,8 @@ function module:draw_panel(ctx, is_window)
 
         ctx:win_text("Level")
         local level_text = "Undefined"
-        if active_tas_session.current_level_index then
-            level_text = common.level_to_string(active_tas_session.tas, active_tas_session.current_level_index, true)
+        if active_tas_session.current_screen_index then
+            level_text = common.level_to_string(active_tas_session.tas, active_tas_session.current_screen_index, true)
         end
         ctx:win_inline()
         ctx:win_width(-0.000001)
@@ -38,7 +38,7 @@ function module:draw_panel(ctx, is_window)
         local frame_text = "Undefined"
         if active_tas_session.current_frame_index then
             if active_tas_session.current_tasable_screen.record_frames then
-                frame_text = active_tas_session.current_frame_index.."/"..active_tas_session.tas:get_end_frame_index(active_tas_session.current_level_index)
+                frame_text = active_tas_session.current_frame_index.."/"..active_tas_session.tas:get_end_frame_index(active_tas_session.current_screen_index)
             else
                 frame_text = tostring(active_tas_session.current_frame_index)
             end
@@ -54,11 +54,11 @@ function module:draw_panel(ctx, is_window)
             ctx:win_text("Level")
             ctx:win_inline()
             ctx:win_width(-0.000001)
-            ctx:win_input_text("##desync_level", common.level_to_string(active_tas_session.tas, active_tas_session.desync.level_index, true))
+            ctx:win_input_text("##desync_level", common.level_to_string(active_tas_session.tas, active_tas_session.desync.screen_index, true))
             ctx:win_text("Frame")
             ctx:win_inline()
             ctx:win_width(-0.000001)
-            ctx:win_input_text("##desync_frame", active_tas_session.desync.frame_index.."/"..active_tas_session.tas:get_end_frame_index(active_tas_session.desync.level_index))
+            ctx:win_input_text("##desync_frame", active_tas_session.desync.frame_index.."/"..active_tas_session.tas:get_end_frame_index(active_tas_session.desync.screen_index))
             ctx:win_indent(-common_gui.INDENT_SUB_INPUT)
         end
     else

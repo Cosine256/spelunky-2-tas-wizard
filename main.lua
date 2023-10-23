@@ -32,10 +32,10 @@ default_options = {
     tas_file_name = "tas.json",
     tas_file_history = {},
     tas_file_history_max_size = 10,
-    playback_from = common_enums.PLAYBACK_FROM.HERE_OR_NEAREST_LEVEL,
+    playback_from = common_enums.PLAYBACK_FROM.HERE_OR_NEAREST_SCREEN,
     playback_target_pause = true,
     playback_target_mode = "playback",
-    record_frame_clear_action = "remaining_run",
+    record_frame_clear_action = "remaining_tas",
     record_frame_write_type = "overwrite",
     presentation_enabled = false,
     -- TODO: Order of tool GUIs is arbitrary. Alphabetize and put them in a sub-table with their IDs as keys?
@@ -163,14 +163,14 @@ end
 function set_active_tas(tas)
     game_controller.cancel_requested_pause()
     if active_tas_session then
-        if active_tas_session.tas.level_snapshot_request_id then
-            game_controller.clear_level_snapshot_request(active_tas_session.tas.level_snapshot_request_id)
-            active_tas_session.tas.level_snapshot_request_id = nil
+        if active_tas_session.tas.screen_snapshot_request_id then
+            game_controller.clear_level_snapshot_request(active_tas_session.tas.screen_snapshot_request_id)
+            active_tas_session.tas.screen_snapshot_request_id = nil
         end
     end
     if tas then
         active_tas_session = TasSession:new(tas)
-        active_tas_session:find_current_level()
+        active_tas_session:find_current_screen()
     else
         active_tas_session = nil
     end
@@ -183,7 +183,7 @@ end
 function set_ghost_tas(tas)
     if tas then
         ghost_tas_session = TasSession:new(tas)
-        ghost_tas_session:find_current_level()
+        ghost_tas_session:find_current_screen()
     else
         ghost_tas_session = nil
     end

@@ -2,7 +2,6 @@ local ComboInput = require("gui/combo_input")
 local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
@@ -12,8 +11,8 @@ local PLAYBACK_TARGET_MODE_COMBO = ComboInput:new(common_enums.PLAYBACK_TARGET_M
 
 local RECORD_FRAME_CLEAR_ACTION = OrderedTable:new({
     { id = "none", name = "None", desc = "When recording starts, do not delete any frames." },
-    { id = "remaining_level", name = "Remaining level", desc = "When recording starts, delete all future frames in the current level." },
-    { id = "remaining_run", name = "Remaining run", desc = "When recording starts, delete all future frames in the entire run." }
+    { id = "remaining_screen", name = "Remaining screen", desc = "When recording starts, delete all future frames in the current screen." },
+    { id = "remaining_tas", name = "Remaining TAS", desc = "When recording starts, delete all future frames in the entire TAS." }
 })
 local RECORD_FRAME_CLEAR_ACTION_COMBO = ComboInput:new(RECORD_FRAME_CLEAR_ACTION)
 
@@ -196,7 +195,7 @@ function module:draw_panel(ctx, is_window)
             if ctx:win_button("Add frame tag") then
                 table.insert(tas.frame_tags, {
                     name = "New",
-                    level = active_tas_session.current_level_index or 1,
+                    screen = active_tas_session.current_screen_index or 1,
                     frame = active_tas_session.current_frame_index or 0
                 })
                 table.insert(frame_tag_datas, {
@@ -210,7 +209,7 @@ function module:draw_panel(ctx, is_window)
             if active_tas_session.mode == common_enums.MODE.FREEPLAY then
                 ctx:win_text("TAS is in freeplay mode. To start recording, playback to the desired frame first.")
             elseif active_tas_session.mode == common_enums.MODE.RECORD then
-                if active_tas_session.current_level_index and active_tas_session.current_frame_index
+                if active_tas_session.current_screen_index and active_tas_session.current_frame_index
                     and ctx:win_button("Switch to playback mode")
                 then
                     if options.debug_print_mode then

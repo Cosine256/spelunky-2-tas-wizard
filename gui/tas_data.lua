@@ -121,10 +121,10 @@ function module:draw_panel(ctx, is_window)
         end
         local level_combo = ComboInput:new(OrderedTable:new(level_choices))
         selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
-        if selected_level_index == 0 and not active_tas_session.current_level_index then
+        if selected_level_index == 0 and not active_tas_session.current_screen_index then
             ctx:win_text("Current level is undefined.")
         else
-            level_index = selected_level_index == 0 and active_tas_session.current_level_index or selected_level_index
+            level_index = selected_level_index == 0 and active_tas_session.current_screen_index or selected_level_index
             ctx:win_pushid("frames")
             ctx:win_section("Frames", function()
                 ctx:win_indent(common_gui.INDENT_SECTION)

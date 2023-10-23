@@ -385,8 +385,8 @@ end
 local function can_fast_update()
     return options.fast_update_playback and not options.presentation_enabled and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
-        and not active_tas_session.suppress_screen_tas_inputs and (not active_tas_session.current_level_data
-            or active_tas_session.current_level_data.metadata.screen ~= SCREEN.TRANSITION or active_tas_session.current_level_data.transition_exit_frame_index ~= nil)
+        and not active_tas_session.suppress_screen_tas_inputs and (not active_tas_session.current_screen_data
+            or active_tas_session.current_screen_data.metadata.screen ~= SCREEN.TRANSITION or active_tas_session.current_screen_data.transition_exit_frame_index ~= nil)
 end
 
 local function on_pre_update()

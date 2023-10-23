@@ -310,21 +310,21 @@ local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
             ctx:win_text("Current level snapshot: "..start_area_name)
         else
             ctx:win_text("Current level snapshot: None")
-            if not tas.level_snapshot_request_id then
+            if not tas.screen_snapshot_request_id then
                 ctx:win_text("To capture a level snapshot, prepare your run in the prior level, and then press \"Request capture\".")
             end
         end
-        if tas.level_snapshot_request_id then
+        if tas.screen_snapshot_request_id then
             ctx:win_text("Capture status: Awaiting level start. A snapshot of the next level you load into will be captured.")
             if ctx:win_button("Cancel capture") then
-                game_controller.clear_level_snapshot_request(tas.level_snapshot_request_id)
-                tas.level_snapshot_request_id = nil
+                game_controller.clear_level_snapshot_request(tas.screen_snapshot_request_id)
+                tas.screen_snapshot_request_id = nil
             end
             ctx:win_text("Cancel the requested level snapshot capture.")
         else
             if ctx:win_button("Request capture") then
-                tas.level_snapshot_request_id = game_controller.register_level_snapshot_request(function(level_snapshot)
-                    tas.level_snapshot_request_id = nil
+                tas.screen_snapshot_request_id = game_controller.register_level_snapshot_request(function(level_snapshot)
+                    tas.screen_snapshot_request_id = nil
                     tas.start_full = level_snapshot
                 end)
             end
@@ -340,9 +340,9 @@ function module.draw_tas_start_settings(ctx, tas, is_options_tas)
             if not tas.start_simple then
                 tas.start_simple = common.deep_copy(options.new_tas.start_simple)
             end
-            if tas.level_snapshot_request_id then
-                game_controller.clear_level_snapshot_request(tas.level_snapshot_request_id)
-                tas.level_snapshot_request_id = nil
+            if tas.screen_snapshot_request_id then
+                game_controller.clear_level_snapshot_request(tas.screen_snapshot_request_id)
+                tas.screen_snapshot_request_id = nil
             end
         elseif new_choice_id == "full" then
             if not tas.start_full then
