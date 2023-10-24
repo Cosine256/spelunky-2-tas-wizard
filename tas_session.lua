@@ -60,8 +60,7 @@ end
 -- `force_current_frame`: Playback will start at the current frame, ignoring conflicting options.
 function TasSession:set_mode_playback(target_screen_index, target_frame_index, force_tas_start, force_current_frame)
     local can_use_current_frame = not force_tas_start and self.mode ~= common_enums.MODE.FREEPLAY
-        and (force_current_frame or options.playback_from == common_enums.PLAYBACK_FROM.HERE_OR_NEAREST_SCREEN
-            or options.playback_from == common_enums.PLAYBACK_FROM.HERE_ELSE_NEAREST_SCREEN)
+        and (force_current_frame or options.playback_from == "here_or_nearest_screen" or options.playback_from == "here_else_nearest_screen")
         and self.current_screen_index and self.current_frame_index
         and common.compare_screen_frame_index(target_screen_index, target_frame_index,
             self.current_screen_index, self.current_tasable_screen.record_frames and self.current_frame_index or 0) >= 0
@@ -70,7 +69,7 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
     if force_tas_start then
         best_screen_index = 1
     elseif not force_current_frame then
-        if options.playback_from <= 3 then
+        if type(options.playback_from) == "string" then
             best_screen_index = 1
             for screen_index = target_screen_index, 2, -1 do
                 if self.tas.screens[screen_index].snapshot then
@@ -79,9 +78,8 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
                 end
             end
         else
-            local playback_from_screen_index = options.playback_from - 3
-            if playback_from_screen_index <= target_screen_index and (playback_from_screen_index == 1 or self.tas.screens[playback_from_screen_index].snapshot) then
-                best_screen_index = playback_from_screen_index
+            if options.playback_from <= target_screen_index and (options.playback_from == 1 or self.tas.screens[options.playback_from].snapshot) then
+                best_screen_index = options.playback_from
             end
         end
     end
@@ -92,7 +90,7 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
     end
     if can_use_current_frame then
         -- The current frame can be used. Decide whether a warp should be used instead.
-        if best_screen_index and (options.playback_from ~= common_enums.PLAYBACK_FROM.HERE_OR_NEAREST_SCREEN or best_screen_index <= self.current_screen_index) then
+        if best_screen_index and (options.playback_from ~= "here_or_nearest_screen" or best_screen_index <= self.current_screen_index) then
             -- Use the current frame.
             best_screen_index = nil
         end

@@ -14,12 +14,12 @@ module.MODE = {
 
 -- The point in the TAS to start playback from.
 module.PLAYBACK_FROM = {
-    -- Use current frame or load the nearest screen to reach the target, preferring whichever is closer.
-    HERE_OR_NEAREST_SCREEN = 1,
-    -- Prefer current frame if it can reach the target. Otherwise, load the nearest screen.
-    HERE_ELSE_NEAREST_SCREEN = 2,
-    -- Load the nearest screen to reach the target.
-    NEAREST_SCREEN = 3
+    -- Use current frame or warp to the nearest screen to reach the target, preferring whichever is closer.
+    { id = "here_or_nearest_screen", name = "Here or nearest screen" },
+    -- Prefer current frame if it can reach the target. Otherwise, warp to the nearest screen.
+    { id = "here_else_nearest_screen", name = "Here, else nearest screen" },
+    -- Warp to the nearest screen to reach the target.
+    { id = "nearest_screen", name = "Nearest screen" }
 }
 
 module.PLAYBACK_TARGET_MODE = OrderedTable:new({

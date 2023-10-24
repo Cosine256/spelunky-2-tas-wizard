@@ -235,13 +235,15 @@ function module:draw_panel(ctx, is_window)
             end
         end
 
-        local playback_from_choices = {
-            "Here or nearest screen",
-            "Here, else nearest screen",
-            "Nearest screen"
-        }
+        local playback_from_choices = {}
+        for i, playback_from_choice in ipairs(common_enums.PLAYBACK_FROM) do
+            playback_from_choices[i] = playback_from_choice
+        end
         for i = 1, #tas.screens do
-            playback_from_choices[i + 3] = "Screen "..common.tas_screen_to_string(tas, i, false)
+            playback_from_choices[#playback_from_choices + 1] = {
+                id = i,
+                name = "Screen "..common.tas_screen_to_string(tas, i, false)
+            }
         end
         local playback_from_combo = ComboInput:new(OrderedTable:new(playback_from_choices))
         options.playback_from = playback_from_combo:draw(ctx, "Playback from", options.playback_from)
