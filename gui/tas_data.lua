@@ -5,7 +5,7 @@ local ComboInput = require("gui/combo_input")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("tas_data", "TAS Data", "tas_data_window")
+local module = Tool_GUI:new("tas_data", "TAS Data")
 
 local CUTSCENE_SKIP_INPUT = OrderedTable:new({
     { id = "jump", name = "Jump", inputs = INPUTS.JUMP },

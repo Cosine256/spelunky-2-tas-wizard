@@ -3,7 +3,7 @@ local common_gui = require("gui/common_gui")
 local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("tas_settings", "TAS Settings", "tas_settings_window")
+local module = Tool_GUI:new("tas_settings", "TAS Settings")
 
 local function draw_tas_settings(ctx, tas)
     tas.name = ctx:win_input_text("Name", tas.name)

@@ -38,20 +38,6 @@ default_options = {
     record_frame_clear_action = "remaining_tas",
     record_frame_write_type = "overwrite",
     presentation_enabled = false,
-    -- TODO: Order of tool GUIs is arbitrary. Alphabetize and put them in a sub-table with their IDs as keys?
-    -- TODO: Choose better default positions and sizes.
-    root_window = { visible = true, x = 0.6, y = -0.2, w = 0.4, h = 0.75 },
-    tas_root_window = { visible = true, x = -1.0, y = 0.8, w = 0.4, h = 1.15 },
-    frames_window = { visible = false, x = -1.0, y = 0.8, w = 0.4, h = 1.15 },
-    single_frame_editor_window = { x = -0.2, y = 0.25, w = 0.4, h = 0.5 },
-    playback_recording_window = { visible = false, x = 0.6, y = 0.8, w = 0.4, h = 1.0 },
-    file_window = { visible = false, x = -1.0, y = -0.35, w = 0.4, h = 0.6 },
-    ghost_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
-    warp_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
-    tas_settings_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
-    tas_data_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
-    options_window = { visible = false, x = -1.0, y = -0.15, w = 0.4, h = 0.8 },
-    status_window = { visible = false, x = -1.0, y = -0.55, w = 0.4, h = 0.4 },
     frames_viewer_follow_current = true,
     frames_viewer_page_size = 10,
     frames_viewer_step_size = 10,
@@ -101,6 +87,56 @@ default_options = {
         },
         save_player_positions = true,
         save_screen_snapshots = true
+    },
+    tool_guis = {
+        -- TODO: Choose better default positions and sizes.
+        file = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.35, w = 0.4, h = 0.6 }
+        },
+        frames = {
+            windowed = false,
+            window_settings = { x = -1.0, y = 0.8, w = 0.4, h = 1.15 }
+        },
+        ghost = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.55, w = 0.4, h = 0.4 }
+        },
+        options = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.15, w = 0.4, h = 0.8 }
+        },
+        playback_recording = {
+            windowed = false,
+            window_settings = { x = 0.6, y = 0.8, w = 0.4, h = 1.0 }
+        },
+        root = {
+            windowed = true,
+            window_settings = { x = 0.6, y = -0.2, w = 0.4, h = 0.75 }
+        },
+        single_frame_editor = {
+            window_settings = { x = -0.2, y = 0.25, w = 0.4, h = 0.5 }
+        },
+        status = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.55, w = 0.4, h = 0.4 }
+        },
+        tas_data = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.15, w = 0.4, h = 0.8 }
+        },
+        tas_root = {
+            windowed = true,
+            window_settings = { x = -1.0, y = 0.8, w = 0.4, h = 1.15 }
+        },
+        tas_settings = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.15, w = 0.4, h = 0.8 }
+        },
+        warp = {
+            windowed = false,
+            window_settings = { x = -1.0, y = -0.55, w = 0.4, h = 0.4 }
+        }
     },
     debug_print_load = false,
     debug_print_fast_update = false,

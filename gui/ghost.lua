@@ -1,6 +1,6 @@
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("ghost", "Ghost", "ghost_window")
+local module = Tool_GUI:new("ghost", "Ghost")
 
 function module:draw_panel(ctx, is_window)
     if active_tas_session and ctx:win_button("Create ghost from active TAS") then

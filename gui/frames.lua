@@ -5,7 +5,7 @@ local common_gui = require("gui/common_gui")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("frames", "Frames", "frames_window")
+local module = Tool_GUI:new("frames", "Frames")
 
 local BULK_OPERATION = OrderedTable:new({
     { id = "none", name = "None" },

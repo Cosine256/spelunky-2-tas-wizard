@@ -1,11 +1,10 @@
 local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("options", "Options", "options_window")
+local module = Tool_GUI:new("options", "Options")
 
 function module:draw_panel(ctx, is_window)
     if not is_window then
@@ -70,7 +69,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_popid()
     end)
 
-    ctx:win_separator_text("Tools")
+    ctx:win_separator_text("Tool GUIs")
     -- TODO: These are shown in an arbitrary order. Give them some meaningful order, such as alphabetical, or the order they appear in the root GUI.
     ctx:win_pushid("tool_guis")
     for _, tool_gui in pairs(tool_guis) do
