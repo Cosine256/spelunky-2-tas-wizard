@@ -53,15 +53,15 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
     if state.screen == SCREEN.OPTIONS or not tas_session.current_screen_data or not tas_session.current_tasable_screen.record_frames then
         return
     end
-    local level_data = tas_session.current_screen_data
+    local screen = tas_session.current_screen_data
     local path_colors = is_ghost and PATH_GHOST_COLORS or PATH_NORMAL_COLORS
-    for i, frame in ipairs(level_data.frames) do
+    for i, frame in ipairs(screen.frames) do
         for player_index, player in ipairs(frame.players) do
             local pos1
             if i == 1 then
-                pos1 = level_data.players[player_index].start_position
+                pos1 = screen.players[player_index].start_position
             else
-                pos1 = level_data.frames[i - 1].players[player_index].position
+                pos1 = screen.frames[i - 1].players[player_index].position
             end
             local pos2 = player.position
             if pos1 and pos2 then
@@ -75,8 +75,8 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
     end
     if options.path_marks_visible then
         -- Draw path marks in this second iteration so that they always draw on top of the path.
-        for i = options.path_mark_increment, #level_data.frames, options.path_mark_increment do
-            local frame = level_data.frames[i]
+        for i = options.path_mark_increment, #screen.frames, options.path_mark_increment do
+            local frame = screen.frames[i]
             for _, player in ipairs(frame.players) do
                 local pos = player.position
                 if pos then

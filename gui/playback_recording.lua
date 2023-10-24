@@ -42,59 +42,59 @@ function module:reset_session_vars()
     end
 end
 
-local function draw_frame_tag(ctx, frame_tag_index, level_choices, level_combo)
+local function draw_frame_tag(ctx, frame_tag_index, screen_choices, screen_combo)
     local tas = active_tas_session.tas
     local frame_tag = tas.frame_tags[frame_tag_index]
     local frame_tag_data = frame_tag_datas[frame_tag_index]
     ctx:win_pushid(frame_tag_data.id)
 
-    local end_level_index = tas:get_end_screen_index()
-    local level_index = frame_tag.screen == -1 and end_level_index or frame_tag.screen
+    local end_screen_index = tas:get_end_screen_index()
+    local screen_index = frame_tag.screen == -1 and end_screen_index or frame_tag.screen
     -- TODO: Validate and clean up frame tags immediately when TAS data is changed, not here in the GUI.
-    if level_index > end_level_index then
-        level_index = end_level_index
-        frame_tag.screen = end_level_index
+    if screen_index > end_screen_index then
+        screen_index = end_screen_index
+        frame_tag.screen = end_screen_index
     end
-    local end_frame_index = tas:get_end_frame_index(level_index)
+    local end_frame_index = tas:get_end_frame_index(screen_index)
     local frame_index = frame_tag.frame == -1 and end_frame_index or frame_tag.frame
     -- TODO: Validate and clean up frame tags immediately when TAS data is changed, not here in the GUI.
     if frame_index > end_frame_index then
         frame_index = end_frame_index
         frame_tag.frame = end_frame_index
     end
-    local screen_records_frames = common_enums.TASABLE_SCREEN[tas.screens[level_index].metadata.screen].record_frames
+    local screen_records_frames = common_enums.TASABLE_SCREEN[tas.screens[screen_index].metadata.screen].record_frames
 
     if ctx:win_button("Go") then
-        active_tas_session:set_mode_playback(level_index, frame_index)
+        active_tas_session:set_mode_playback(screen_index, frame_index)
     end
     ctx:win_inline()
 
-    local section_label = frame_tag.name.." [Lv "..common.level_to_string(tas, level_index, false)
+    local section_label = frame_tag.name.." [Scr "..common.tas_screen_to_string(tas, screen_index, false)
         ..(screen_records_frames and ", Fr "..frame_index or "").."]###section"
     ctx:win_section(section_label, function()
         ctx:win_indent(common_gui.INDENT_SECTION)
 
         frame_tag.name = ctx:win_input_text("Name", frame_tag.name)
 
-        local end_level_choice = #level_choices
-        local new_level = level_combo:draw(ctx, "Level", frame_tag.screen == -1 and end_level_choice or frame_tag.screen)
-        local old_level_index = level_index
-        if new_level == end_level_choice then
-            level_index = #tas.screens
+        local end_screen_choice = #screen_choices
+        local new_screen = screen_combo:draw(ctx, "Screen", frame_tag.screen == -1 and end_screen_choice or frame_tag.screen)
+        local old_screen_index = screen_index
+        if new_screen == end_screen_choice then
+            screen_index = #tas.screens
             frame_tag.screen = -1
         else
-            level_index = new_level
-            frame_tag.screen = new_level
+            screen_index = new_screen
+            frame_tag.screen = new_screen
         end
 
-        if old_level_index ~= level_index then
-            end_frame_index = tas:get_end_frame_index(level_index)
+        if old_screen_index ~= screen_index then
+            end_frame_index = tas:get_end_frame_index(screen_index)
             frame_index = frame_tag.frame == -1 and end_frame_index or frame_tag.frame
             if frame_index > end_frame_index then
                 frame_index = end_frame_index
                 frame_tag.frame = end_frame_index
             end
-            screen_records_frames = common_enums.TASABLE_SCREEN[tas.screens[level_index].metadata.screen].record_frames
+            screen_records_frames = common_enums.TASABLE_SCREEN[tas.screens[screen_index].metadata.screen].record_frames
         end
 
         if screen_records_frames then
@@ -165,16 +165,16 @@ function module:draw_panel(ctx, is_window)
 
             ctx:win_separator()
 
-            local level_choices = {}
+            local screen_choices = {}
             for i = 1, #tas.screens do
-                level_choices[i] = common.level_to_string(tas, i, false)
+                screen_choices[i] = common.tas_screen_to_string(tas, i, false)
             end
-            level_choices[#level_choices + 1] = "End level"
-            level_choices = OrderedTable:new(level_choices)
-            local level_combo = ComboInput:new(level_choices)
+            screen_choices[#screen_choices + 1] = "End screen"
+            screen_choices = OrderedTable:new(screen_choices)
+            local screen_combo = ComboInput:new(screen_choices)
             local i = 1
             while i <= #tas.frame_tags do
-                draw_frame_tag(ctx, i, level_choices, level_combo)
+                draw_frame_tag(ctx, i, screen_choices, screen_combo)
                 local frame_tag_data = frame_tag_datas[i]
                 if frame_tag_data.delete then
                     table.remove(tas.frame_tags, i)
@@ -236,12 +236,12 @@ function module:draw_panel(ctx, is_window)
         end
 
         local playback_from_choices = {
-            "Here or nearest level",
-            "Here, else nearest level",
-            "Nearest level"
+            "Here or nearest screen",
+            "Here, else nearest screen",
+            "Nearest screen"
         }
         for i = 1, #tas.screens do
-            playback_from_choices[i + 3] = "Level "..common.level_to_string(tas, i, false)
+            playback_from_choices[i + 3] = "Screen "..common.tas_screen_to_string(tas, i, false)
         end
         local playback_from_combo = ComboInput:new(OrderedTable:new(playback_from_choices))
         options.playback_from = playback_from_combo:draw(ctx, "Playback from", options.playback_from)

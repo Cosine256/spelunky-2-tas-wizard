@@ -25,14 +25,14 @@ function module:draw_panel(ctx, is_window)
             ctx:win_text("Playing back to frame: "..active_tas_session:get_playback_target_string())
         end
 
-        ctx:win_text("Level")
-        local level_text = "Undefined"
+        ctx:win_text("Screen")
+        local screen_text = "Undefined"
         if active_tas_session.current_screen_index then
-            level_text = common.level_to_string(active_tas_session.tas, active_tas_session.current_screen_index, true)
+            screen_text = common.tas_screen_to_string(active_tas_session.tas, active_tas_session.current_screen_index, true)
         end
         ctx:win_inline()
         ctx:win_width(-0.000001)
-        ctx:win_input_text("##current_level", level_text)
+        ctx:win_input_text("##current_screen", screen_text)
 
         ctx:win_text("Frame")
         local frame_text = "Undefined"
@@ -51,10 +51,10 @@ function module:draw_panel(ctx, is_window)
             ctx:win_text("Warning: Desynchronization detected:")
             ctx:win_indent(common_gui.INDENT_SUB_INPUT)
             ctx:win_text(active_tas_session.desync.desc)
-            ctx:win_text("Level")
+            ctx:win_text("Screen")
             ctx:win_inline()
             ctx:win_width(-0.000001)
-            ctx:win_input_text("##desync_level", common.level_to_string(active_tas_session.tas, active_tas_session.desync.screen_index, true))
+            ctx:win_input_text("##desync_screen", common.tas_screen_to_string(active_tas_session.tas, active_tas_session.desync.screen_index, true))
             ctx:win_text("Frame")
             ctx:win_inline()
             ctx:win_width(-0.000001)

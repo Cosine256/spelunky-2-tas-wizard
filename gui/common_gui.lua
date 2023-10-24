@@ -246,7 +246,7 @@ local function draw_tas_start_settings_simple(ctx, tas)
         new_player_count = PLAYER_COUNT_COMBO:draw(ctx, "Player count", start.player_count)
     end
     if start.player_count ~= new_player_count then
-        print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating level and frame data.")
+        print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating screen and frame data.")
         start.player_count = new_player_count
         -- Populate unassigned player characters.
         for player_index = 1, new_player_count do
@@ -254,17 +254,17 @@ local function draw_tas_start_settings_simple(ctx, tas)
                 start.players[player_index] = options.new_tas.start_simple.players[player_index]
             end
         end
-        -- Update all level and frame data to match the new player count.
-        for _, level in ipairs(tas.screens) do
-            if common_enums.TASABLE_SCREEN[level.metadata.screen].record_frames then
+        -- Update all screen and frame data to match the new player count.
+        for _, screen in ipairs(tas.screens) do
+            if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
                 for player_index = 1, CONST.MAX_PLAYERS do
                     if player_index > new_player_count then
-                        level.players[player_index] = nil
-                    elseif not level.players[player_index] then
-                        level.players[player_index] = {}
+                        screen.players[player_index] = nil
+                    elseif not screen.players[player_index] then
+                        screen.players[player_index] = {}
                     end
                 end
-                for _, frame in ipairs(level.frames) do
+                for _, frame in ipairs(screen.frames) do
                     for player_index = 1, CONST.MAX_PLAYERS do
                         if player_index > new_player_count then
                             frame.players[player_index] = nil
@@ -284,11 +284,11 @@ local function draw_tas_start_settings_simple(ctx, tas)
 end
 
 local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
-    ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full level snapshot.")
+    ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full screen snapshot.")
     ctx:win_section("More info", function()
         ctx:win_indent(module.INDENT_SECTION)
-        ctx:win_text("A full start is configured by playing the game (with or without cheating) up to right before the desired starting level, and then capturing a snapshot of the game state while loading that level. Runs will then start on a level with initial conditions that are identical to the game state at the time that the snapshot was captured.")
-        ctx:win_text("Full starts only support levels and the camp. A full start cannot be used for other areas, such as level transitions and menus.")
+        ctx:win_text("A full start is configured by playing the game (with or without cheating) up to right before the desired starting screen, and then capturing a snapshot of the game state while loading that screen. Runs will then start on a screen with initial conditions that are identical to the game state at the time that the snapshot was captured.")
+        ctx:win_text("Full starts only support levels and the camp. A full start cannot be used for other screens, such as transitions and menus.")
         ctx:win_text("The TAS Tool does not currently provide an editor for full starts. The only built-in way to configure a full start is via snapshot capture. However, you can still edit a full start by modifying the saved TAS file in a text editor. The full start is stored in \"start_full\". The structure of \"start_full.state_memory\" matches the \"StateMemory\" type in Overlunky's documentation, though it only includes fields that are necessary for a full start. Be very careful when manually editing a TAS file. The TAS Tool has almost no file validation and a corrupted TAS file can cause many problems and errors.")
         ctx:win_indent(-module.INDENT_SECTION)
     end)
@@ -306,29 +306,29 @@ local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
                 metadata.level = tas.start_full.state_memory.level_next
                 metadata.theme = tas.start_full.state_memory.theme_next
             end
-            local start_area_name = common.level_metadata_to_string(metadata)
-            ctx:win_text("Current level snapshot: "..start_area_name)
+            local start_area_name = common.screen_metadata_to_string(metadata)
+            ctx:win_text("Current screen snapshot: "..start_area_name)
         else
-            ctx:win_text("Current level snapshot: None")
+            ctx:win_text("Current screen snapshot: None")
             if not tas.screen_snapshot_request_id then
-                ctx:win_text("To capture a level snapshot, prepare your run in the prior level, and then press \"Request capture\".")
+                ctx:win_text("To capture a screen snapshot, prepare your run in the prior screen, and then press \"Request capture\".")
             end
         end
         if tas.screen_snapshot_request_id then
-            ctx:win_text("Capture status: Awaiting level start. A snapshot of the next level you load into will be captured.")
+            ctx:win_text("Capture status: Awaiting screen change. A snapshot of the next valid screen you load into will be captured.")
             if ctx:win_button("Cancel capture") then
                 game_controller.clear_screen_snapshot_request(tas.screen_snapshot_request_id)
                 tas.screen_snapshot_request_id = nil
             end
-            ctx:win_text("Cancel the requested level snapshot capture.")
+            ctx:win_text("Cancel the requested screen snapshot capture.")
         else
             if ctx:win_button("Request capture") then
-                tas.screen_snapshot_request_id = game_controller.register_screen_snapshot_request(function(level_snapshot)
+                tas.screen_snapshot_request_id = game_controller.register_screen_snapshot_request(function(screen_snapshot)
                     tas.screen_snapshot_request_id = nil
-                    tas.start_full = level_snapshot
+                    tas.start_full = screen_snapshot
                 end)
             end
-            ctx:win_text("Request a new level snapshot capture.")
+            ctx:win_text("Request a new screen snapshot capture.")
         end
     end
 end

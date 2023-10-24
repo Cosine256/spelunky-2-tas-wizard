@@ -4,7 +4,7 @@ local module = {}
 
 -- The game interaction mode for a TAS session.
 module.MODE = {
-    -- Keep track of current level, but do not record or playback any TAS frames, and do not execute configured transition exits.
+    -- Keep track of current screen, but do not record or playback any TAS frames, and do not execute configured transition exits.
     FREEPLAY = 0,
     -- Record TAS frames, and execute configured transition exits.
     RECORD = 1,

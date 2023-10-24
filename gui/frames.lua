@@ -14,7 +14,7 @@ local BULK_OPERATION = OrderedTable:new({
 })
 local BULK_OPERATION_COMBO = ComboInput:new(BULK_OPERATION)
 
-local selected_level_index = 0
+local selected_screen_index = 0
 local edit_mode = false
 local bulk_operation = "none"
 local bulk_start_index
@@ -23,19 +23,19 @@ local bulk_use_start_inputs = false
 local bulk_inputs
 local viewer_player_index = 1
 local viewer_frame_index = 1
-local last_current_level_index
+local last_current_screen_index
 local last_current_frame_index
 
 function module:reset_session_vars()
     bulk_start_index = 0
     bulk_count = 1
     bulk_inputs = {}
-    last_current_level_index = nil
+    last_current_screen_index = nil
     last_current_frame_index = nil
 end
 
 local function compute_last_page_frame_index()
-    return math.max(active_tas_session.tas:get_end_frame_index(module.level_index) - options.frames_viewer_page_size + 1, 1)
+    return math.max(active_tas_session.tas:get_end_frame_index(module.screen_index) - options.frames_viewer_page_size + 1, 1)
 end
 
 local function draw_page_controls(ctx, id)
@@ -49,7 +49,7 @@ local function draw_page_controls(ctx, id)
     end
     ctx:win_inline()
     viewer_frame_index = common_gui.draw_drag_int_clamped(ctx, "##viewer_frame_index", viewer_frame_index,
-        1, active_tas_session.tas:get_end_frame_index(module.level_index))
+        1, active_tas_session.tas:get_end_frame_index(module.screen_index))
     ctx:win_inline()
     if ctx:win_button("+"..options.frames_viewer_step_size) and viewer_frame_index < compute_last_page_frame_index() then
         viewer_frame_index = math.min(viewer_frame_index + options.frames_viewer_step_size, compute_last_page_frame_index())
@@ -82,30 +82,30 @@ function module:draw_panel(ctx, is_window)
         return
     end
 
-    -- When this tool GUI is not windowed, the parent tool GUI is expected set the level index before drawing this as a panel.
+    -- When this tool GUI is not windowed, the parent tool GUI is expected set the screen index before drawing this as a panel.
     if is_window then
-        local level_choices = {
-            [0] = "Current level"
+        local screen_choices = {
+            [0] = "Current screen"
         }
         for i = 1, #session.tas.screens do
-            level_choices[i] = common.level_to_string(session.tas, i, false)
+            screen_choices[i] = common.tas_screen_to_string(session.tas, i, false)
         end
-        local level_combo = ComboInput:new(OrderedTable:new(level_choices))
-        selected_level_index = level_combo:draw(ctx, "Level", selected_level_index)
-        if selected_level_index == 0 and not session.current_screen_index then
-            ctx:win_text("Current level is undefined.")
+        local screen_combo = ComboInput:new(OrderedTable:new(screen_choices))
+        selected_screen_index = screen_combo:draw(ctx, "Screen", selected_screen_index)
+        if selected_screen_index == 0 and not session.current_screen_index then
+            ctx:win_text("Current screen is undefined.")
             return
         end
-        self.level_index = selected_level_index == 0 and session.current_screen_index or selected_level_index
+        self.screen_index = selected_screen_index == 0 and session.current_screen_index or selected_screen_index
     end
 
-    local tasable_screen = common_enums.TASABLE_SCREEN[session.tas.screens[self.level_index].metadata.screen]
+    local tasable_screen = common_enums.TASABLE_SCREEN[session.tas.screens[self.screen_index].metadata.screen]
     if not tasable_screen.record_frames then
         ctx:win_text(tasable_screen.name.." screen does not record frames.")
         return
     end
 
-    local frames = session.tas.screens[self.level_index].frames
+    local frames = session.tas.screens[self.screen_index].frames
 
     edit_mode = ctx:win_check("Enable editing", edit_mode)
 
@@ -153,7 +153,7 @@ function module:draw_panel(ctx, is_window)
                 end
             end
             if ctx:win_button("Insert") then
-                session.tas:insert_frames(self.level_index, bulk_start_index, bulk_count, bulk_inputs)
+                session.tas:insert_frames(self.screen_index, bulk_start_index, bulk_count, bulk_inputs)
                 bulk_start_index = bulk_start_index + bulk_count
                 session.desync = nil
                 session:validate_current_frame()
@@ -161,14 +161,14 @@ function module:draw_panel(ctx, is_window)
             end
         elseif bulk_operation == "delete" then
             if #frames == 0 then
-                ctx:win_text("Level contains no frames to delete.")
+                ctx:win_text("Screen contains no frames to delete.")
             else
                 bulk_start_index = common_gui.draw_drag_int_clamped(ctx, "Start frame", bulk_start_index, 1, #frames)
                 local max_frame_count = #frames - bulk_start_index + 1
                 bulk_count = common_gui.draw_drag_int_clamped(ctx, "Frame count to delete", bulk_count, 1, max_frame_count)
                 ctx:win_text("Frames to delete (inclusive): "..bulk_start_index.." to "..(bulk_start_index + bulk_count - 1))
                 if ctx:win_button("Delete") then
-                    session.tas:delete_frames(self.level_index, bulk_start_index, bulk_count)
+                    session.tas:delete_frames(self.screen_index, bulk_start_index, bulk_count)
                     session.desync = nil
                     session:validate_current_frame()
                     session:check_playback()
@@ -192,22 +192,22 @@ function module:draw_panel(ctx, is_window)
     if options.frames_viewer_follow_current ~= follow_current then
         options.frames_viewer_follow_current = follow_current
         if not follow_current then
-            last_current_level_index = nil
+            last_current_screen_index = nil
             last_current_frame_index = nil
         end
     end
-    ctx:win_text("Frames in level: "..#frames)
+    ctx:win_text("Frames in screen: "..#frames)
     if #frames == 0 then
         return
     end
     if follow_current then
         if session.mode == common_enums.MODE.FREEPLAY then
-            last_current_level_index = nil
+            last_current_screen_index = nil
             last_current_frame_index = nil
-        elseif session.current_screen_index == module.level_index and session.current_frame_index
-            and (session.current_screen_index ~= last_current_level_index or session.current_frame_index ~= last_current_frame_index)
+        elseif session.current_screen_index == self.screen_index and session.current_frame_index
+            and (session.current_screen_index ~= last_current_screen_index or session.current_frame_index ~= last_current_frame_index)
         then
-            last_current_level_index = session.current_screen_index
+            last_current_screen_index = session.current_screen_index
             last_current_frame_index = session.current_frame_index
             viewer_frame_index = math.min(session.current_frame_index - math.ceil(options.frames_viewer_page_size / 2) + 1, compute_last_page_frame_index())
         end
@@ -234,7 +234,7 @@ function module:draw_panel(ctx, is_window)
                     end
                 end
             end
-            if session.current_screen_index == self.level_index and session.current_frame_index then
+            if session.current_screen_index == self.screen_index and session.current_frame_index then
                 if frame_index == session.current_frame_index then
                     label = label.." (prev)"
                     if frame_index ~= end_frame_index then
@@ -253,7 +253,7 @@ function module:draw_panel(ctx, is_window)
                 end
                 ctx:win_inline()
                 if ctx:win_button("Edit") then
-                    tool_guis.single_frame_editor:open(self.level_index, frame_index, viewer_player_index, inputs)
+                    tool_guis.single_frame_editor:open(self.screen_index, frame_index, viewer_player_index, inputs)
                 end
             else
                 ctx:win_input_text(label.."###inputs", common.inputs_to_string(inputs))

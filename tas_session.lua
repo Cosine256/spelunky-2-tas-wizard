@@ -63,7 +63,7 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
         and (force_current_frame or options.playback_from == common_enums.PLAYBACK_FROM.HERE_OR_NEAREST_SCREEN
             or options.playback_from == common_enums.PLAYBACK_FROM.HERE_ELSE_NEAREST_SCREEN)
         and self.current_screen_index and self.current_frame_index
-        and common.compare_level_frame_index(target_screen_index, target_frame_index,
+        and common.compare_screen_frame_index(target_screen_index, target_frame_index,
             self.current_screen_index, self.current_tasable_screen.record_frames and self.current_frame_index or 0) >= 0
 
     local best_screen_index
@@ -146,7 +146,7 @@ function TasSession:check_playback()
     end
     local end_screen_index = self.tas:get_end_screen_index()
     local end_frame_index = self.tas:get_end_frame_index()
-    local end_comparison = common.compare_level_frame_index(self.playback_target_screen, self.playback_target_frame, end_screen_index, end_frame_index)
+    local end_comparison = common.compare_screen_frame_index(self.playback_target_screen, self.playback_target_frame, end_screen_index, end_frame_index)
     if end_comparison > 0 then
         self:_on_playback_invalid("Target is later than end of TAS ("..end_screen_index.."-"..end_frame_index..").")
         return
@@ -159,7 +159,7 @@ function TasSession:check_playback()
         -- Don't compare the playback target to the current screen and frame while warping out of the current screen.
         return
     end
-    local current_comparison = common.compare_level_frame_index(self.playback_target_screen, self.playback_target_frame,
+    local current_comparison = common.compare_screen_frame_index(self.playback_target_screen, self.playback_target_frame,
     self.current_screen_index, self.current_tasable_screen.record_frames and self.current_frame_index or 0)
     if current_comparison < 0 then
         self:_on_playback_invalid("Current frame ("..self.current_screen_index.."-"..self.current_frame_index..") is later than playback target.")

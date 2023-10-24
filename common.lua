@@ -123,7 +123,7 @@ local function world_level_theme_to_string(world, level, theme)
     end
 end
 
-function module.level_metadata_to_string(metadata)
+function module.screen_metadata_to_string(metadata)
     local tasable_screen = common_enums.TASABLE_SCREEN[metadata.screen]
     if metadata.screen == SCREEN.LEVEL or metadata.screen == SCREEN.TRANSITION then
         local wlt_text = world_level_theme_to_string(metadata.world, metadata.level, metadata.theme)
@@ -137,24 +137,24 @@ function module.level_metadata_to_string(metadata)
     end
 end
 
-function module.level_to_string(tas, level_index, include_total)
-    local text = tostring(level_index)
+function module.tas_screen_to_string(tas, screen_index, include_total)
+    local text = tostring(screen_index)
     if include_total then
         text = text.."/"..#tas.screens
     end
-    local level = tas.screens[level_index]
-    if level then
-        text = text.." ("..module.level_metadata_to_string(level.metadata)..")"
+    local screen = tas.screens[screen_index]
+    if screen then
+        text = text.." ("..module.screen_metadata_to_string(screen.metadata)..")"
     end
     return text
 end
 
--- Compares two level index and frame index pairs and returns the result as a signed integer.
+-- Compares two screen index and frame index pairs and returns the result as a signed integer.
 -- Negative: Pair 1 is before pair 2.
 -- Zero: Pair 1 is equal to pair 2.
 -- Positive: Pair 1 is after pair 2.
-function module.compare_level_frame_index(level_index_1, frame_index_1, level_index_2, frame_index_2)
-    return level_index_1 == level_index_2 and frame_index_1 - frame_index_2 or level_index_1 - level_index_2
+function module.compare_screen_frame_index(screen_index_1, frame_index_1, screen_index_2, frame_index_2)
+    return screen_index_1 == screen_index_2 and frame_index_1 - frame_index_2 or screen_index_1 - screen_index_2
 end
 
 return module
