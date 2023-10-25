@@ -15,24 +15,47 @@ local START_TYPE = OrderedTable:new({
 })
 local START_TYPE_COMBO = ComboInput:new(START_TYPE)
 
-local RUN_START_AREA = OrderedTable:new({
-    { id = "dwelling", name = "Dwelling", world = 1, level = 1, theme = THEME.DWELLING, shortcut = false, tutorial_race = false },
-    { id = "quillback_shortcut", name = "Quillback Shortcut", world = 1, level = 4, theme = THEME.DWELLING, shortcut = true, tutorial_race = false },
-    { id = "olmec_shortcut", name = "Olmec Shortcut", world = 3, level = 1, theme = THEME.OLMEC, shortcut = true, tutorial_race = false },
-    { id = "ice_caves_shortcut", name = "Ice Caves Shortcut", world = 5, level = 1, theme = THEME.ICE_CAVES, shortcut = true, tutorial_race = false },
-    { id = "tutorial_race", name = "Tutorial Race", world = 1, level = 1, theme = THEME.BASE_CAMP, shortcut = false, tutorial_race = true },
-    { id = "custom", name = "Custom" }
-})
-local RUN_START_AREA_BY_INDEX = RUN_START_AREA:values_by_index()
-local RUN_START_AREA_COMBO = ComboInput:new(RUN_START_AREA)
+local START_PRESET_BY_INDEX = {
+    {
+        id = "dwelling_start", name = "Dwelling Start",
+        screen = SCREEN.LEVEL, world = 1, level = 1, theme = THEME.DWELLING, shortcut = false, tutorial_race = false
+    },
+    {
+        id = "quillback_shortcut", name = "Quillback Shortcut",
+        screen = SCREEN.LEVEL, world = 1, level = 4, theme = THEME.DWELLING, shortcut = true, tutorial_race = false
+    },
+    {
+        id = "olmec_shortcut", name = "Olmec Shortcut",
+        screen = SCREEN.LEVEL, world = 3, level = 1, theme = THEME.OLMEC, shortcut = true, tutorial_race = false
+    },
+    {
+        id = "ice_caves_shortcut", name = "Ice Caves Shortcut",
+        screen = SCREEN.LEVEL, world = 5, level = 1, theme = THEME.ICE_CAVES, shortcut = true, tutorial_race = false
+    },
+    {
+        id = "tutorial_race", name = "Tutorial Race",
+        screen = SCREEN.CAMP, world = 1, level = 1, theme = THEME.BASE_CAMP, shortcut = false, tutorial_race = true, screen_last = SCREEN.CAMP
+    },
+    {
+        id = "custom", name = "Custom"
+    }
+}
+local START_PRESET = OrderedTable:new(START_PRESET_BY_INDEX)
+local START_PRESET_COMBO = ComboInput:new(START_PRESET)
 
-local VANILLA_LEVEL
+local START_SCREEN = OrderedTable:new({
+    { id = SCREEN.LEVEL, name = "Level" },
+    { id = SCREEN.CAMP, name = "Camp" }
+})
+local START_SCREEN_COMBO = ComboInput:new(START_SCREEN)
+
+local VANILLA_LEVEL_BY_INDEX
 do
     local cosmic_ocean_levels = {}
     for i = 5, 98 do
         cosmic_ocean_levels[i - 4] = i
     end
-    VANILLA_LEVEL = OrderedTable:new({
+    VANILLA_LEVEL_BY_INDEX = {
         { id = "dwelling", name = common.THEME_NAME[THEME.DWELLING], theme = THEME.DWELLING, world = 1, levels = { 1, 2, 3, 4 } },
         { id = "jungle", name = common.THEME_NAME[THEME.JUNGLE], theme = THEME.JUNGLE, world = 2, levels = { 1, 2, 3, 4 } },
         { id = "volcana", name = common.THEME_NAME[THEME.VOLCANA], theme = THEME.VOLCANA, world = 2, levels = { 1, 2, 3, 4 } },
@@ -49,10 +72,25 @@ do
         { id = "eggplant_world", name = common.THEME_NAME[THEME.EGGPLANT_WORLD], theme = THEME.EGGPLANT_WORLD, world = 7, levels = { 2 } },
         { id = "hundun", name = common.THEME_NAME[THEME.HUNDUN], theme = THEME.HUNDUN, world = 7, levels = { 4 } },
         { id = "cosmic_ocean", name = common.THEME_NAME[THEME.COSMIC_OCEAN], theme = THEME.COSMIC_OCEAN, world = 8, levels = cosmic_ocean_levels }
-    })
+    }
 end
-local VANILLA_LEVEL_BY_INDEX = VANILLA_LEVEL:values_by_index()
+local VANILLA_LEVEL = OrderedTable:new(VANILLA_LEVEL_BY_INDEX)
 local VANILLA_LEVEL_COMBO = ComboInput:new(VANILLA_LEVEL)
+
+local SHORTCUTS = {
+    { world = 1, level = 4, theme = THEME.DWELLING },
+    { world = 3, level = 1, theme = THEME.OLMEC },
+    { world = 5, level = 1, theme = THEME.ICE_CAVES }
+}
+
+local CAMP_START_TYPE_BY_INDEX = {
+    { id = "tutorial_race", name = "Tutorial Race", screen_last = SCREEN.CAMP, tutorial_race = true },
+    { id = "on_rope", name = "On Rope", screen_last = SCREEN.LEVEL, tutorial_race = false },
+    { id = "below_rope", name = "Below Rope", screen_last = SCREEN.CAMP, tutorial_race = false },
+    { id = "door_ejection", name = "Door Ejection", screen_last = SCREEN.DEATH, tutorial_race = false }
+}
+local CAMP_START_TYPE = OrderedTable:new(CAMP_START_TYPE_BY_INDEX)
+local CAMP_START_TYPE_COMBO = ComboInput:new(CAMP_START_TYPE)
 
 local SEED_TYPE = OrderedTable:new({
     { id = "seeded", name = "Seeded", desc = "Seed chosen by the user for normal seeded runs." },
@@ -141,53 +179,89 @@ end
 local function draw_tas_start_settings_simple(ctx, tas)
     local start = tas.start_simple
     ctx:win_text(START_TYPE:value_by_id("simple").name..": Provides basic start settings, such as the starting area and player characters. All other aspects of the run (health, items, etc) use the default behavior from starting a new run.")
-    local run_start_area_id = "custom"
-    if not start.is_custom_area_choice then
-        for _, run_start_area in ipairs(RUN_START_AREA_BY_INDEX) do
-            if start.world == run_start_area.world and start.level == run_start_area.level and start.theme == run_start_area.theme
-                and start.shortcut == run_start_area.shortcut and start.tutorial_race == run_start_area.tutorial_race
+
+    local start_preset_id = "custom"
+    if not start.is_custom_preset then
+        for _, start_preset in ipairs(START_PRESET_BY_INDEX) do
+            if start.screen == start_preset.screen and start.world == start_preset.world and start.level == start_preset.level and start.theme == start_preset.theme
+                and start.shortcut == start_preset.shortcut and start.screen_last == start_preset.screen_last and start.tutorial_race == start_preset.tutorial_race
             then
-                run_start_area_id = run_start_area.id
+                start_preset_id = start_preset.id
                 break
             end
         end
     end
-    run_start_area_id = RUN_START_AREA_COMBO:draw(ctx, "Start area", run_start_area_id)
-    if run_start_area_id == "custom" then
+    start_preset_id = START_PRESET_COMBO:draw(ctx, "Preset", start_preset_id)
+
+    if start_preset_id == "custom" then
         ctx:win_indent(module.INDENT_SUB_INPUT)
-        start.is_custom_area_choice = true
-        start.shortcut = false
-        start.tutorial_race = false
-        local vanilla_level_id
-        for _, vanilla_level in ipairs(VANILLA_LEVEL_BY_INDEX) do
-            if start.world == vanilla_level.world and start.theme == vanilla_level.theme then
-                vanilla_level_id = vanilla_level.id
-                break
+        start.is_custom_preset = true
+        start.screen = START_SCREEN_COMBO:draw(ctx, "Screen", start.screen)
+        if start.screen == SCREEN.LEVEL then
+            local vanilla_level_id
+            for _, vanilla_level in ipairs(VANILLA_LEVEL_BY_INDEX) do
+                if start.world == vanilla_level.world and start.theme == vanilla_level.theme then
+                    vanilla_level_id = vanilla_level.id
+                    break
+                end
             end
-        end
-        vanilla_level_id = VANILLA_LEVEL_COMBO:draw(ctx, "World", vanilla_level_id)
-        local vanilla_level = VANILLA_LEVEL:value_by_id(vanilla_level_id)
-        start.world = vanilla_level.world
-        start.theme = vanilla_level.theme
-        if #vanilla_level.levels == 1 then
-            start.level = vanilla_level.levels[1]
-        else
-            local level_choices = {}
-            for i, level in ipairs(vanilla_level.levels) do
-                level_choices[i] = { id = level }
+            vanilla_level_id = VANILLA_LEVEL_COMBO:draw(ctx, "World", vanilla_level_id)
+            local vanilla_level = VANILLA_LEVEL:value_by_id(vanilla_level_id)
+            start.world = vanilla_level.world
+            start.theme = vanilla_level.theme
+            if #vanilla_level.levels == 1 then
+                start.level = vanilla_level.levels[1]
+            else
+                local level_choices = {}
+                for i, level in ipairs(vanilla_level.levels) do
+                    level_choices[i] = { id = level }
+                end
+                local level_combo = ComboInput:new(OrderedTable:new(level_choices))
+                start.level = level_combo:draw(ctx, "Level", start.level)
             end
-            local level_combo = ComboInput:new(OrderedTable:new(level_choices))
-            start.level = level_combo:draw(ctx, "Level", start.level)
+            local can_shortcut = false
+            for _, shortcut in ipairs(SHORTCUTS) do
+                if start.world == shortcut.world and start.level == shortcut.level and start.theme == shortcut.theme then
+                    can_shortcut = true
+                    break
+                end
+            end
+            if can_shortcut then
+                start.shortcut = ctx:win_check("Shortcut", start.shortcut)
+            else
+                start.shortcut = false
+            end
+            start.screen_last = nil
+            start.tutorial_race = false
+        elseif start.screen == SCREEN.CAMP then
+            local camp_start_type_id
+            for _, camp_start_type in ipairs(CAMP_START_TYPE_BY_INDEX) do
+                if start.screen_last == camp_start_type.screen_last and start.tutorial_race == camp_start_type.tutorial_race
+                then
+                    camp_start_type_id = camp_start_type.id
+                    break
+                end
+            end
+            camp_start_type_id = CAMP_START_TYPE_COMBO:draw(ctx, "Camp start type", camp_start_type_id)
+            local camp_start_type = CAMP_START_TYPE:value_by_id(camp_start_type_id)
+            start.world = 1
+            start.level = 1
+            start.theme = THEME.BASE_CAMP
+            start.shortcut = false
+            start.screen_last = camp_start_type.screen_last
+            start.tutorial_race = camp_start_type.tutorial_race
         end
         ctx:win_indent(-module.INDENT_SUB_INPUT)
     else
-        start.is_custom_area_choice = false
-        local run_start_area = RUN_START_AREA:value_by_id(run_start_area_id)
-        start.world = run_start_area.world
-        start.level = run_start_area.level
-        start.theme = run_start_area.theme
-        start.shortcut = run_start_area.shortcut
-        start.tutorial_race = run_start_area.tutorial_race
+        local start_preset = START_PRESET:value_by_id(start_preset_id)
+        start.is_custom_preset = false
+        start.screen = start_preset.screen
+        start.world = start_preset.world
+        start.level = start_preset.level
+        start.theme = start_preset.theme
+        start.shortcut = start_preset.shortcut
+        start.screen_last = start_preset.screen_last
+        start.tutorial_race = start_preset.tutorial_race
     end
 
     local new_seed_type_id = SEED_TYPE_COMBO:draw(ctx, "Seed type", start.seed_type)

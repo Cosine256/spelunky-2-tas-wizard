@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 21
+local CURRENT_FORMAT = 22
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -407,7 +407,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [20] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 21,
         update = function(o)
             o.screens = o.levels
             o.levels = nil
@@ -417,6 +417,21 @@ local FORMAT_UPDATERS = {
             end
             o.save_screen_snapshots = o.save_level_snapshots
             o.save_level_snapshots = nil
+        end
+    },
+    [21] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            if o.start_simple then
+                o.is_custom_preset = o.is_custom_area_choice
+                o.is_custom_area_choice = nil
+                if o.start_simple.tutorial_race then
+                    o.start_simple.screen = SCREEN.CAMP
+                    o.start_simple.screen_last = SCREEN.CAMP
+                else
+                    o.start_simple.screen = SCREEN.LEVEL
+                end
+            end
         end
     }
 }

@@ -204,29 +204,34 @@ function module.trigger_start_simple_warp(tas)
         }
         -- The seeded seed does not affect adventure runs.
     end
-    if start.shortcut then
-        state.quest_flags = state.quest_flags | common.flag_to_value(QUEST_FLAG.SHORTCUT_USED)
-    end
+    state.screen_next = start.screen
     state.world_next = start.world
     state.level_next = start.level
     state.theme_next = start.theme
-    if start.tutorial_race then
-        state.screen_next = SCREEN.CAMP
+    if start.screen == SCREEN.CAMP then
         state.world_start = 1
         state.level_start = 1
         state.theme_start = THEME.DWELLING
-        state.speedrun_activation_trigger = true
-        state.speedrun_character = common_enums.PLAYER_CHAR:value_by_id(start.tutorial_race_referee).ent_type_id
-        if not warp_screen_snapshot then
-            warp_screen_snapshot = {}
+        if start.screen_last then
+            if not warp_screen_snapshot then
+                warp_screen_snapshot = {}
+            end
+            -- This affects where the players spawn in the camp.
+            warp_screen_snapshot.pre_level_gen_screen_last = start.screen_last
         end
-        -- Ensure that the player spawns in the tutorial area, instead of the rope or large door.
-        warp_screen_snapshot.pre_level_gen_screen_last = SCREEN.CAMP
-    else
-        state.screen_next = SCREEN.LEVEL
+        if start.tutorial_race then
+            state.speedrun_activation_trigger = true
+            state.speedrun_character = common_enums.PLAYER_CHAR:value_by_id(start.tutorial_race_referee).ent_type_id
+        else
+            state.speedrun_activation_trigger = false
+        end
+    elseif start.screen == SCREEN.LEVEL then
         state.world_start = start.world
         state.level_start = start.level
         state.theme_start = start.theme
+        if start.shortcut then
+            state.quest_flags = state.quest_flags | common.flag_to_value(QUEST_FLAG.SHORTCUT_USED)
+        end
         state.speedrun_activation_trigger = false
     end
     state.items.player_count = start.player_count

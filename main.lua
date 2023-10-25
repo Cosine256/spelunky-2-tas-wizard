@@ -61,7 +61,8 @@ default_options = {
             seeded_seed = 0x00000000,
             -- Adventure seed 0,0 generates runs with unusual similarity between levels. This default adventure seed has better behavior.
             adventure_seed = { 0x0000000000000001, 0x0000000000000000 },
-            is_custom_area_choice = false,
+            is_custom_preset = false,
+            screen = SCREEN.LEVEL,
             world = 1,
             level = 1,
             theme = THEME.DWELLING,
