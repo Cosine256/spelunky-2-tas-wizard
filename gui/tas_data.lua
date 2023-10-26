@@ -158,14 +158,17 @@ function module:draw_panel(ctx, is_window)
                 end
                 if screen.metadata.screen == SCREEN.LEVEL then
                     if screen.metadata.cutscene then
+                        ctx:win_pushid("cutscene")
                         ctx:win_separator_text("Cutscene")
                         ctx:win_section("Cutscene Skip Editor", function()
                             ctx:win_indent(common_gui.INDENT_SECTION)
                             draw_cutscene_skip_editor(ctx, screen)
                             ctx:win_indent(-common_gui.INDENT_SECTION)
                         end)
+                        ctx:win_popid()
                     end
                 elseif screen.metadata.screen == SCREEN.TRANSITION then
+                    ctx:win_pushid("transition_settings")
                     ctx:win_separator_text("Transition settings")
                     local transition_exit = ctx:win_check("Automatically exit transition", screen.transition_exit_frame_index ~= nil)
                     if transition_exit then
@@ -177,15 +180,21 @@ function module:draw_panel(ctx, is_window)
                     else
                         screen.transition_exit_frame_index = nil
                     end
+                    ctx:win_popid()
                 end
                 if tasable_screen.record_frames then
+                    ctx:win_pushid("player_positions")
                     ctx:win_separator_text("Player positions")
+                    common_gui.draw_player_positions_more_info(ctx)
                     if ctx:win_button("Clear player positions") then
                         tas:clear_player_positions(screen_index)
                     end
+                    ctx:win_popid()
                 end
                 if tasable_screen.can_snapshot and screen_index > 1 then
+                    ctx:win_pushid("screen_snapshot")
                     ctx:win_separator_text("Screen snapshot")
+                    common_gui.draw_screen_snapshot_more_info(ctx)
                     if screen.snapshot then
                         ctx:win_text("Screen snapshot captured.")
                         if ctx:win_button("Clear screen snapshot") then
@@ -194,7 +203,18 @@ function module:draw_panel(ctx, is_window)
                     else
                         ctx:win_text("No screen snapshot captured.")
                     end
+                    ctx:win_popid()
                 end
+                ctx:win_pushid("screen_deletion")
+                ctx:win_separator_text("Screen deletion")
+                if ctx:win_button("Delete screen") then
+                    tas:remove_screens_after(screen_index - 1)
+                    active_tas_session:validate_current_frame()
+                    active_tas_session:check_playback()
+                    selected_screen_index = selected_screen_index - 1
+                end
+                ctx:win_text("Deletes this entire screen and all later screen data in the TAS.")
+                ctx:win_popid()
                 ctx:win_indent(-common_gui.INDENT_SECTION)
             end)
             ctx:win_popid()

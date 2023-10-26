@@ -431,4 +431,20 @@ function module.draw_tas_start_settings(ctx, tas, is_options_tas)
     end
 end
 
+function module.draw_player_positions_more_info(ctx)
+    ctx:win_section("More info", function()
+        ctx:win_indent(module.INDENT_SECTION)
+        ctx:win_text("Player positions are used to show player paths through each screen and to detect player position desync. They are stored in memory automatically while playing back or recording the TAS.")
+        ctx:win_indent(-module.INDENT_SECTION)
+    end)
+end
+
+function module.draw_screen_snapshot_more_info(ctx)
+    ctx:win_section("More info", function()
+        ctx:win_indent(module.INDENT_SECTION)
+        ctx:win_text("Screen snapshots allow screen warping and playing back the TAS from the start of the nearest screen instead of the start of the run. They are stored in memory automatically while playing back or recording the TAS.")
+        ctx:win_indent(-module.INDENT_SECTION)
+    end)
+end
+
 return module

@@ -574,10 +574,10 @@ function Tas:get_end_screen_index()
     return #self.screens
 end
 
--- Gets the final frame index of the specified screen, or the final screen if `nil`. Returns 0 if the screen does not store frame data.
+-- Gets the final frame index of the specified screen, or the final screen if `nil`. Returns 0 if the screen does not store frame data or does not exist.
 function Tas:get_end_frame_index(screen_index)
     local screen = self.screens[screen_index or #self.screens]
-    return common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames and #screen.frames or 0
+    return screen and common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames and #screen.frames or 0
 end
 
 -- Removes screens after (but not including) the specified screen.
