@@ -72,7 +72,7 @@ default_options = {
             player_count = 1,
             players = { "ana", "margaret", "colin", "roffy" },
         },
-        start_full = {},
+        start_snapshot = {},
         screens = {},
         frame_tags = {
             {

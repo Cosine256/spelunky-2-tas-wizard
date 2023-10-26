@@ -11,7 +11,7 @@ module.INDENT_SUB_INPUT = 10
 
 local START_TYPE = OrderedTable:new({
     { id = "simple", name = "Simple" },
-    { id = "full", name = "Full" }
+    { id = "snapshot", name = "Snapshot" }
 })
 local START_TYPE_COMBO = ComboInput:new(START_TYPE)
 
@@ -357,28 +357,28 @@ local function draw_tas_start_settings_simple(ctx, tas)
     end
 end
 
-local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
-    ctx:win_text(START_TYPE:value_by_id("full").name..": The run is initialized by applying a full screen snapshot.")
+local function draw_tas_start_settings_snapshot(ctx, tas, is_options_tas)
+    ctx:win_text(START_TYPE:value_by_id("snapshot").name..": The run is initialized by applying a screen snapshot.")
     ctx:win_section("More info", function()
         ctx:win_indent(module.INDENT_SECTION)
-        ctx:win_text("A full start is configured by playing the game (with or without cheating) up to right before the desired starting screen, and then capturing a snapshot of the game state while loading that screen. Runs will then start on a screen with initial conditions that are identical to the game state at the time that the snapshot was captured.")
-        ctx:win_text("Full starts only support levels and the camp. A full start cannot be used for other screens, such as transitions and menus.")
-        ctx:win_text("The TAS Tool does not currently provide an editor for full starts. The only built-in way to configure a full start is via snapshot capture. However, you can still edit a full start by modifying the saved TAS file in a text editor. The full start is stored in \"start_full\". The structure of \"start_full.state_memory\" matches the \"StateMemory\" type in Overlunky's documentation, though it only includes fields that are necessary for a full start. Be very careful when manually editing a TAS file. The TAS Tool has almost no file validation and a corrupted TAS file can cause many problems and errors.")
+        ctx:win_text("A snapshot start is configured by playing the game (with or without cheating) up to right before the desired starting screen, and then capturing a snapshot of the game state while loading that screen. Runs will then start on a screen with initial conditions that are identical to the game state at the time that the snapshot was captured.")
+        ctx:win_text("Snapshot starts only support levels and the camp. A snapshot start cannot be used for other screens, such as transitions and menus.")
+        ctx:win_text("The TAS Tool does not currently provide an editor for snapshot starts. The only built-in way to configure a snapshot start is via snapshot capture. However, you can still edit a snapshot start by modifying the saved TAS file in a text editor. The snapshot is stored in \"start_snapshot\". The structure of \"start_snapshot.state_memory\" matches the \"StateMemory\" type in Overlunky's documentation, though it only includes fields that are necessary for a screen snapshot. Be very careful when manually editing a TAS file. The TAS Tool has almost no file validation and a corrupted TAS file can cause many problems and errors.")
         ctx:win_indent(-module.INDENT_SECTION)
     end)
 
     if is_options_tas then
-        -- Full start snapshots are enormous. Avoid storing them in the options.
-        ctx:win_text("Full starts cannot be captured for the default TAS settings.")
+        -- Snapshot starts are enormous. Avoid storing them in the options.
+        ctx:win_text("Snapshot starts cannot be captured for the default TAS settings.")
     else
         if tas:is_start_configured() then
             local metadata = {
-                screen = tas.start_full.state_memory.screen_next
+                screen = tas.start_snapshot.state_memory.screen_next
             }
             if metadata.screen == SCREEN.LEVEL or metadata.screen == SCREEN.TRANSITION then
-                metadata.world = tas.start_full.state_memory.world_next
-                metadata.level = tas.start_full.state_memory.level_next
-                metadata.theme = tas.start_full.state_memory.theme_next
+                metadata.world = tas.start_snapshot.state_memory.world_next
+                metadata.level = tas.start_snapshot.state_memory.level_next
+                metadata.theme = tas.start_snapshot.state_memory.theme_next
             end
             local start_area_name = common.screen_metadata_to_string(metadata)
             ctx:win_text("Current screen snapshot: "..start_area_name)
@@ -399,7 +399,7 @@ local function draw_tas_start_settings_full(ctx, tas, is_options_tas)
             if ctx:win_button("Request capture") then
                 tas.screen_snapshot_request_id = game_controller.register_screen_snapshot_request(function(screen_snapshot)
                     tas.screen_snapshot_request_id = nil
-                    tas.start_full = screen_snapshot
+                    tas.start_snapshot = screen_snapshot
                 end)
             end
             ctx:win_text("Request a new screen snapshot capture.")
@@ -418,16 +418,16 @@ function module.draw_tas_start_settings(ctx, tas, is_options_tas)
                 game_controller.clear_screen_snapshot_request(tas.screen_snapshot_request_id)
                 tas.screen_snapshot_request_id = nil
             end
-        elseif new_choice_id == "full" then
-            if not tas.start_full then
-                tas.start_full = common.deep_copy(options.new_tas.start_full)
+        elseif new_choice_id == "snapshot" then
+            if not tas.start_snapshot then
+                tas.start_snapshot = common.deep_copy(options.new_tas.start_snapshot)
             end
         end
     end)
     if tas.start_type == "simple" then
         draw_tas_start_settings_simple(ctx, tas)
-    elseif tas.start_type == "full" then
-        draw_tas_start_settings_full(ctx, tas, is_options_tas)
+    elseif tas.start_type == "snapshot" then
+        draw_tas_start_settings_snapshot(ctx, tas, is_options_tas)
     end
 end
 

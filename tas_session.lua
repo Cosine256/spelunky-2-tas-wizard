@@ -367,8 +367,8 @@ function TasSession:trigger_warp(screen_index)
         if self.tas:is_start_configured() then
             if self.tas.start_type == "simple" then
                 warp_triggered = game_controller.trigger_start_simple_warp(self.tas)
-            elseif self.tas.start_type == "full" then
-                warp_triggered = game_controller.trigger_screen_snapshot_warp(self.tas.start_full)
+            elseif self.tas.start_type == "snapshot" then
+                warp_triggered = game_controller.trigger_screen_snapshot_warp(self.tas.start_snapshot)
             end
         end
     else

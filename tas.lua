@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 22
+local CURRENT_FORMAT = 23
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -420,7 +420,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [21] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 22,
         update = function(o)
             if o.start_simple then
                 o.is_custom_preset = o.is_custom_area_choice
@@ -433,6 +433,16 @@ local FORMAT_UPDATERS = {
                 end
             end
         end
+    },
+    [22] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            if o.start_type == "full" then
+                o.start_type = "snapshot"
+            end
+            o.start_snapshot = o.start_full
+            o.start_full = nil
+        end
     }
 }
 
@@ -444,7 +454,7 @@ function Tas:to_raw(serial_mod)
         description = self.description,
         start_type = self.start_type,
         start_simple = common.deep_copy(self.start_simple),
-        start_full = common.deep_copy(self.start_full),
+        start_snapshot = common.deep_copy(self.start_snapshot),
         screens = {},
         frame_tags = common.deep_copy(self.frame_tags),
         save_player_positions = self.save_player_positions,
@@ -470,16 +480,16 @@ function Tas:to_raw(serial_mod)
             else
                 copy.start_simple = nil
             end
-            if copy.start_type ~= "full" then
-                copy.start_full = nil
+            if copy.start_type ~= "snapshot" then
+                copy.start_snapshot = nil
             end
         end
         -- The JSON serializer doesn't handle the 64-bit integer pairs correctly and converts them into lossy floats. Save them as 128-bit hex strings instead.
         if copy.start_simple and copy.start_simple.adventure_seed then
             copy.start_simple.adventure_seed = common.adventure_seed_to_string(copy.start_simple.adventure_seed)
         end
-        if copy.start_full and copy.start_full.adventure_seed then
-            copy.start_full.adventure_seed = common.adventure_seed_to_string(copy.start_full.adventure_seed)
+        if copy.start_snapshot and copy.start_snapshot.adventure_seed then
+            copy.start_snapshot.adventure_seed = common.adventure_seed_to_string(copy.start_snapshot.adventure_seed)
         end
     end
     for screen_index, self_screen in ipairs(self.screens) do
@@ -535,8 +545,8 @@ function Tas:from_raw(raw, serial_mod)
         if raw.start_simple and raw.start_simple.adventure_seed then
             raw.start_simple.adventure_seed = common.string_to_adventure_seed(raw.start_simple.adventure_seed)
         end
-        if raw.start_full and raw.start_full.adventure_seed then
-            raw.start_full.adventure_seed = common.string_to_adventure_seed(raw.start_full.adventure_seed)
+        if raw.start_snapshot and raw.start_snapshot.adventure_seed then
+            raw.start_snapshot.adventure_seed = common.string_to_adventure_seed(raw.start_snapshot.adventure_seed)
         end
         if raw.screens then
             for _, screen in ipairs(raw.screens) do
@@ -657,8 +667,8 @@ end
 function Tas:is_start_configured()
     if self.start_type == "simple" then
         return true
-    elseif self.start_type == "full" then
-        return self.start_full.state_memory ~= nil
+    elseif self.start_type == "snapshot" then
+        return self.start_snapshot.state_memory ~= nil
     end
     return false
 end
@@ -667,8 +677,8 @@ end
 function Tas:get_player_count()
     if self.start_type == "simple" then
         return self.start_simple.player_count
-    elseif self.start_type == "full" and self.start_full.state_memory then
-        return self.start_full.state_memory.items.player_count
+    elseif self.start_type == "snapshot" and self.start_snapshot.state_memory then
+        return self.start_snapshot.state_memory.items.player_count
     end
 end
 
@@ -676,11 +686,11 @@ end
 function Tas:get_player_chars()
     if self.start_type == "simple" then
         return self.start_simple.players
-    elseif self.start_type == "full" and self.start_full.state_memory then
+    elseif self.start_type == "snapshot" and self.start_snapshot.state_memory then
         local player_chars = {}
         for player_index = 1, CONST.MAX_PLAYERS do
             player_chars[player_index] = common_enums.PLAYER_CHAR_BY_ENT_TYPE[
-                self.start_full.state_memory.items.player_select[player_index].character].id
+                self.start_snapshot.state_memory.items.player_select[player_index].character].id
         end
         return player_chars
     end
