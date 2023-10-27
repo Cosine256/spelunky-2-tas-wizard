@@ -5,31 +5,61 @@ local module = {}
 local POINT_SCR_W_HALF = 0.005
 local POINT_SCR_H_HALF
 
-local PATH_SAME_LAYER_ALPHA = 0.9
-local PATH_OTHER_LAYER_ALPHA = 0.4
-local PATH_NORMAL_COLORS = {
-    same_layer = {
-        primary = Color:new(0.7, 0.0, 0.0, PATH_SAME_LAYER_ALPHA):get_ucolor(),
-        secondary = Color:new(0.7, 0.3, 0.0, PATH_SAME_LAYER_ALPHA):get_ucolor(),
-        mark = Color:new(1.0, 0.5, 0.2, PATH_SAME_LAYER_ALPHA):get_ucolor()
-    },
-    other_layer = {
-        primary = Color:new(0.7, 0.0, 0.0, PATH_OTHER_LAYER_ALPHA):get_ucolor(),
-        secondary = Color:new(0.7, 0.3, 0.0, PATH_OTHER_LAYER_ALPHA):get_ucolor(),
-        mark = Color:new(1.0, 0.5, 0.2, PATH_OTHER_LAYER_ALPHA):get_ucolor()
+local PATH_SAME_LAYER_ALPHA = 0.85
+local PATH_OTHER_LAYER_ALPHA = 0.3
+
+local function to_ghost_ucolor(color)
+    return Color:new((0.3 * color.r) + 0.6, (0.3 * color.g) + 0.6, (0.3 * color.b) + 0.6, color.a):get_ucolor()
+end
+
+local function generate_path_colors(primary, secondary)
+    local colors = {
+        same_layer = {
+            Color:new(primary.r, primary.g, primary.b, PATH_SAME_LAYER_ALPHA),
+            Color:new(secondary.r, secondary.g, secondary.b, PATH_SAME_LAYER_ALPHA)
+        },
+        other_layer = {
+            Color:new(primary.r, primary.g, primary.b, PATH_OTHER_LAYER_ALPHA),
+            Color:new(secondary.r, secondary.g, secondary.b, PATH_OTHER_LAYER_ALPHA)
+        }
     }
-}
-local PATH_GHOST_COLORS = {
-    same_layer = {
-        primary = Color:new(0.8, 0.8, 0.8, PATH_SAME_LAYER_ALPHA):get_ucolor(),
-        secondary = Color:new(0.6, 0.6, 0.6, PATH_SAME_LAYER_ALPHA):get_ucolor(),
-        mark = Color:new(0.9, 0.9, 0.9, PATH_SAME_LAYER_ALPHA):get_ucolor()
-    },
-    other_layer = {
-        primary = Color:new(0.8, 0.8, 0.8, PATH_OTHER_LAYER_ALPHA):get_ucolor(),
-        secondary = Color:new(0.6, 0.6, 0.6, PATH_OTHER_LAYER_ALPHA):get_ucolor(),
-        mark = Color:new(0.9, 0.9, 0.9, PATH_OTHER_LAYER_ALPHA):get_ucolor()
+    return {
+        normal = {
+            same_layer = {
+                colors.same_layer[1]:get_ucolor(),
+                colors.same_layer[2]:get_ucolor()
+            },
+            other_layer = {
+                colors.other_layer[1]:get_ucolor(),
+                colors.other_layer[2]:get_ucolor()
+            }
+        },
+        ghost = {
+            same_layer = {
+                to_ghost_ucolor(colors.same_layer[1]),
+                to_ghost_ucolor(colors.same_layer[2])
+            },
+            other_layer = {
+                to_ghost_ucolor(colors.other_layer[1]),
+                to_ghost_ucolor(colors.other_layer[2])
+            }
+        }
     }
+end
+
+local PATH_COLORS = {
+    generate_path_colors( -- Player 1: red
+        Color:new(0.8, 0.2, 0.2, 1.0),
+        Color:new(0.7, 0.0, 0.0, 1.0)),
+    generate_path_colors( -- Player 2: blue
+        Color:new(0.3, 0.3, 1.0, 1.0),
+        Color:new(0.1, 0.1, 1.0, 1.0)),
+    generate_path_colors( -- Player 3: green
+        Color:new(0.2, 0.7, 0.2, 1.0),
+        Color:new(0.0, 0.4, 0.0, 1.0)),
+    generate_path_colors( -- Player 4: yellow
+        Color:new(0.8, 0.8, 0.2, 1.0),
+        Color:new(0.4, 0.4, 0.0, 1.0))
 }
 
 local MODE_WATERMARK_UCOLOR = Color:new(1.0, 1.0, 1.0, 0.25):get_ucolor()
@@ -58,7 +88,7 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
         return
     end
     local screen = tas_session.current_screen_data
-    local path_colors = is_ghost and PATH_GHOST_COLORS or PATH_NORMAL_COLORS
+    local color_type = is_ghost and "ghost" or "normal"
     for i, frame in ipairs(screen.frames) do
         for player_index, player in ipairs(frame.players) do
             local pos1
@@ -71,9 +101,8 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
             if pos1 and pos2 then
                 local x1, y1 = screen_position(pos1.x, pos1.y)
                 local x2, y2 = screen_position(pos2.x, pos2.y)
-                local layer_colors = pos2.l == state.camera_layer and path_colors.same_layer or path_colors.other_layer
-                local ucolor = (i % 2 == 0) and layer_colors.primary or layer_colors.secondary
-                ctx:draw_line(x1, y1, x2, y2, 2, ucolor)
+                ctx:draw_line(x1, y1, x2, y2, 2,
+                    PATH_COLORS[player_index][color_type][pos2.l == state.camera_layer and "same_layer" or "other_layer"][(i % 2) + 1])
             end
         end
     end
@@ -81,11 +110,11 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
         -- Draw path marks in this second iteration so that they always draw on top of the path.
         for i = options.path_mark_increment, #screen.frames, options.path_mark_increment do
             local frame = screen.frames[i]
-            for _, player in ipairs(frame.players) do
+            for player_index, player in ipairs(frame.players) do
                 local pos = player.position
                 if pos then
-                    local layer_colors = pos.l == state.camera_layer and path_colors.same_layer or path_colors.other_layer
-                    draw_tas_path_mark(ctx, pos, tostring(i), layer_colors.mark)
+                    draw_tas_path_mark(ctx, pos, tostring(i),
+                        PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
                 end
             end
         end
