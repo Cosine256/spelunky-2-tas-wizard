@@ -45,9 +45,19 @@ function module:draw_panel(ctx, is_window)
         options.path_mark_increment = 1
     end
 
+    ctx:win_separator_text("Mode watermark")
+    options.mode_watermark_visible = ctx:win_check("Show mode watermark###mode_watermark_visible", options.mode_watermark_visible)
+    ctx:win_text("Show a watermark on the screen indicating that the TAS is in recording or playback mode.")
+    options.mode_watermark_x = common_gui.draw_drag_float_clamped(ctx, "Watermark X", options.mode_watermark_x, -1.0, 1.0)
+    options.mode_watermark_y = common_gui.draw_drag_float_clamped(ctx, "Watermark Y", options.mode_watermark_y, -1.0, 1.0)
+    options.mode_watermark_size = common_gui.draw_drag_float_clamped(ctx, "Watermark size", options.mode_watermark_size, 1.0, 200.0)
+
     ctx:win_separator_text("Presentation mode")
     ctx:win_text("Presentation mode hides the TAS Tool GUI and paths, and disables speed tweaks.")
     options.presentation_enabled = ctx:win_check("Activate during playback", options.presentation_enabled)
+    options.presentation_mode_watermark_visible = ctx:win_check("Show mode watermark###presentation_mode_watermark_visible",
+        options.presentation_mode_watermark_visible)
+    ctx:win_text("Show the mode watermark in presentation mode.")
 
     ctx:win_separator_text("TAS file history")
     local new_tas_file_history_max_size = math.max(ctx:win_input_int("Max size", options.tas_file_history_max_size), 0)

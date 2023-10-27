@@ -102,8 +102,8 @@ local PLAYER_COUNT_COMBO = ComboInput:new(OrderedTable:new({ 1, 2, 3, 4 }))
 
 local PLAYER_CHAR_COMBO = ComboInput:new(common_enums.PLAYER_CHAR)
 
-function module.draw_drag_int_clamped(ctx, label, value, min, max, clamp_min, clamp_max)
-    value = ctx:win_drag_int(label, value, min, max)
+local function draw_drag_input_clamped(ctx, func, label, value, min, max, clamp_min, clamp_max)
+    value = func(ctx, label, value, min, max)
     if (clamp_min or clamp_min == nil) and value < min then
         return min
     elseif (clamp_max or clamp_max == nil) and value > max then
@@ -111,6 +111,14 @@ function module.draw_drag_int_clamped(ctx, label, value, min, max, clamp_min, cl
     else
         return value
     end
+end
+
+function module.draw_drag_int_clamped(ctx, label, value, min, max, clamp_min, clamp_max)
+    return draw_drag_input_clamped(ctx, ctx.win_drag_int, label, value, min, max, clamp_min, clamp_max)
+end
+
+function module.draw_drag_float_clamped(ctx, label, value, min, max, clamp_min, clamp_max)
+    return draw_drag_input_clamped(ctx, ctx.win_drag_float, label, value, min, max, clamp_min, clamp_max)
 end
 
 function module.draw_player_combo_input(ctx, tas, label, selected_player_index)

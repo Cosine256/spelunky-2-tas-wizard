@@ -1,3 +1,5 @@
+local common_enums = require("common_enums")
+
 local module = {}
 
 local POINT_SCR_W_HALF = 0.005
@@ -29,6 +31,8 @@ local PATH_GHOST_COLORS = {
         mark = Color:new(0.9, 0.9, 0.9, PATH_OTHER_LAYER_ALPHA):get_ucolor()
     }
 }
+
+local MODE_WATERMARK_UCOLOR = Color:new(1.0, 1.0, 1.0, 0.25):get_ucolor()
 
 function module.update_screen_vars()
     local window_w, window_h = get_window_size()
@@ -86,6 +90,20 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
             end
         end
     end
+end
+
+function module.draw_mode_watermark(ctx)
+    local presentation_mode = options.presentation_enabled and active_tas_session.mode == common_enums.MODE.PLAYBACK
+    if active_tas_session.mode == common_enums.MODE.FREEPLAY or state.screen == SCREEN.OPTIONS
+        or not ((not presentation_mode and options.mode_watermark_visible) or (presentation_mode and options.presentation_mode_watermark_visible))
+    then
+        return
+    end
+    local text = active_tas_session.mode == common_enums.MODE.PLAYBACK and "TAS Playback" or "TAS Recording"
+    local w, h = draw_text_size(options.mode_watermark_size, text)
+    ctx:draw_text(options.mode_watermark_x - (0.5 * w * (1.0 + options.mode_watermark_x)),
+        options.mode_watermark_y - (0.5 * h * (1.0 - options.mode_watermark_y)),
+        options.mode_watermark_size, text, MODE_WATERMARK_UCOLOR)
 end
 
 return module
