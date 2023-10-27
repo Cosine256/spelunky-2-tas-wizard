@@ -524,18 +524,16 @@ function TasSession:on_pre_update()
         end
     elseif self.current_screen_data.metadata.screen == SCREEN.TRANSITION then
         -- Exiting is triggered during the first update where the exit input is seen being held down, not when it's released. The earliest update where inputs are processed is the final update of the fade-in. If an exit input is seen during the earliest update, then the fade-out is started in that same update. The update still executes entity state machines, so characters can be seen stepping forward for a single frame. This is the same behavior that occurs in normal gameplay by holding down the exit input while the transition screen fades in. Providing the exit input on later frames has a delay before the fade-out starts because the transition UI panel has to scroll off screen first.
-        if self.current_screen_data.transition_exit_frame_index then
-            local frame_inputs = {}
-            for player_index = 1, self.tas:get_player_count() do
-                -- By default, suppress inputs from every player.
-                frame_inputs[player_index] = INPUTS.NONE
-            end
-            if self.current_frame_index + 1 >= self.current_screen_data.transition_exit_frame_index then
-                -- Have player 1 provide the transition exit input.
-                frame_inputs[1] = INPUTS.JUMP
-            end
-            game_controller.submit_pre_update_inputs(frame_inputs)
+        local frame_inputs = {}
+        for player_index = 1, self.tas:get_player_count() do
+            -- By default, suppress inputs from every player.
+            frame_inputs[player_index] = INPUTS.NONE
         end
+        if self.current_frame_index + 1 >= self.current_screen_data.transition_exit_frame_index then
+            -- Have player 1 provide the transition exit input.
+            frame_inputs[1] = INPUTS.JUMP
+        end
+        game_controller.submit_pre_update_inputs(frame_inputs)
     end
     -- Note: There is nothing to do on the spaceship screen except wait for it to end.
 end

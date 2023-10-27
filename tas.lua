@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 23
+local CURRENT_FORMAT = 24
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -435,13 +435,23 @@ local FORMAT_UPDATERS = {
         end
     },
     [22] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 23,
         update = function(o)
             if o.start_type == "full" then
                 o.start_type = "snapshot"
             end
             o.start_snapshot = o.start_full
             o.start_full = nil
+        end
+    },
+    [23] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, screen in ipairs(o.screens) do
+                if screen.metadata.screen == SCREEN.TRANSITION and not screen.transition_exit_frame_index then
+                    screen.transition_exit_frame_index = 1
+                end
+            end
         end
     }
 }
