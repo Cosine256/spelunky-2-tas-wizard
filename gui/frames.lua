@@ -62,7 +62,7 @@ local function draw_page_controls(ctx, id)
 end
 
 function module:draw_panel(ctx, is_window)
-    ctx:win_section("Options", function()
+    ctx:win_section("More Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         self:draw_window_options(ctx, is_window)
         options.frames_viewer_page_size = common_gui.draw_drag_int_clamped(ctx, "Frame viewer page size", options.frames_viewer_page_size, 1, 3600)

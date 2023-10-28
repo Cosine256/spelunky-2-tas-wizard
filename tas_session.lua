@@ -485,7 +485,7 @@ function TasSession:on_post_update_load_screen()
                 end
                 if self.mode == common_enums.MODE.RECORD or not player.start_position then
                     player.start_position = actual_pos
-                elseif self:_check_position_desync(player_index, player.start_position, actual_pos) and options.pause_desync then
+                elseif self:_check_position_desync(player_index, player.start_position, actual_pos) and options.desync_pause then
                     game_controller.request_pause("Detected start position desync.")
                 end
             end
@@ -496,8 +496,8 @@ function TasSession:on_post_update_load_screen()
                 print("on_post_update_load_screen: Transferred stored screen snapshot into TAS screen "..self.current_screen_index..".")
             end
         end
-        if (self.mode == common_enums.MODE.PLAYBACK and options.pause_playback_on_screen_load)
-            or (self.mode == common_enums.MODE.RECORD and options.pause_recording_on_screen_load)
+        if (self.mode == common_enums.MODE.PLAYBACK and options.playback_screen_load_pause)
+            or (self.mode == common_enums.MODE.RECORD and options.record_screen_load_pause)
         then
             game_controller.request_pause("New screen loaded.")
         end
@@ -580,7 +580,7 @@ function TasSession:on_post_update()
             -- A TASable frame just executed during playback without frame data. This is normal on the last screen of the TAS since it means the user played back past the end of the TAS. Otherwise, it's a desync scenario because the game should be switching to the next screen instead of executing more TASable frames on the current screen.
             if not self.desync and self.current_screen_index < self.tas:get_end_screen_index() then
                 self:_set_screen_end_desync()
-                if options.pause_desync then
+                if options.desync_pause then
                     game_controller.request_pause("Detected screen end desync.")
                 end
             end
@@ -610,7 +610,7 @@ function TasSession:on_post_update()
             elseif self.mode == common_enums.MODE.PLAYBACK then
                 local expected_pos = player.position
                 if expected_pos then
-                    if self:_check_position_desync(player_index, expected_pos, actual_pos) and options.pause_desync then
+                    if self:_check_position_desync(player_index, expected_pos, actual_pos) and options.desync_pause then
                         game_controller.request_pause("Detected position desync.")
                     end
                 else

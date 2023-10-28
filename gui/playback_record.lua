@@ -1,11 +1,12 @@
 local ComboInput = require("gui/combo_input")
 local common = require("common")
 local common_enums = require("common_enums")
+local game_controller = require("game_controller")
 local common_gui = require("gui/common_gui")
 local OrderedTable = require("ordered_table")
 local Tool_GUI = require("gui/tool_gui")
 
-local module = Tool_GUI:new("playback_recording", "Playback & Recording")
+local module = Tool_GUI:new("playback_record", "Playback & Recording")
 
 local PLAYBACK_TARGET_MODE_COMBO = ComboInput:new(common_enums.PLAYBACK_TARGET_MODE)
 
@@ -130,18 +131,41 @@ local function draw_frame_tag(ctx, frame_tag_index, screen_choices, screen_combo
     ctx:win_popid()
 end
 
-function module:draw_fast_update_playback_option(ctx, include_desc)
-    options.fast_update_playback = ctx:win_check("Fast playback", options.fast_update_playback)
+function module:draw_unpause_button(ctx)
+    if state.loading == 0 and state.pause == PAUSE.FADE then
+        if ctx:win_button("Unpause game engine") then
+            game_controller.try_unpause()
+        end
+        ctx:win_text("Clear the current game engine pause. Use this if you've accidentally triggered an engine pause and don't have a hotkey to clear it.")
+    end
+end
+
+function module:draw_playback_screen_load_pause_option(ctx)
+    options.playback_screen_load_pause = ctx:win_check("Pause after screen load during playback", options.playback_screen_load_pause)
+end
+
+function module:draw_record_screen_load_pause_option(ctx)
+    options.record_screen_load_pause = ctx:win_check("Pause after screen load during recording", options.record_screen_load_pause)
+end
+
+function module:draw_playback_target_pause_option(ctx)
+    options.playback_target_pause = ctx:win_check("Pause at playback target", options.playback_target_pause)
+end
+
+function module:draw_playback_fast_update_option(ctx, include_desc)
+    options.playback_fast_update = ctx:win_check("Fast playback", options.playback_fast_update)
     if include_desc then
         ctx:win_text("During playback, execute game updates as fast as possible and skip rendering on most frames. The game will be very laggy during fast updates.")
     end
 end
 
 function module:draw_panel(ctx, is_window)
-    -- TODO: This panel feels messy. How could I reorganize it to be easier to use?
-    ctx:win_section("Options", function()
+    ctx:win_section("More Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         self:draw_window_options(ctx, is_window)
+        self:draw_unpause_button(ctx)
+        self:draw_playback_screen_load_pause_option(ctx)
+        self:draw_record_screen_load_pause_option(ctx)
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
 
@@ -248,8 +272,8 @@ function module:draw_panel(ctx, is_window)
         local playback_from_combo = ComboInput:new(OrderedTable:new(playback_from_choices))
         options.playback_from = playback_from_combo:draw(ctx, "Playback from", options.playback_from)
         options.playback_target_mode = PLAYBACK_TARGET_MODE_COMBO:draw(ctx, "Playback target action", options.playback_target_mode)
-        options.playback_target_pause = ctx:win_check("Pause at playback target", options.playback_target_pause)
-        self:draw_fast_update_playback_option(ctx, false)
+        self:draw_playback_target_pause_option(ctx)
+        self:draw_playback_fast_update_option(ctx, false)
 
         ctx:win_separator_text("Recording")
 

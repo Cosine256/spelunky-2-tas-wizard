@@ -13,7 +13,7 @@ function module:initialize()
     ordered_tool_guis = {
         tool_guis.tas_settings,
         tool_guis.tas_data,
-        tool_guis.playback_recording,
+        tool_guis.playback_record,
         tool_guis.warp,
         tool_guis.status
     }

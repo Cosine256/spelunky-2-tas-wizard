@@ -116,7 +116,7 @@ function module.cancel_requested_pause()
     need_pause = false
 end
 
--- Apply a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called after the next game update to try again.
+-- Applies a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called after the next game update to try again.
 local function try_pause()
     if not need_pause then
         return
@@ -150,6 +150,13 @@ local function try_pause()
         if options.debug_print_pause then
             print("try_pause: Paused")
         end
+    end
+end
+
+-- Immediately clears a game engine pause if one is active and it's safe to do so.
+function module.try_unpause()
+    if state.loading == 0 and state.pause == PAUSE.FADE then
+        state.pause = 0
     end
 end
 
@@ -388,7 +395,7 @@ function module.submit_pre_update_inputs(frame_inputs)
 end
 
 local function can_fast_update()
-    return options.fast_update_playback and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
+    return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
         and not active_tas_session.suppress_screen_tas_inputs
 end
