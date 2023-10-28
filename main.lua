@@ -37,7 +37,8 @@ default_options = {
     playback_target_pause = true,
     record_frame_clear_action = "remaining_tas",
     record_frame_write_type = "overwrite",
-    presentation_enabled = false,
+    presentation_start_on_playback = false,
+    presentation_stop_after_playback = false,
     presentation_mode_watermark_visible = false,
     frames_viewer_follow_current = true,
     frames_viewer_page_size = 10,
@@ -158,6 +159,7 @@ default_options = {
 active_tas_session = nil
 ---@type TasSession?
 ghost_tas_session = nil
+presentation_active = false
 
 local function save_script_data(save_ctx)
     local save_data = {
@@ -201,6 +203,18 @@ local function load_script_data(load_ctx)
     end
 end
 
+local function on_active_tas_mode_set(old_mode, new_mode)
+    if presentation_active then
+        if options.presentation_stop_after_playback and old_mode == common_enums.MODE.PLAYBACK and new_mode ~= common_enums.MODE.PLAYBACK then
+            presentation_active = false
+        end
+    else
+        if options.presentation_start_on_playback and new_mode == common_enums.MODE.PLAYBACK then
+            presentation_active = true
+        end
+    end
+end
+
 -- Set the TAS for a new active TAS session.
 function set_active_tas(tas)
     game_controller.cancel_requested_pause()
@@ -209,10 +223,13 @@ function set_active_tas(tas)
             game_controller.clear_screen_snapshot_request(active_tas_session.tas.screen_snapshot_request_id)
             active_tas_session.tas.screen_snapshot_request_id = nil
         end
+        on_active_tas_mode_set(active_tas_session.mode, nil)
     end
     if tas then
         active_tas_session = TasSession:new(tas)
+        active_tas_session.set_mode_callback = on_active_tas_mode_set
         active_tas_session:find_current_screen()
+        on_active_tas_mode_set(nil, active_tas_session.mode)
     else
         active_tas_session = nil
     end
@@ -232,11 +249,9 @@ function set_ghost_tas(tas)
 end
 
 local function on_gui_frame(ctx)
-    local presentation_mode = options.presentation_enabled and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
-
     ctx:draw_layer(DRAW_LAYER.BACKGROUND)
     drawing.update_screen_vars()
-    if not presentation_mode then
+    if not presentation_active then
         if ghost_tas_session and options.ghost_path_visible then
             drawing.draw_tas_path(ctx, ghost_tas_session, true)
         end
@@ -248,7 +263,7 @@ local function on_gui_frame(ctx)
         drawing.draw_mode_watermark(ctx)
     end
 
-    if not presentation_mode then
+    if not presentation_active then
         ctx:draw_layer(DRAW_LAYER.WINDOW)
         for _, tool_gui in pairs(tool_guis) do
             tool_gui:draw_window(ctx)

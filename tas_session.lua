@@ -16,6 +16,7 @@ local game_controller = require("game_controller")
     ---@field warp_screen_index integer? The screen index being warped to when this session triggers a warp.
     ---@field stored_screen_snapshot table? Temporarily stores a screen snapshot during a screen change update until a TAS screen is ready to receive it.
     ---@field suppress_screen_tas_inputs boolean If true, then do not submit TAS inputs for the current screen. This is cleared when the current screen unloads.
+    ---@field set_mode_callback function? Called when a mode setter is executed, right before the new mode is set. This is called even if the old mode is the same as the new one.
 local TasSession = {}
 TasSession.__index = TasSession
 
@@ -37,6 +38,9 @@ end
 function TasSession:set_mode_freeplay()
     self:_reset_playback_vars()
     self.current_frame_index = nil
+    if self.set_mode_callback then
+        self.set_mode_callback(self.mode, common_enums.MODE.FREEPLAY)
+    end
     self.mode = common_enums.MODE.FREEPLAY
 end
 
@@ -51,6 +55,9 @@ function TasSession:set_mode_record()
                 self.tas:remove_screens_after(self.current_screen_index)
             end
         end
+    end
+    if self.set_mode_callback then
+        self.set_mode_callback(self.mode, common_enums.MODE.RECORD)
     end
     self.mode = common_enums.MODE.RECORD
 end
@@ -116,6 +123,9 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
         end
     end
 
+    if self.set_mode_callback then
+        self.set_mode_callback(self.mode, common_enums.MODE.PLAYBACK)
+    end
     self.mode = common_enums.MODE.PLAYBACK
     self.playback_target_screen = target_screen_index
     self.playback_target_frame = target_frame_index

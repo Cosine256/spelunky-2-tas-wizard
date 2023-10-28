@@ -1,5 +1,4 @@
 local common = require("common")
-local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
 local tas_persistence = require("tas_persistence")
 local Tool_GUI = require("gui/tool_gui")
@@ -10,13 +9,18 @@ function module:draw_panel(ctx, is_window)
     if not is_window then
         -- TODO: Can't distinguish between whether this is embedded in the options dropdown or the TAS Tool window.
         if ctx:win_button("Show TAS Tool window") then
-            if tool_guis.root:is_window_open() then
-                if active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled then
-                    -- This is a shortcut for the user to disable the presentation mode setting during playback.
-                    options.presentation_enabled = false
-                end
-            else
-                tool_guis.root:set_window_open(true)
+            if presentation_active then
+                presentation_active = false
+            end
+            tool_guis.root:set_window_open(true)
+        end
+        if presentation_active then
+            if ctx:win_button("Deactivate presentation mode") then
+                presentation_active = false
+            end
+        else
+            if ctx:win_button("Activate presentation mode") then
+                presentation_active = true
             end
         end
         ctx:win_separator()
@@ -54,7 +58,8 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Presentation mode")
     ctx:win_text("Presentation mode hides the TAS Tool GUI and paths, and disables speed tweaks.")
-    options.presentation_enabled = ctx:win_check("Activate during playback", options.presentation_enabled)
+    options.presentation_start_on_playback = ctx:win_check("Activate on playback", options.presentation_start_on_playback)
+    options.presentation_stop_after_playback = ctx:win_check("Deactivate after playback", options.presentation_stop_after_playback)
     options.presentation_mode_watermark_visible = ctx:win_check("Show mode watermark###presentation_mode_watermark_visible",
         options.presentation_mode_watermark_visible)
     ctx:win_text("Show the mode watermark in presentation mode.")

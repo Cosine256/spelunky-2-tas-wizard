@@ -159,7 +159,7 @@ function module:draw_panel(ctx, is_window)
         if #tas.screens == 0 then
             ctx:win_text("No data to playback.")
         else
-            if ctx:win_button("Playback entire run") then
+            if ctx:win_button("Playback entire TAS") then
                 active_tas_session:set_mode_playback(tas:get_end_screen_index(), tas:get_end_frame_index(), true, false)
             end
 

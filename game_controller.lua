@@ -388,7 +388,7 @@ function module.submit_pre_update_inputs(frame_inputs)
 end
 
 local function can_fast_update()
-    return options.fast_update_playback and not options.presentation_enabled and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
+    return options.fast_update_playback and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
         and not active_tas_session.suppress_screen_tas_inputs
 end
@@ -451,9 +451,7 @@ local function on_post_update_load_screen()
 
     is_warping = false
 
-    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not need_pause and options.transition_skip
-        and not (active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK and options.presentation_enabled)
-    then
+    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not need_pause and options.transition_skip and not presentation_active then
         -- The screen couldn't be skipped entirely. The transition screen needed to be loaded in order for pet health to be applied to players. The spaceship screen is also handled in this way for simplicity, even though it doesn't affect pet health. Now the screen can be immediately unloaded.
         if options.debug_print_load then
             print("on_post_update_load_screen: Skipping transition/spaceship screen.")

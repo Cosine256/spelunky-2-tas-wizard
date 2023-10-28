@@ -122,9 +122,8 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
 end
 
 function module.draw_mode_watermark(ctx)
-    local presentation_mode = options.presentation_enabled and active_tas_session.mode == common_enums.MODE.PLAYBACK
     if active_tas_session.mode == common_enums.MODE.FREEPLAY or state.screen == SCREEN.OPTIONS
-        or not ((not presentation_mode and options.mode_watermark_visible) or (presentation_mode and options.presentation_mode_watermark_visible))
+        or not ((not presentation_active and options.mode_watermark_visible) or (presentation_active and options.presentation_mode_watermark_visible))
     then
         return
     end
