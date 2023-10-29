@@ -77,7 +77,7 @@ end
 
 local function draw_tas_path_mark(ctx, pos, label, ucolor)
     draw_point_mark(ctx, pos.x, pos.y, ucolor)
-    if options.path_mark_labels_visible then
+    if options.path_mark_label_visible then
         local x, y = screen_position(pos.x, pos.y)
         ctx:draw_text(x, y, 0, label, ucolor)
     end
@@ -106,7 +106,7 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
             end
         end
     end
-    if options.path_marks_visible then
+    if options.path_mark_visible then
         -- Draw path marks in this second iteration so that they always draw on top of the path.
         for i = options.path_mark_increment, #screen.frames, options.path_mark_increment do
             local frame = screen.frames[i]

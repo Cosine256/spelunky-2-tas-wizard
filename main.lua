@@ -49,11 +49,11 @@ default_options = {
     frames_viewer_follow_current = true,
     frames_viewer_page_size = 10,
     frames_viewer_step_size = 10,
-    paths_visible = true,
-    path_marks_visible = true,
-    path_mark_labels_visible = true,
-    path_mark_increment = 30,
+    active_path_visible = true,
     ghost_path_visible = true,
+    path_mark_visible = true,
+    path_mark_label_visible = true,
+    path_mark_increment = 30,
     mode_watermark_visible = true,
     mode_watermark_x = 0.0,
     mode_watermark_y = -0.95,
@@ -255,7 +255,7 @@ local function on_gui_frame(ctx)
         if ghost_tas_session and options.ghost_path_visible then
             drawing.draw_tas_path(ctx, ghost_tas_session, true)
         end
-        if active_tas_session and options.paths_visible then
+        if active_tas_session and options.active_path_visible then
             drawing.draw_tas_path(ctx, active_tas_session, false)
         end
     end

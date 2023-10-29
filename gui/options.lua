@@ -42,18 +42,19 @@ function module:draw_panel(ctx, is_window)
     ctx:win_text("Instead of engine pausing in a transition screen, temporarily suppress TAS inputs and wait for the user to exit the transition manually.")
 
     ctx:win_separator_text("Player paths")
-    -- TODO: This only controls visibility of the active TAS path, not the ghost TAS path. Maybe have this setting apply globally to all paths, and then add a new TAS setting for showing its own path.
-    options.paths_visible = ctx:win_check("Draw paths", options.paths_visible)
-    options.path_marks_visible = ctx:win_check("Draw path marks", options.path_marks_visible)
-    options.path_mark_labels_visible = ctx:win_check("Draw path mark labels", options.path_mark_labels_visible)
+    ctx:win_text("Player paths show the recorded positions of each player.")
+    options.active_path_visible = ctx:win_check("Show active TAS paths", options.active_path_visible)
+    tool_guis.ghost:draw_ghost_path_visible_option(ctx)
+    options.path_mark_visible = ctx:win_check("Draw path marks", options.path_mark_visible)
+    options.path_mark_label_visible = ctx:win_check("Draw path mark labels", options.path_mark_label_visible)
     options.path_mark_increment = ctx:win_input_int("Frames between path marks", options.path_mark_increment)
     if options.path_mark_increment < 1 then
         options.path_mark_increment = 1
     end
 
     ctx:win_separator_text("Mode watermark")
+    ctx:win_text("A mode watermark can be shown on the screen to indicate that the TAS is in recording or playback mode.")
     options.mode_watermark_visible = ctx:win_check("Show mode watermark###mode_watermark_visible", options.mode_watermark_visible)
-    ctx:win_text("Show a watermark on the screen indicating that the TAS is in recording or playback mode.")
     options.mode_watermark_x = common_gui.draw_drag_float_clamped(ctx, "Watermark X", options.mode_watermark_x, -1.0, 1.0)
     options.mode_watermark_y = common_gui.draw_drag_float_clamped(ctx, "Watermark Y", options.mode_watermark_y, -1.0, 1.0)
     options.mode_watermark_size = common_gui.draw_drag_float_clamped(ctx, "Watermark size", options.mode_watermark_size, 1.0, 200.0)
