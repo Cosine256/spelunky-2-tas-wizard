@@ -96,22 +96,21 @@ default_options = {
         save_screen_snapshots = true
     },
     tool_guis = {
-        -- TODO: Choose better default positions and sizes.
         file = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.35, w = 0.4, h = 0.6 }
+            window_settings = { x = -0.3, y = 0.5, w = 0.4, h = 0.6 }
         },
         frames = {
             windowed = false,
-            window_settings = { x = -1.0, y = 0.8, w = 0.4, h = 1.15 }
+            window_settings = { x = -0.59, y = 0.8, w = 0.4, h = 1.2 }
         },
         ghost = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.55, w = 0.4, h = 0.4 }
+            window_settings = { x = -0.25, y = 0.45, w = 0.4, h = 0.3 }
         },
         options = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.15, w = 0.4, h = 0.8 }
+            window_settings = { x = -0.2, y = 0.4, w = 0.4, h = 1.0 }
         },
         playback_record = {
             windowed = false,
@@ -119,30 +118,30 @@ default_options = {
         },
         root = {
             windowed = true,
-            window_settings = { x = 0.6, y = -0.2, w = 0.4, h = 0.75 }
+            window_settings = { x = 0.6, y = -0.21, w = 0.4, h = 0.74 }
         },
         single_frame_editor = {
             window_settings = { x = -0.2, y = 0.25, w = 0.4, h = 0.5 }
         },
         status = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.55, w = 0.4, h = 0.4 }
+            window_settings = { x = -0.15, y = 0.35, w = 0.4, h = 0.6 }
         },
         tas_data = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.15, w = 0.4, h = 0.8 }
+            window_settings = { x = -0.1, y = 0.3, w = 0.4, h = 1.2 }
         },
         tas_root = {
             windowed = true,
-            window_settings = { x = -1.0, y = 0.8, w = 0.4, h = 1.15 }
+            window_settings = { x = -1.0, y = 0.8, w = 0.4, h = 1.2 }
         },
         tas_settings = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.15, w = 0.4, h = 0.8 }
+            window_settings = { x = -0.05, y = 0.25, w = 0.4, h = 0.8 }
         },
         warp = {
             windowed = false,
-            window_settings = { x = -1.0, y = -0.55, w = 0.4, h = 0.4 }
+            window_settings = { x = 0.0, y = 0.2, w = 0.4, h = 0.4 }
         }
     },
     debug_print_load = false,
