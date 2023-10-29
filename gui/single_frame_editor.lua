@@ -30,13 +30,11 @@ function module:draw_panel(ctx, is_window)
     self.new_inputs = common.string_to_inputs(ctx:win_input_text("New inputs", common.inputs_to_string(self.new_inputs)))
     if ctx:win_button("OK") then
         -- TODO: This popup doesn't elegantly handle situations where the underlying TAS data changes after the popup is spawned. The popup should be closed automatically when this happens.
-        if tas.screens[self.screen_index] and tas.screens[self.screen_index].frames[self.frame_index]
-            and tas.screens[self.screen_index].frames[self.frame_index].players[self.player_index]
-        then
-            tas.screens[self.screen_index].frames[self.frame_index].players[self.player_index].inputs = self.new_inputs
+        if tas.screens[self.screen_index] and tas.screens[self.screen_index].frames[self.frame_index] and self.player_index <= tas:get_player_count() then
+            tas.screens[self.screen_index].frames[self.frame_index].inputs[self.player_index] = self.new_inputs
             self:close()
         else
-            print("Warning: Failed to edit frame "..self.screen_index.."-"..self.frame_index.." for player "..self.player_index..": Frame or player does not exist.")
+            print("Warning: Failed to edit frame "..self.screen_index.."-"..self.frame_index.." for player "..self.player_index..": Screen, frame, or player does not exist.")
         end
     end
     ctx:win_inline()

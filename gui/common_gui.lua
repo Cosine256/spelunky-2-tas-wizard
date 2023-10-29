@@ -329,7 +329,6 @@ local function draw_tas_start_settings_simple(ctx, tas)
     end
     if start.player_count ~= new_player_count then
         print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating screen and frame data.")
-        start.player_count = new_player_count
         -- Populate unassigned player characters.
         for player_index = 1, new_player_count do
             if not start.players[player_index] then
@@ -339,26 +338,36 @@ local function draw_tas_start_settings_simple(ctx, tas)
         -- Update all screen and frame data to match the new player count.
         for _, screen in ipairs(tas.screens) do
             if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
-                for player_index = 1, CONST.MAX_PLAYERS do
-                    if player_index > new_player_count then
-                        screen.players[player_index] = nil
-                    elseif not screen.players[player_index] then
-                        screen.players[player_index] = {}
+                if start.player_count < new_player_count then
+                    -- Create data for the added players.
+                    for player_index = start.player_count + 1, new_player_count do
+                        if screen.start_positions then
+                            screen.start_positions[player_index] = {}
+                        end
+                        for _, frame in ipairs(screen.frames) do
+                            frame.inputs[player_index] = INPUTS.NONE
+                            if frame.positions then
+                                frame.positions[player_index] = {}
+                            end
+                        end
                     end
-                end
-                for _, frame in ipairs(screen.frames) do
-                    for player_index = 1, CONST.MAX_PLAYERS do
-                        if player_index > new_player_count then
-                            frame.players[player_index] = nil
-                        elseif not frame.players[player_index] then
-                            frame.players[player_index] = {
-                                inputs = INPUTS.NONE
-                            }
+                else
+                    -- Delete data for the removed players.
+                    for player_index = new_player_count + 1, start.player_count do
+                        if screen.start_positions then
+                            screen.start_positions[player_index] = nil
+                        end
+                        for _, frame in ipairs(screen.frames) do
+                            frame.inputs[player_index] = nil
+                            if frame.positions then
+                                frame.positions[player_index] = nil
+                            end
                         end
                     end
                 end
             end
         end
+        start.player_count = new_player_count
     end
     for player_index = 1, start.player_count do
         start.players[player_index] = PLAYER_CHAR_COMBO:draw(ctx, "Player "..player_index, start.players[player_index])

@@ -126,10 +126,10 @@ function module:draw_panel(ctx, is_window)
                         if #frames == 0 then
                             bulk_inputs[player_index] = INPUTS.NONE
                         else
-                            bulk_inputs[player_index] = frames[1].players[player_index].inputs
+                            bulk_inputs[player_index] = frames[1].inputs[player_index]
                         end
                     else
-                        bulk_inputs[player_index] = frames[bulk_start_index].players[player_index].inputs
+                        bulk_inputs[player_index] = frames[bulk_start_index].inputs[player_index]
                     end
                 elseif not bulk_inputs[player_index] then
                     bulk_inputs[player_index] = INPUTS.NONE
@@ -221,7 +221,7 @@ function module:draw_panel(ctx, is_window)
         ctx:win_pushid(frame_index)
         local draw_separator = false
         if frames[frame_index] then
-            local inputs = frames[frame_index].players[viewer_player_index].inputs
+            local inputs = frames[frame_index].inputs[viewer_player_index]
             local label = tostring(frame_index)
             if edit_mode then
                 if bulk_operation == "insert" then
@@ -249,7 +249,7 @@ function module:draw_panel(ctx, is_window)
                 local new_inputs_string = ctx:win_input_text(label.."###inputs", inputs_string)
                 if inputs_string ~= new_inputs_string then
                     inputs = common.string_to_inputs(new_inputs_string)
-                    frames[frame_index].players[viewer_player_index].inputs = inputs
+                    frames[frame_index].inputs[viewer_player_index] = inputs
                 end
                 ctx:win_inline()
                 if ctx:win_button("Edit") then

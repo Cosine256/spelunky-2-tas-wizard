@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 24
+local CURRENT_FORMAT = 25
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -445,11 +445,36 @@ local FORMAT_UPDATERS = {
         end
     },
     [23] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 24,
         update = function(o)
             for _, screen in ipairs(o.screens) do
                 if screen.metadata.screen == SCREEN.TRANSITION and not screen.transition_exit_frame_index then
                     screen.transition_exit_frame_index = 1
+                end
+            end
+        end
+    },
+    [24] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, screen in ipairs(o.screens) do
+                if screen.players then
+                    screen.start_positions = {}
+                    for player_index, player in ipairs(screen.players) do
+                        screen.start_positions[player_index] = player.start_position or {}
+                    end
+                    screen.players = nil
+                end
+                if screen.frames then
+                    for _, frame in ipairs(screen.frames) do
+                        frame.inputs = {}
+                        frame.positions = {}
+                        for player_index, player in ipairs(frame.players) do
+                            frame.inputs[player_index] = player.inputs
+                            frame.positions[player_index] = player.position or {}
+                        end
+                        frame.players = nil
+                    end
                 end
             end
         end
@@ -508,14 +533,8 @@ function Tas:to_raw(serial_mod)
             transition_exit_frame_index = self_screen.transition_exit_frame_index
         }
         copy.screens[screen_index] = copy_screen
-        if self_screen.players then
-            copy_screen.players = {}
-            for player_index, self_player in ipairs(self_screen.players) do
-                copy_screen.players[player_index] = {}
-                if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
-                    copy_screen.players[player_index].start_position = common.deep_copy(self_player.start_position)
-                end
-            end
+        if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions) and self_screen.start_positions then
+            copy_screen.start_positions = common.deep_copy(self_screen.start_positions)
         end
         if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_screen_snapshots) and self_screen.snapshot then
             copy_screen.snapshot = common.deep_copy(self_screen.snapshot)
@@ -527,16 +546,11 @@ function Tas:to_raw(serial_mod)
             copy_screen.frames = {}
             for frame_index, self_frame in ipairs(self_screen.frames) do
                 local copy_frame = {
-                    players = {}
+                    inputs = common.deep_copy(self_frame.inputs)
                 }
                 copy_screen.frames[frame_index] = copy_frame
-                for player_index, self_player in ipairs(self_frame.players) do
-                    copy_frame.players[player_index] = {
-                        inputs = self_player.inputs
-                    }
-                    if serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions then
-                        copy_frame.players[player_index].position = common.deep_copy(self_player.position)
-                    end
+                if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions) and self_frame.positions then
+                    copy_frame.positions = common.deep_copy(self_frame.positions)
                 end
             end
         end
@@ -567,16 +581,6 @@ function Tas:from_raw(raw, serial_mod)
         end
     end
     return Tas:new(raw, false)
-end
-
-function Tas:create_frame_data()
-    local frame_data = {
-        players = {}
-    }
-    for player_index = 1, self:get_player_count() do
-        frame_data.players[player_index] = {}
-    end
-    return frame_data
 end
 
 -- Gets the final screen index.
@@ -614,17 +618,13 @@ function Tas:insert_frames(screen_index, frame_start_index, frame_count, frame_i
     local original_last_frame = #screen.frames
     for i = original_last_frame, frame_start_index + 1, -1 do
         screen.frames[i + frame_count] = screen.frames[i]
-        for _, player in ipairs(screen.frames[i].players) do
-            player.position = nil
-        end
+        screen.frames[i].positions = nil
     end
     -- Insert the new frames.
     for i = frame_start_index + 1, frame_start_index + frame_count do
-        local new_frame = self:create_frame_data()
-        for player_index, player in ipairs(new_frame.players) do
-            player.inputs = frame_inputs[player_index]
-        end
-        screen.frames[i] = new_frame
+        screen.frames[i] = {
+            inputs = common.deep_copy(frame_inputs)
+        }
     end
 end
 
@@ -632,9 +632,7 @@ function Tas:delete_frames(screen_index, frame_start_index, frame_count)
     local screen = self.screens[screen_index]
     -- Delete position data.
     for i = frame_start_index, #screen.frames do
-        for _, player in ipairs(screen.frames[i].players) do
-            player.position = nil
-        end
+        screen.frames[i].positions = nil
     end
     -- Shift existing frames into the deleted space.
     local shift_count = math.max(frame_count, #screen.frames - frame_count - frame_start_index + 1)
@@ -647,13 +645,9 @@ end
 function Tas:clear_player_positions(screen_index)
     local screen = self.screens[screen_index]
     if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
-        for _, player in ipairs(screen.players) do
-            player.start_position = nil
-        end
+        screen.start_positions = nil
         for _, frame in ipairs(screen.frames) do
-            for _, player in ipairs(frame.players) do
-                player.position = nil
-            end
+            frame.positions = nil
         end
     end
 end

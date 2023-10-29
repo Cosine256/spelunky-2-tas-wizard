@@ -89,32 +89,31 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
     end
     local screen = tas_session.current_screen_data
     local color_type = is_ghost and "ghost" or "normal"
+    local prev_frame_positions = screen.start_positions
     for i, frame in ipairs(screen.frames) do
-        for player_index, player in ipairs(frame.players) do
-            local pos1
-            if i == 1 then
-                pos1 = screen.players[player_index].start_position
-            else
-                pos1 = screen.frames[i - 1].players[player_index].position
-            end
-            local pos2 = player.position
-            if pos1 and pos2 then
-                local x1, y1 = screen_position(pos1.x, pos1.y)
-                local x2, y2 = screen_position(pos2.x, pos2.y)
-                ctx:draw_line(x1, y1, x2, y2, 2,
-                    PATH_COLORS[player_index][color_type][pos2.l == state.camera_layer and "same_layer" or "other_layer"][(i % 2) + 1])
+        if prev_frame_positions and frame.positions then
+            for player_index, this_pos in ipairs(frame.positions) do
+                local prev_pos = prev_frame_positions[player_index]
+                if prev_pos.x and this_pos.x then
+                    local x1, y1 = screen_position(prev_pos.x, prev_pos.y)
+                    local x2, y2 = screen_position(this_pos.x, this_pos.y)
+                    ctx:draw_line(x1, y1, x2, y2, 2,
+                        PATH_COLORS[player_index][color_type][this_pos.l == state.camera_layer and "same_layer" or "other_layer"][(i % 2) + 1])
+                end
             end
         end
+        prev_frame_positions = frame.positions
     end
     if options.path_mark_visible then
         -- Draw path marks in this second iteration so that they always draw on top of the path.
         for i = options.path_mark_increment, #screen.frames, options.path_mark_increment do
             local frame = screen.frames[i]
-            for player_index, player in ipairs(frame.players) do
-                local pos = player.position
-                if pos then
-                    draw_tas_path_mark(ctx, pos, tostring(i),
-                        PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
+            if frame.positions then
+                for player_index, pos in ipairs(frame.positions) do
+                    if pos.x then
+                        draw_tas_path_mark(ctx, pos, tostring(i),
+                            PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
+                    end
                 end
             end
         end

@@ -264,10 +264,6 @@ function TasSession:_create_end_screen()
     self.current_tasable_screen = common_enums.TASABLE_SCREEN[screen.metadata.screen]
     if self.current_tasable_screen.record_frames then
         screen.frames = {}
-        screen.players = {}
-        for player_index = 1, self.tas:get_player_count() do
-            screen.players[player_index] = {}
-        end
     end
     if screen.metadata.screen == SCREEN.TRANSITION then
         screen.transition_exit_frame_index = common.TRANSITION_EXIT_FIRST_FRAME
@@ -476,16 +472,21 @@ function TasSession:on_post_update_load_screen()
     if self.mode ~= common_enums.MODE.FREEPLAY then
         self.current_frame_index = 0
         if self.current_tasable_screen.record_frames then
-            for player_index, player in ipairs(self.current_screen_data.players) do
+            local start_positions = self.current_screen_data.start_positions
+            if not start_positions then
+                start_positions = {}
+                self.current_screen_data.start_positions = start_positions
+            end
+            for player_index = 1, self.tas:get_player_count() do
                 local player_ent = get_player(player_index, true)
                 local actual_pos
                 if player_ent then
                     local x, y, l = get_position(player_ent.uid)
                     actual_pos = { x = x, y = y, l = l }
                 end
-                if self.mode == common_enums.MODE.RECORD or not player.start_position then
-                    player.start_position = actual_pos
-                elseif self:_check_position_desync(player_index, player.start_position, actual_pos) and options.desync_pause then
+                if self.mode == common_enums.MODE.RECORD or not start_positions[player_index] or not start_positions[player_index].x then
+                    start_positions[player_index] = actual_pos
+                elseif self:_check_position_desync(player_index, start_positions[player_index], actual_pos) and options.desync_pause then
                     game_controller.request_pause("Detected start position desync.")
                 end
             end
@@ -525,11 +526,7 @@ function TasSession:on_pre_update()
             -- It's acceptable to not have frame data for the upcoming update as long as the game doesn't process player inputs. If inputs are processed with no frame data, then that scenario will be detected and handled after the update.
             local next_frame_data = self.current_screen_data.frames[self.current_frame_index + 1]
             if next_frame_data then
-                local frame_inputs = {}
-                for player_index = 1, self.tas:get_player_count() do
-                    frame_inputs[player_index] = next_frame_data.players[player_index].inputs
-                end
-                game_controller.submit_pre_update_inputs(frame_inputs)
+                game_controller.submit_pre_update_inputs(next_frame_data.inputs)
             end
         end
     elseif self.current_screen_data.metadata.screen == SCREEN.TRANSITION then
@@ -569,11 +566,11 @@ function TasSession:on_post_update()
             -- Only record mode can create new frames. Playback mode should only be active during frames that already exist.
             if options.record_frame_write_type == "overwrite" then
                 if not current_frame_data then
-                    current_frame_data = self.tas:create_frame_data()
+                    current_frame_data = {}
                     self.current_screen_data.frames[self.current_frame_index] = current_frame_data
                 end
             elseif options.record_frame_write_type == "insert" then
-                current_frame_data = self.tas:create_frame_data()
+                current_frame_data = {}
                 table.insert(self.current_screen_data.frames, self.current_frame_index, current_frame_data)
             end
         elseif self.mode == common_enums.MODE.PLAYBACK and not current_frame_data then
@@ -591,7 +588,10 @@ function TasSession:on_post_update()
             return
         end
 
-        for player_index, player in ipairs(current_frame_data.players) do
+        if not current_frame_data.positions then
+            current_frame_data.positions = {}
+        end
+        for player_index = 1, self.tas:get_player_count() do
             local player_ent = get_player(player_index, true)
             local actual_pos
             if player_ent then
@@ -605,17 +605,20 @@ function TasSession:on_post_update()
                     print("on_post_update: Recording inputs: frame="..self.current_screen_index.."-"..self.current_frame_index
                         .." player="..player_index.." inputs="..common.inputs_to_string(inputs))
                 end
-                player.inputs = inputs
-                player.position = actual_pos
+                if not current_frame_data.inputs then
+                    current_frame_data.inputs = {}
+                end
+                current_frame_data.inputs[player_index] = inputs
+                current_frame_data.positions[player_index] = actual_pos
             elseif self.mode == common_enums.MODE.PLAYBACK then
-                local expected_pos = player.position
-                if expected_pos then
+                local expected_pos = current_frame_data.positions[player_index]
+                if expected_pos and expected_pos.x then
                     if self:_check_position_desync(player_index, expected_pos, actual_pos) and options.desync_pause then
                         game_controller.request_pause("Detected position desync.")
                     end
                 else
                     -- No player positions are stored for this frame. Store the current positions.
-                    player.position = actual_pos
+                    current_frame_data.positions[player_index] = actual_pos
                 end
             end
         end
