@@ -128,12 +128,13 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
                 or frame_tag.screen) == tas_session.current_screen_index
             then
                 local positions
-                if frame_tag.frame == -1 then
-                    positions = screen.frames[tas_session.tas:get_end_frame_index(tas_session.current_screen_index)].positions
-                elseif frame_tag.frame == 0 then
+                if frame_tag.frame == 0 then
                     positions = screen.start_positions
                 else
-                    positions = screen.frames[frame_tag.frame].positions
+                    local frame = screen.frames[frame_tag.frame == -1 and tas_session.tas:get_end_frame_index(tas_session.current_screen_index) or frame_tag.frame]
+                    if frame then
+                        positions = frame.positions
+                    end
                 end
                 if positions then
                     for player_index, pos in ipairs(positions) do

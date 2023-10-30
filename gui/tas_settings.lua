@@ -1,11 +1,11 @@
-local common = require("common")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
 local Tool_GUI = require("gui/tool_gui")
 
 local module = Tool_GUI:new("tas_settings", "TAS Settings")
 
-local function draw_tas_settings(ctx, tas)
+local function draw_tas_settings(ctx)
+    local tas = active_tas_session.tas
+
     tas.name = ctx:win_input_text("Name", tas.name)
     -- TODO: Use a multi-line text input.
     tas.description = ctx:win_input_text("Description", tas.description)
@@ -13,9 +13,9 @@ local function draw_tas_settings(ctx, tas)
     ctx:win_pushid("start_settings")
     ctx:win_separator_text("Start settings")
     if #tas.screens > 0 then
-        ctx:win_text("Warning: This TAS has recorded data. Modifying the start settings can change level generation and RNG, which may cause it to desynchronize.")
+        ctx:win_text("Warning: This TAS has recorded data. Changing the player count or start type will immediately delete recorded data for removed players. Modifying the start settings can change level generation and RNG, which may cause the TAS to desynchronize.")
     end
-    common_gui.draw_tas_start_settings(ctx, tas, false)
+    common_gui.draw_tas_start_settings(ctx, active_tas_session, tas, false)
     ctx:win_popid()
 
     ctx:win_pushid("player_positions")
@@ -42,24 +42,16 @@ local function draw_tas_settings(ctx, tas)
 
     ctx:win_pushid("reset")
     ctx:win_separator_text("Reset")
-    if ctx:win_button("Reset TAS") then
-        game_controller.cancel_requested_pause()
-        active_tas_session:set_mode_freeplay()
-        active_tas_session:unset_current_screen()
-        active_tas_session.desync = nil
-        tas.screens = {}
-        tas.frame_tags = common.deep_copy(options.new_tas.frame_tags)
-        for _, tool_gui in pairs(tool_guis) do
-            tool_gui:reset_session_vars()
-        end
+    if ctx:win_button("Reset TAS data") then
+        active_tas_session:reset_tas(true)
     end
-    ctx:win_text("Resets the TAS to an empty state, clearing all recorded inputs, generated data, and frame tags. This does not reset the start settings.")
+    ctx:win_text("Resets the TAS to an empty state, clearing all recorded inputs and generated data. This does not reset TAS settings and frame tags.")
     ctx:win_popid()
 end
 
 function module:draw_panel(ctx, is_window)
     if active_tas_session then
-        draw_tas_settings(ctx, active_tas_session.tas)
+        draw_tas_settings(ctx)
     else
         ctx:win_text("No TAS loaded.")
     end

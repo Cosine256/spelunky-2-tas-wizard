@@ -694,13 +694,15 @@ function Tas:is_start_configured()
     return false
 end
 
--- Gets the player count configured in the start settings.
+-- Gets the player count configured in the start settings. Returns 0 if the start settings are not configured.
 function Tas:get_player_count()
     if self.start_type == "simple" then
         return self.start_simple.player_count
-    elseif self.start_type == "snapshot" and self.start_snapshot.state_memory then
+    end
+    if self.start_type == "snapshot" and self.start_snapshot.state_memory then
         return self.start_snapshot.state_memory.items.player_count
     end
+    return 0
 end
 
 -- Gets the array of player characters configured in the start settings. The array size will at least match the configured player count, but will be larger if additional unused player characters are stored.
@@ -715,6 +717,46 @@ function Tas:get_player_chars()
         end
         return player_chars
     end
+end
+
+-- Updates screen and frame data to match a new player count. This function only uses the given player count arguments, and does not read or write to the player count stored in the start settings.
+function Tas:update_data_player_count(old_count, new_count)
+    for _, screen in ipairs(self.screens) do
+        if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
+            if old_count < new_count then
+                -- Create data for the added players.
+                for player_index = old_count + 1, new_count do
+                    if screen.start_positions then
+                        screen.start_positions[player_index] = {}
+                    end
+                    for _, frame in ipairs(screen.frames) do
+                        frame.inputs[player_index] = INPUTS.NONE
+                        if frame.positions then
+                            frame.positions[player_index] = {}
+                        end
+                    end
+                end
+            else
+                -- Delete data for the removed players.
+                for player_index = new_count + 1, old_count do
+                    if screen.start_positions then
+                        screen.start_positions[player_index] = nil
+                    end
+                    for _, frame in ipairs(screen.frames) do
+                        frame.inputs[player_index] = nil
+                        if frame.positions then
+                            frame.positions[player_index] = nil
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Resets the TAS to an empty state, clearing all recorded inputs and generated data. This does not reset TAS settings and frame tags.
+function Tas:reset_data()
+    self.screens = {}
 end
 
 return Tas

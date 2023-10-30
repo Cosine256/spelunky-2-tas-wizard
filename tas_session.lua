@@ -141,6 +141,19 @@ function TasSession:_reset_playback_vars()
     self.playback_waiting_at_end = false
 end
 
+function TasSession:reset_tas(is_active_tas_session)
+    self:set_mode_freeplay()
+    self:unset_current_screen()
+    self.desync = nil
+    self.tas:reset_data()
+    if is_active_tas_session then
+        game_controller.cancel_requested_pause()
+        for _, tool_gui in pairs(tool_guis) do
+            tool_gui:reset_session_vars()
+        end
+    end
+end
+
 function TasSession:_on_playback_invalid(message)
     print("Warning: Invalid playback target ("..self:get_playback_target_string().."): "..message.." Switching to freeplay mode.")
     self:set_mode_freeplay()

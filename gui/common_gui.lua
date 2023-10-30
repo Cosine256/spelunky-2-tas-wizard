@@ -184,7 +184,28 @@ function module.draw_tool_gui_panels(ctx, tool_guis)
     end
 end
 
-local function draw_tas_start_settings_simple(ctx, tas)
+local function handle_player_count_change(session, tas, old_count, new_count)
+    if old_count == new_count then
+        return
+    end
+
+    print("Player count changed from "..old_count.." to "..new_count..". Updating TAS data.")
+    if new_count == 0 then
+        if session then
+            session:reset_tas(session == active_tas_session)
+        else
+            tas:reset_data()
+        end
+    else
+        if session and session.mode ~= common_enums.MODE.FREEPLAY then
+            session:set_mode_freeplay()
+        end
+        tas:update_data_player_count(old_count, new_count)
+        tas:clear_all_screen_snapshots()
+    end
+end
+
+local function draw_tas_start_simple_settings(ctx, tas)
     local start = tas.start_simple
     ctx:win_text(START_TYPE:value_by_id("simple").name..": Provides basic start settings, such as the starting area and player characters. All other aspects of the run (health, items, etc) use the default behavior from starting a new run.")
 
@@ -328,43 +349,10 @@ local function draw_tas_start_settings_simple(ctx, tas)
         new_player_count = PLAYER_COUNT_COMBO:draw(ctx, "Player count", start.player_count)
     end
     if start.player_count ~= new_player_count then
-        print("Player count changed from "..start.player_count.." to "..new_player_count..". Updating screen and frame data.")
         -- Populate unassigned player characters.
-        for player_index = 1, new_player_count do
+        for player_index = start.player_count + 1, new_player_count do
             if not start.players[player_index] then
                 start.players[player_index] = options.new_tas.start_simple.players[player_index]
-            end
-        end
-        -- Update all screen and frame data to match the new player count.
-        for _, screen in ipairs(tas.screens) do
-            if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
-                if start.player_count < new_player_count then
-                    -- Create data for the added players.
-                    for player_index = start.player_count + 1, new_player_count do
-                        if screen.start_positions then
-                            screen.start_positions[player_index] = {}
-                        end
-                        for _, frame in ipairs(screen.frames) do
-                            frame.inputs[player_index] = INPUTS.NONE
-                            if frame.positions then
-                                frame.positions[player_index] = {}
-                            end
-                        end
-                    end
-                else
-                    -- Delete data for the removed players.
-                    for player_index = new_player_count + 1, start.player_count do
-                        if screen.start_positions then
-                            screen.start_positions[player_index] = nil
-                        end
-                        for _, frame in ipairs(screen.frames) do
-                            frame.inputs[player_index] = nil
-                            if frame.positions then
-                                frame.positions[player_index] = nil
-                            end
-                        end
-                    end
-                end
             end
         end
         start.player_count = new_player_count
@@ -374,7 +362,7 @@ local function draw_tas_start_settings_simple(ctx, tas)
     end
 end
 
-local function draw_tas_start_settings_snapshot(ctx, tas, is_options_tas)
+local function draw_tas_start_snapshot_settings(ctx, session, tas, is_options_tas)
     ctx:win_text(START_TYPE:value_by_id("snapshot").name..": The run is initialized by applying a screen snapshot.")
     ctx:win_section("More info", function()
         ctx:win_indent(module.INDENT_SECTION)
@@ -416,7 +404,9 @@ local function draw_tas_start_settings_snapshot(ctx, tas, is_options_tas)
             if ctx:win_button("Request capture") then
                 tas.screen_snapshot_request_id = game_controller.register_screen_snapshot_request(function(screen_snapshot)
                     tas.screen_snapshot_request_id = nil
+                    local old_player_count = tas:get_player_count()
                     tas.start_snapshot = screen_snapshot
+                    handle_player_count_change(session, tas, old_player_count, tas:get_player_count())
                 end)
             end
             ctx:win_text("Request a new screen snapshot capture.")
@@ -424,9 +414,9 @@ local function draw_tas_start_settings_snapshot(ctx, tas, is_options_tas)
     end
 end
 
-function module.draw_tas_start_settings(ctx, tas, is_options_tas)
+function module.draw_tas_start_settings(ctx, session, tas, is_options_tas)
+    local old_player_count = tas:get_player_count()
     tas.start_type = START_TYPE_COMBO:draw(ctx, "Start type", tas.start_type, function(current_choice_id, new_choice_id)
-        -- TODO: Handle possible player count change when switching start types.
         if new_choice_id == "simple" then
             if not tas.start_simple then
                 tas.start_simple = common.deep_copy(options.new_tas.start_simple)
@@ -442,10 +432,11 @@ function module.draw_tas_start_settings(ctx, tas, is_options_tas)
         end
     end)
     if tas.start_type == "simple" then
-        draw_tas_start_settings_simple(ctx, tas)
+        draw_tas_start_simple_settings(ctx, tas)
     elseif tas.start_type == "snapshot" then
-        draw_tas_start_settings_snapshot(ctx, tas, is_options_tas)
+        draw_tas_start_snapshot_settings(ctx, session, tas, is_options_tas)
     end
+    handle_player_count_change(session, tas, old_player_count, tas:get_player_count())
 end
 
 function module.draw_player_positions_more_info(ctx)
