@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 26
+local CURRENT_FORMAT = 27
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -480,10 +480,19 @@ local FORMAT_UPDATERS = {
         end
     },
     [25] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 26,
         update = function(o)
             for _, frame_tag in ipairs(o.frame_tags) do
                 frame_tag.show_on_path = frame_tag.frame ~= 0 and frame_tag.frame ~= -1
+            end
+        end
+    },
+    [26] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, screen in ipairs(o.screens) do
+                screen.transition_exit_frame = screen.transition_exit_frame_index
+                screen.transition_exit_frame_index = nil
             end
         end
     }
@@ -538,7 +547,7 @@ function Tas:to_raw(serial_mod)
     for screen_index, self_screen in ipairs(self.screens) do
         local copy_screen = {
             metadata = common.deep_copy(self_screen.metadata),
-            transition_exit_frame_index = self_screen.transition_exit_frame_index
+            transition_exit_frame = self_screen.transition_exit_frame
         }
         copy.screens[screen_index] = copy_screen
         if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions) and self_screen.start_positions then

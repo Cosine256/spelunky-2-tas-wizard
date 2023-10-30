@@ -266,7 +266,7 @@ function TasSession:_create_end_screen()
         screen.frames = {}
     end
     if screen.metadata.screen == SCREEN.TRANSITION then
-        screen.transition_exit_frame_index = common.TRANSITION_EXIT_FIRST_FRAME
+        screen.transition_exit_frame = common.TRANSITION_EXIT_FIRST_FRAME
     end
 end
 
@@ -536,7 +536,7 @@ function TasSession:on_pre_update()
             -- By default, suppress inputs from every player.
             frame_inputs[player_index] = INPUTS.NONE
         end
-        if self.current_frame_index + 1 >= self.current_screen_data.transition_exit_frame_index then
+        if self.current_frame_index + 1 >= self.current_screen_data.transition_exit_frame then
             -- Have player 1 provide the transition exit input.
             frame_inputs[1] = INPUTS.JUMP
         end

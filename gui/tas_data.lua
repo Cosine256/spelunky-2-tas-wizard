@@ -172,8 +172,8 @@ function module:draw_panel(ctx, is_window)
                 elseif screen.metadata.screen == SCREEN.TRANSITION then
                     ctx:win_pushid("transition_settings")
                     ctx:win_separator_text("Transition settings")
-                    screen.transition_exit_frame_index = common_gui.draw_drag_int_clamped(ctx, "Transition exit frame",
-                        screen.transition_exit_frame_index, common.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
+                    screen.transition_exit_frame = common_gui.draw_drag_int_clamped(ctx, "Transition exit frame",
+                        screen.transition_exit_frame, common.TRANSITION_EXIT_FIRST_FRAME, 300, true, false)
                     ctx:win_popid()
                 end
                 if tasable_screen.record_frames then
