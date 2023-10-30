@@ -279,7 +279,7 @@ local function on_gui_frame(ctx)
             drawing.draw_tas_path(ctx, active_tas_session, false)
         end
     end
-    if options.fast_update_flash_prevention and game_controller.can_fast_update() then
+    if options.fast_update_flash_prevention and game_controller.pre_update_executed_fast_update_batch then
         drawing.draw_black_overlay(ctx)
     end
     if active_tas_session then
