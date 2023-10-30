@@ -8,6 +8,8 @@ local POINT_SCR_H_HALF
 local PATH_SAME_LAYER_ALPHA = 0.85
 local PATH_OTHER_LAYER_ALPHA = 0.3
 
+local BLACK_OVERLAY_UCOLOR = Color:new(0.0, 0.0, 0.0, 1.0):get_ucolor()
+
 local function to_ghost_ucolor(color)
     return Color:new((0.3 * color.r) + 0.6, (0.3 * color.g) + 0.6, (0.3 * color.b) + 0.6, color.a):get_ucolor()
 end
@@ -160,6 +162,10 @@ function module.draw_mode_watermark(ctx)
     ctx:draw_text(options.mode_watermark_x - (0.5 * w * (1.0 + options.mode_watermark_x)),
         options.mode_watermark_y - (0.5 * h * (1.0 - options.mode_watermark_y)),
         options.mode_watermark_size, text, MODE_WATERMARK_UCOLOR)
+end
+
+function module.draw_black_overlay(ctx)
+    ctx:draw_rect_filled(-1.0, 1.0, 1.0, -1.0, 0.0, BLACK_OVERLAY_UCOLOR)
 end
 
 return module

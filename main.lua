@@ -5,7 +5,7 @@ meta.author = "Cosine"
 
 local common = require("common")
 local common_enums = require("common_enums")
-local drawing = require("drawing")
+local drawing = require("gui/drawing")
 local game_controller = require("game_controller")
 local persistence = require("persistence")
 local Tas = require("tas")
@@ -42,6 +42,7 @@ default_options = {
     desync_pause = true,
     pause_suppress_transition_tas_inputs = true,
     playback_fast_update = false,
+    fast_update_flash_prevention = true,
     transition_skip = false,
     presentation_start_on_playback = false,
     presentation_stop_after_playback = false,
@@ -277,6 +278,9 @@ local function on_gui_frame(ctx)
         if active_tas_session and options.active_path_visible then
             drawing.draw_tas_path(ctx, active_tas_session, false)
         end
+    end
+    if options.fast_update_flash_prevention and game_controller.can_fast_update() then
+        drawing.draw_black_overlay(ctx)
     end
     if active_tas_session then
         drawing.draw_mode_watermark(ctx)

@@ -358,7 +358,7 @@ function module.submit_pre_update_inputs(frame_inputs)
     end
 end
 
-local function can_fast_update()
+function module.can_fast_update()
     return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
         and not active_tas_session.suppress_screen_tas_inputs
@@ -368,7 +368,7 @@ local function on_pre_update()
     -- Before executing the upcoming normal update, check whether a batch of fast updates should occur. Fast updates are identical to normal updates as far the game state is concerned, and they trigger OL callbacks just like normal updates. However, they do not perform any rendering and are not locked to any frame rate, so fast updates can be executed as quickly as the computer is capable of doing so. This is usually significantly faster than the 60 FPS of normal updates.
     -- Only a finite batch of fast updates will be executed. The batch will end once the maximum duration is reached, or if any checks stop the batch early. Once the batch ends, the pending normal update will be allowed to execute. Unlike the fast updates, rendering will occur after the normal update. This will allow pausing and GUI interactions to occur, although the performance will be very laggy. It will also let the user see the progress of fast playback rather than the game appearing to be frozen until fast playback stops, and it will prevent an uninterruptible infinite loop if fast playback fails to reach a stopping point for whatever reason. Before the next normal update, the script will check again whether another batch of fast updates should occur.
     --  Note: `get_frame()` and `state.time_startup` are not incremented by fast updates, so they are not reliable update counters.
-    if not fast_update_start_time and can_fast_update() then
+    if not fast_update_start_time and module.can_fast_update() then
         fast_update_start_time = get_ms()
         print_debug("fast_update", "on_pre_update: Starting fast update batch. fast_update_start_time=%s", fast_update_start_time)
         while true do
@@ -378,7 +378,7 @@ local function on_pre_update()
                 print_debug("fast_update", "on_pre_update: Stopping fast update batch after %sms: Max duration reached.", duration)
                 break
             end
-            if not can_fast_update() then
+            if not module.can_fast_update() then
                 print_debug("fast_update", "on_pre_update: Stopping fast update batch after %sms: Fast update conditions no longer met.", duration)
                 break
             end

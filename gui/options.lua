@@ -28,6 +28,8 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Speed tweaks")
     tool_guis.playback_record:draw_playback_fast_update_option(ctx, true)
+    options.fast_update_flash_prevention = ctx:win_check("Fast update flash prevention", options.fast_update_flash_prevention == true)
+    ctx:win_text("Prevent screen flashing during fast updates by applying a black overlay.")
     options.transition_skip = ctx:win_check("Skip transition screens", options.transition_skip)
     ctx:win_text("Instantly skip transition screens instead of allowing them to fade in and out. This also skips the spaceship cutscene screen after exiting 6-4 via the spaceship.")
 
