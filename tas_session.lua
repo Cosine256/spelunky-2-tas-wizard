@@ -91,10 +91,8 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
         end
     end
 
-    if options.debug_print_mode then
-        print("Evaluating method to reach playback target "..target_screen_index.."-"..target_frame_index
-            ..": can_use_current_frame="..tostring(can_use_current_frame).." best_screen_index="..tostring(best_screen_index))
-    end
+    print_debug("mode", "set_mode_playback: Evaluating method to reach playback target %s-%s: can_use_current_frame=%s best_screen_index=%s",
+        target_screen_index, target_frame_index, can_use_current_frame, best_screen_index)
     if can_use_current_frame then
         -- The current frame can be used. Decide whether a warp should be used instead.
         if best_screen_index and (options.playback_from ~= "here_or_nearest_screen" or best_screen_index <= self.current_screen_index) then
@@ -103,24 +101,20 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
         end
     elseif not best_screen_index then
         -- Can neither use current frame nor use a warp.
-        print("Warning: Cannot reach playback target "..target_screen_index.."-"..target_frame_index.." with current options.")
+        print_warn("Cannot reach playback target %s-%s with current options.", target_screen_index, target_frame_index)
         return
     end
 
     if best_screen_index then
         -- Warp to a screen to reach the playback target.
-        if options.debug_print_mode then
-            print("Warping to screen "..best_screen_index.." to reach playback target "..target_screen_index.."-"..target_frame_index..".")
-        end
+        print_debug("mode", "set_mode_playback: Warping to screen %s to reach playback target %s-%s.", best_screen_index, target_screen_index, target_frame_index)
         if not self:trigger_warp(best_screen_index) then
-            print("Warning: Failed to warp to screen "..best_screen_index.." to reach playback target "..target_screen_index.."-"..target_frame_index..".")
+            print_warn("Failed to warp to screen %s to reach playback target %s-%s.", best_screen_index, target_screen_index, target_frame_index)
             return
         end
     else
         -- Playback from the current frame to reach the playback target.
-        if options.debug_print_mode then
-            print("Playing back from current frame to reach playback target "..target_screen_index.."-"..target_frame_index..".")
-        end
+        print_debug("mode", "set_mode_playback: Playing back from current frame to reach playback target %s-%s.", target_screen_index, target_frame_index)
     end
 
     if self.set_mode_callback then
@@ -155,7 +149,7 @@ function TasSession:reset_tas(is_active_tas_session)
 end
 
 function TasSession:_on_playback_invalid(message)
-    print("Warning: Invalid playback target ("..self:get_playback_target_string().."): "..message.." Switching to freeplay mode.")
+    print_warn("Invalid playback target (%s): %s Switching to freeplay mode.", self:get_playback_target_string(), message)
     self:set_mode_freeplay()
     game_controller.request_pause("Invalid playback target.")
 end
@@ -194,32 +188,26 @@ function TasSession:check_playback()
     local new_mode = common_enums.PLAYBACK_TARGET_MODE:value_by_id(options.playback_target_mode).mode
     local allow_waiting_pause = false
     if new_mode == common_enums.MODE.RECORD then
-        if options.debug_print_mode then
-            print("Playback target ("..self:get_playback_target_string()..") reached. Switching to record mode.")
-        end
+        print_debug("mode", "check_playback: Playback target (%s) reached. Switching to record mode.", self:get_playback_target_string())
         self:set_mode_record()
     elseif new_mode == common_enums.MODE.FREEPLAY then
-        if options.debug_print_mode then
-            print("Playback target ("..self:get_playback_target_string()..") reached. Switching to freeplay mode.")
-        end
+        print_debug("mode", "check_playback: Playback target (%s) reached. Switching to freeplay mode.", self:get_playback_target_string())
         self:set_mode_freeplay()
     elseif new_mode == common_enums.MODE.PLAYBACK then
         if end_comparison < 0 then
             -- The playback target is earlier than the end of the TAS.
             if self.playback_waiting_at_end then
                 self.playback_waiting_at_end = false
-                if options.debug_print_mode then
-                    print("Detected new frames while waiting in playback mode at end of TAS. Setting target to end of TAS.")
-                end
-            elseif options.debug_print_mode then
-                print("Playback target ("..self:get_playback_target_string()..") reached. Staying in playback mode and setting target to end of TAS.")
+                print_debug("mode", "check_playback: Detected new frames while waiting in playback mode at end of TAS. Setting target to end of TAS.")
+            else
+                print_debug("mode", "check_playback: Playback target (%s) reached. Staying in playback mode and setting target to end of TAS.",
+                    self:get_playback_target_string())
             end
             self.playback_target_screen, self.playback_target_frame = end_screen_index, end_frame_index
         elseif not self.playback_waiting_at_end then
             -- The playback target is the end of the TAS and playback had not reached it until now.
-            if options.debug_print_mode then
-                print("Playback target ("..self:get_playback_target_string()..") reached. Staying in playback mode at end of TAS and waiting for new frames.")
-            end
+            print_debug("mode", "check_playback: Playback target (%s) reached. Staying in playback mode at end of TAS and waiting for new frames.",
+                self:get_playback_target_string())
             self.playback_waiting_at_end = true
             allow_waiting_pause = true
         end
@@ -268,7 +256,7 @@ end
 function TasSession:_create_end_screen()
     self:unset_current_screen()
     self.current_screen_index = #self.tas.screens + 1
-    print("Creating new TAS screen: "..self.current_screen_index)
+    print_debug("misc", "_create_end_screen: Creating new TAS screen: %s", self.current_screen_index)
     local screen = {
         metadata = generate_screen_metadata()
     }
@@ -334,7 +322,7 @@ function TasSession:validate_current_frame()
         end
     end
     if message then
-        print("Warning: Invalid current frame ("..self.current_screen_index.."-"..tostring(self.current_frame_index).."): "..message.." Switching to freeplay mode.")
+        print_warn("Invalid current frame (%s-%s): %s Switching to freeplay mode.", self.current_screen_index, self.current_frame_index, message)
         self:set_mode_freeplay()
         game_controller.request_pause("Invalid current frame.")
         if unset_current_screen then
@@ -359,13 +347,13 @@ function TasSession:_check_position_desync(player_index, expected_pos, actual_po
         frame_index = self.current_frame_index,
         desc = "Actual player "..player_index.." position differs from expected position."
     }
-    print("Desynchronized on frame "..self.desync.screen_index.."-"..self.desync.frame_index..": "..self.desync.desc)
-    print("    Expected: x="..expected_pos.x.." y="..expected_pos.y)
+    print_warn("Desynchronized on frame %s-%s: %s", self.desync.screen_index, self.desync.frame_index, self.desync.desc)
+    print_warn("    Expected: x=%s y=%s", expected_pos.x, expected_pos.y)
     if actual_pos then
-        print("    Actual: x="..actual_pos.x.." y="..actual_pos.y)
-        print("    Diff: dx="..(actual_pos.x - expected_pos.x).." dy="..(actual_pos.y - expected_pos.y))
+        print_warn("    Actual: x=%s y=%s", actual_pos.x, actual_pos.y)
+        print_warn("    Diff: dx=%s dy=%s", actual_pos.x - expected_pos.x, actual_pos.y - expected_pos.y)
     else
-        print("    Actual: nil")
+        print_warn("    Actual: nil")
     end
     return true
 end
@@ -376,7 +364,7 @@ function TasSession:_set_screen_end_desync()
         frame_index = self.current_frame_index,
         desc = "Expected end of screen."
     }
-    print("Desynchronized on frame "..self.desync.screen_index.."-"..self.desync.frame_index..": "..self.desync.desc)
+    print_warn("Desynchronized on frame %s-%s: %s", self.desync.screen_index, self.desync.frame_index, self.desync.desc)
 end
 
 -- Triggers a warp to the specified TAS screen. If warping to screen 1, then the TAS start settings will be used. Otherwise, a screen snapshot will be used. No warp will occur if the TAS does not contain the necessary data to warp to the specified screen. Returns whether the warp was triggered successfully.
@@ -395,7 +383,7 @@ function TasSession:trigger_warp(screen_index)
         if screen and screen.snapshot then
             warp_triggered = game_controller.trigger_screen_snapshot_warp(screen.snapshot)
         else
-            print("Cannot trigger warp to screen "..screen_index..": Missing screen snapshot.")
+            print_info("Cannot trigger warp to screen %s: Missing screen snapshot.", screen_index)
         end
     end
     if warp_triggered then
@@ -425,9 +413,7 @@ function TasSession:on_post_update_load_screen()
         -- The new screen is not TASable.
         self:unset_current_screen()
         if self.mode ~= common_enums.MODE.FREEPLAY then
-            if options.debug_print_mode then
-                print("on_post_update_load_screen: Loaded non-TASable screen. Switching to freeplay mode.")
-            end
+            print_debug("mode", "on_post_update_load_screen: Loaded non-TASable screen. Switching to freeplay mode.")
             self:set_mode_freeplay()
         end
     elseif self.warp_screen_index then
@@ -436,13 +422,13 @@ function TasSession:on_post_update_load_screen()
             if self.mode == common_enums.MODE.FREEPLAY then
                 -- The screen won't exist yet if freeplay warping to screen 1 in a TAS with no recorded data.
                 if self.warp_screen_index ~= 1 or #self.tas.screens > 0 then
-                    print("Warning: Loaded unexpected screen when warping to screen index "..self.warp_screen_index..".")
+                    print_warn("Loaded unexpected screen when warping to screen index %s.", self.warp_screen_index)
                 end
             else
                 if self.mode == common_enums.MODE.RECORD and self.warp_screen_index == #self.tas.screens + 1 then
                     self:_create_end_screen()
                 else
-                    print("Warning: Loaded unexpected screen when warping to screen index "..self.warp_screen_index..". Switching to freeplay mode.")
+                    print_warn("Loaded unexpected screen when warping to screen index %s. Switching to freeplay mode.", self.warp_screen_index)
                     self:set_mode_freeplay()
                 end
             end
@@ -458,13 +444,11 @@ function TasSession:on_post_update_load_screen()
                     if self.mode == common_enums.MODE.RECORD then
                         self:_create_end_screen()
                     else
-                        if options.debug_print_mode then
-                            print("Loaded new screen during playback after end of TAS. Switching to freeplay mode.")
-                        end
+                        print_debug("mode", "Loaded new screen during playback after end of TAS. Switching to freeplay mode.")
                         self:set_mode_freeplay()
                     end
                 else
-                    print("Warning: Loaded unexpected screen after screen change from screen index "..prev_screen_index..". Switching to freeplay mode.")
+                    print_warn("Loaded unexpected screen after screen change from screen index %s. Switching to freeplay mode.", prev_screen_index)
                     self:set_mode_freeplay()
                 end
             end
@@ -475,13 +459,11 @@ function TasSession:on_post_update_load_screen()
             self:find_current_screen()
         else
             -- Note: This case should not be possible. Playback and recording should always know either the previous screen index or the new screen index.
-            print("Warning: Loaded new screen during playback or recording with unknown previous screen index and unknown new screen index. Switching to freeplay mode.")
+            print_warn("Loaded new screen during playback or recording with unknown previous screen index and unknown new screen index. Switching to freeplay mode.")
             self:set_mode_freeplay()
         end
     end
-    if options.debug_print_load then
-        print("on_post_update_load_screen: Current TAS screen updated to "..tostring(self.current_screen_index)..".")
-    end
+    print_debug("screen_load", "on_post_update_load_screen: Current TAS screen updated to %s.", self.current_screen_index)
     if self.mode ~= common_enums.MODE.FREEPLAY then
         self.current_frame_index = 0
         if self.current_tasable_screen.record_frames then
@@ -506,9 +488,7 @@ function TasSession:on_post_update_load_screen()
         end
         if self.current_tasable_screen.can_snapshot and self.stored_screen_snapshot then
             self.current_screen_data.snapshot = self.stored_screen_snapshot
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_post_update_load_screen: Transferred stored screen snapshot into TAS screen "..self.current_screen_index..".")
-            end
+            print_debug("snapshot", "on_post_update_load_screen: Transferred stored screen snapshot into TAS screen %s.", self.current_screen_index)
         end
         if (self.mode == common_enums.MODE.PLAYBACK and options.playback_screen_load_pause)
             or (self.mode == common_enums.MODE.RECORD and options.record_screen_load_pause)
@@ -569,9 +549,8 @@ function TasSession:on_post_update()
     -- A TASable frame occurred during this update.
     self.current_frame_index = self.current_frame_index + 1
 
-    if options.debug_print_frame or options.debug_print_input then
-        print("on_post_update: frame="..self.current_screen_index.."-"..self.current_frame_index.." p1_inputs="..common.inputs_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
-    end
+    print_debug("input", "on_post_update: frame=%s-%s p1_inputs=%s", self.current_screen_index, self.current_frame_index,
+        common.inputs_to_string(state.player_inputs.player_slots[1].buttons_gameplay))
 
     if self.current_tasable_screen.record_frames then
         local current_frame_data = self.current_screen_data.frames[self.current_frame_index]
@@ -594,9 +573,7 @@ function TasSession:on_post_update()
                     game_controller.request_pause("Detected screen end desync.")
                 end
             end
-            if options.debug_print_mode then
-                print("on_post_update: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
-            end
+            print_debug("mode", "on_post_update: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
             self:set_mode_freeplay()
             return
         end
@@ -614,10 +591,8 @@ function TasSession:on_post_update()
             if self.mode == common_enums.MODE.RECORD then
                 -- Record the current player inputs for the frame that just executed.
                 local inputs = state.player_inputs.player_slots[player_index].buttons_gameplay & SUPPORTED_INPUTS_MASK
-                if options.debug_print_frame or options.debug_print_input then
-                    print("on_post_update: Recording inputs: frame="..self.current_screen_index.."-"..self.current_frame_index
-                        .." player="..player_index.." inputs="..common.inputs_to_string(inputs))
-                end
+                print_debug("input", "on_post_update: Recording inputs: frame=%s-%s player=%s inputs=%s",
+                    self.current_screen_index, self.current_frame_index, player_index, common.inputs_to_string(inputs))
                 if not current_frame_data.inputs then
                     current_frame_data.inputs = {}
                 end

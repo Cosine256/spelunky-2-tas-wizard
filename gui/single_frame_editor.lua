@@ -34,7 +34,7 @@ function module:draw_panel(ctx, is_window)
             tas.screens[self.screen_index].frames[self.frame_index].inputs[self.player_index] = self.new_inputs
             self:close()
         else
-            print("Warning: Failed to edit frame "..self.screen_index.."-"..self.frame_index.." for player "..self.player_index..": Screen, frame, or player does not exist.")
+            print_warn("Failed to edit frame %s-%s for player %s: Screen, frame, or player does not exist.", self.screen_index, self.frame_index, self.player_index)
         end
     end
     ctx:win_inline()

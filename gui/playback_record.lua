@@ -239,24 +239,18 @@ function module:draw_panel(ctx, is_window)
                 if active_tas_session.current_screen_index and active_tas_session.current_frame_index
                     and ctx:win_button("Switch to playback mode")
                 then
-                    if options.debug_print_mode then
-                        print("Switching to playback mode.")
-                    end
+                    print_debug("mode", "draw_panel: Switching to playback mode.")
                     active_tas_session:set_mode_playback(tas:get_end_screen_index(), tas:get_end_frame_index(), false, true)
                 end
             elseif active_tas_session.mode == common_enums.MODE.PLAYBACK then
                 if ctx:win_button("Switch to record mode") then
-                    if options.debug_print_mode then
-                        print("Switching to record mode.")
-                    end
+                    print_debug("mode", "draw_panel: Switching to record mode.")
                     active_tas_session:set_mode_record()
                 end
             end
             if active_tas_session.mode ~= common_enums.MODE.FREEPLAY then
                 if ctx:win_button("Switch to freeplay mode") then
-                    if options.debug_print_mode then
-                        print("Switching to freeplay mode.")
-                    end
+                    print_debug("mode", "draw_panel: Switching to freeplay mode.")
                     active_tas_session:set_mode_freeplay()
                 end
             end

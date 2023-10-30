@@ -4,8 +4,7 @@ function module.update_format(obj, final_format, updaters)
     while obj.format ~= final_format do
         local updater = updaters[obj.format]
         if updater then
-            -- TODO: Print is for testing.
-            print("Updating from format "..obj.format.." to "..updater.output_format..".")
+            print_debug("file", "update_format: Updating from format %s to %s.", obj.format, updater.output_format)
             updater.update(obj)
             obj.format = updater.output_format
         else

@@ -189,7 +189,7 @@ local function handle_player_count_change(session, tas, old_count, new_count)
         return
     end
 
-    print("Player count changed from "..old_count.." to "..new_count..". Updating TAS data.")
+    print_debug("misc", "handle_player_count_change: Player count changed from %s to %s. Updating TAS data.", old_count, new_count)
     if new_count == 0 then
         if session then
             session:reset_tas(session == active_tas_session)

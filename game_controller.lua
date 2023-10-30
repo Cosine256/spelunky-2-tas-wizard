@@ -84,9 +84,7 @@ function module.register_screen_snapshot_request(callback)
     screen_snapshot_request_next_id = screen_snapshot_request_next_id + 1
     screen_snapshot_requests[request_id] = callback
     screen_snapshot_request_count = screen_snapshot_request_count + 1
-    if options.debug_print_snapshot then
-        print("register_screen_snapshot_request: Registered screen snapshot request "..request_id..".")
-    end
+    print_debug("snapshot", "register_screen_snapshot_request: Registered screen snapshot request %s.", request_id)
     return request_id
 end
 
@@ -94,25 +92,19 @@ function module.clear_screen_snapshot_request(request_id)
     if screen_snapshot_requests[request_id] then
         screen_snapshot_requests[request_id] = nil
         screen_snapshot_request_count = screen_snapshot_request_count - 1
-        if options.debug_print_snapshot then
-            print("clear_screen_snapshot_request: Cleared screen snapshot request "..request_id..".")
-        end
+        print_debug("snapshot", "clear_screen_snapshot_request: Cleared screen snapshot request %s.", request_id)
     end
 end
 
 -- Requests a game engine pause. The pause will be applied after a game update as soon as it's safe to do so.
 function module.request_pause(debug_message)
-    if options.debug_print_pause then
-        print("request_pause: "..debug_message)
-    end
+    print_debug("pause", "request_pause: %s", debug_message)
     need_pause = true
 end
 
 -- Cancels a requested pause that hasn't be applied to the game engine yet. Does nothing if there is no requested pause. Does not unpause the game engine if it is already paused.
 function module.cancel_requested_pause()
-    if options.debug_print_pause then
-        print("cancel_requested_pause")
-    end
+    print_debug("pause", "cancel_requested_pause")
     need_pause = false
 end
 
@@ -136,9 +128,7 @@ local function try_pause()
         if active_tas_session then
             active_tas_session.suppress_screen_tas_inputs = true
         end
-        if options.debug_print_pause then
-            print("try_pause: Suppressing TAS inputs for the current transition screen instead of pausing.")
-        end
+        print_debug("pause", "try_pause: Suppressing TAS inputs for the current transition screen instead of pausing.")
         return
     end
     if state.loading == 0 and (state.pause == 0 or state.pause == PAUSE.FADE) then
@@ -147,9 +137,7 @@ local function try_pause()
         -- TODO: Pausing is not safe during mixed or non-FADE pause states because OL FADE pauses currently handle them incorrectly and will erase the other pause flags. This causes problems such as level timer desync during cutscenes.
         state.pause = PAUSE.FADE
         need_pause = false
-        if options.debug_print_pause then
-            print("try_pause: Paused")
-        end
+        print_debug("pause", "try_pause: Paused")
     end
 end
 
@@ -167,13 +155,13 @@ end
 -- Validates whether a warp can be performed and prepares for screen-specific warp behavior. Returns false if it isn't currently safe to warp from this screen.
 local function prepare_warp_from_screen()
     if state.loading == 2 then
-        print("Cannot warp during screen change update.")
+        print_info("Cannot warp during screen change update.")
         return false
     end
     local screen_can_warp = SCREEN_WARP_HANDLER[state.screen]
     local can_warp = type(screen_can_warp) == "function" and screen_can_warp() or screen_can_warp == true
     if not can_warp then
-        print("Cannot warp from current screen.")
+        print_info("Cannot warp from current screen.")
     end
     return can_warp
 end
@@ -188,9 +176,7 @@ end
 
 -- Forces the game to warp to a screen initialized with the simple start settings of the given TAS. This sets the run reset flag, prepares the game state, and then triggers the game to start unloading the current screen. The reset flag handles the most of the process on its own. Returns whether the warp was triggered successfully.
 function module.trigger_start_simple_warp(tas)
-    if options.debug_print_load then
-        print("trigger_start_simple_warp")
-    end
+    print_debug("screen_load", "trigger_start_simple_warp")
 
     if not prepare_warp_from_screen() then
         return false
@@ -262,9 +248,7 @@ end
 
 -- Forces the game to warp to a screen initialized with the given screen snapshot. This triggers the game to start unloading the current screen, and then it hooks into the loading process at specific points to apply the snapshot. Returns whether the warp was triggered successfully.
 function module.trigger_screen_snapshot_warp(screen_snapshot)
-    if options.debug_print_load then
-        print("trigger_screen_snapshot_warp")
-    end
+    print_debug("screen_load", "trigger_screen_snapshot_warp")
 
     if not prepare_warp_from_screen() then
         return false
@@ -280,31 +264,23 @@ end
 
 -- Called right before an update which is going to load a screen. The screen value itself might not change since the game may be loading the same type of screen. For screens that include level generation, this is the last place to read or write the adventure seed. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level generation.
 local function on_pre_update_load_screen()
-    if options.debug_print_load then
-        print("on_pre_update_load_screen: "..state.screen.." -> "..state.screen_next)
-    end
+    print_debug("screen_load", "on_pre_update_load_screen: %s -> %s", state.screen, state.screen_next)
 
     if warp_screen_snapshot then
         -- Apply a screen snapshot instead of loading the original destination for this screen change.
         if warp_screen_snapshot.state_memory then
             -- Apply the state memory snapshot.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_load_screen: Applying state memory from screen snapshot.")
-            end
+            print_debug("snapshot", "on_pre_update_load_screen: Applying state memory from screen snapshot.")
             introspection.apply_snapshot(state, warp_screen_snapshot.state_memory, GAME_TYPES.StateMemory_ScreenSnapshot)
         end
         if warp_screen_snapshot.adventure_seed then
             -- Apply the adventure seed.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_update_load_screen: Applying adventure seed from screen snapshot: "
-                    ..common.adventure_seed_part_to_string(warp_screen_snapshot.adventure_seed[1]).."-"
-                    ..common.adventure_seed_part_to_string(warp_screen_snapshot.adventure_seed[2]))
-            end
+            print_debug("snapshot", "on_pre_update_load_screen: Applying adventure seed from screen snapshot: %s-%s",
+                common.adventure_seed_part_to_string(warp_screen_snapshot.adventure_seed[1]),
+                common.adventure_seed_part_to_string(warp_screen_snapshot.adventure_seed[2]))
             set_adventure_seed(table.unpack(warp_screen_snapshot.adventure_seed))
         end
-        if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_update_load_screen: Screen change with snapshot: "..state.screen.." -> "..state.screen_next)
-        end
+        print_debug("snapshot", "on_pre_update_load_screen: Screen change with snapshot: %s -> %s", state.screen, state.screen_next)
     end
 
     if state.screen_next == SCREEN.OPTIONS or state.screen == SCREEN.OPTIONS then
@@ -319,9 +295,7 @@ local function on_pre_update_load_screen()
     local tasable_screen = common_enums.TASABLE_SCREEN[state.screen_next]
     if tasable_screen and tasable_screen.can_snapshot and screen_snapshot_request_count > 0 then
         -- Begin capturing a screen snapshot for the upcoming screen.
-        if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_update_load_screen: Starting capture of screen snapshot for "..screen_snapshot_request_count.." requests.")
-        end
+        print_debug("snapshot", "on_pre_update_load_screen: Starting capture of screen snapshot for %s requests.", screen_snapshot_request_count)
         -- Capture a state memory snapshot.
         captured_screen_snapshot = {
             state_memory = introspection.create_snapshot(state, GAME_TYPES.StateMemory_ScreenSnapshot)
@@ -336,33 +310,25 @@ end
 
 -- Called before level generation for the `CAMP` and `LEVEL` screens. This callback occurs within a game update where `state.loading` is initially 2. The previous screen has been unloaded at this point. This is the last place to manipulate the state memory before level generation. The state memory's player inventory data is fully set and can be read or written here. Shortly after level generation, the game will advance `state.loading` from 2 to 3.
 local function on_pre_level_gen()
-    if options.debug_print_load then
-        print("on_pre_level_gen")
-    end
+    print_debug("screen_load", "on_pre_level_gen")
 
     if warp_screen_snapshot then
         if warp_screen_snapshot.state_memory then
             -- The `player_inventory` array is applied pre-update, but it may be modified by the game when the previous screen is unloaded. Reapply it here.
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_level_gen: Reapplying player inventory array snapshot.")
-            end
+            print_debug("snapshot", "on_pre_level_gen: Reapplying player inventory array snapshot.")
             introspection.apply_snapshot(state.items.player_inventory, warp_screen_snapshot.state_memory.items.player_inventory,
                 GAME_TYPES.Items.fields_by_name["player_inventory"].type)
         end
         if warp_screen_snapshot.pre_level_gen_screen_last then
             state.screen_last = warp_screen_snapshot.pre_level_gen_screen_last
         end
-        if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_level_gen: Finished applying screen snapshot.")
-        end
+        print_debug("snapshot", "on_pre_level_gen: Finished applying screen snapshot.")
         warp_screen_snapshot = nil
     end
 
     if captured_screen_snapshot then
         -- Recapture the `player_inventory` array in the state memory. Earlier in this update, the game may have modified the player inventories based on the player entities that were unloaded in the previous screen. Assuming that updates are not affected by the contents of the `player_inventory` array before level generation, it should be safe to overwrite the `player_inventory` array that was captured pre-update.
-        if options.debug_print_load or options.debug_print_snapshot then
-            print("on_pre_level_gen: Recapturing player inventory array snapshot.")
-        end
+        print_debug("snapshot", "on_pre_level_gen: Recapturing player inventory array snapshot.")
         captured_screen_snapshot.state_memory.items.player_inventory =
             introspection.create_snapshot(state.items.player_inventory, GAME_TYPES.Items.fields_by_name["player_inventory"].type)
         if state.screen == SCREEN.CAMP then
@@ -376,9 +342,7 @@ local function on_pre_level_gen()
             else
                 callback(captured_screen_snapshot)
             end
-            if options.debug_print_load or options.debug_print_snapshot then
-                print("on_pre_level_gen: Fulfilled screen snapshot request "..request_id..".")
-            end
+            print_debug("snapshot", "on_pre_level_gen: Fulfilled screen snapshot request %s.", request_id)
             screen_snapshot_requests[request_id] = nil
             screen_snapshot_request_count = screen_snapshot_request_count - 1
         end
@@ -406,22 +370,16 @@ local function on_pre_update()
     --  Note: `get_frame()` and `state.time_startup` are not incremented by fast updates, so they are not reliable update counters.
     if not fast_update_start_time and can_fast_update() then
         fast_update_start_time = get_ms()
-        if options.debug_print_fast_update then
-            print("on_pre_update: Starting fast update batch. fast_update_start_time="..fast_update_start_time)
-        end
+        print_debug("fast_update", "on_pre_update: Starting fast update batch. fast_update_start_time=%s", fast_update_start_time)
         while true do
             update_state()
             local duration = get_ms() - fast_update_start_time
             if duration >= FAST_UPDATE_BATCH_DURATION then
-                if options.debug_print_fast_update then
-                    print("on_pre_update: Stopping fast update batch after "..duration.."ms: Max duration reached.")
-                end
+                print_debug("fast_update", "on_pre_update: Stopping fast update batch after %sms: Max duration reached.", duration)
                 break
             end
             if not can_fast_update() then
-                if options.debug_print_fast_update then
-                    print("on_pre_update: Stopping fast update batch after "..duration.."ms: Fast update conditions no longer met.")
-                end
+                print_debug("fast_update", "on_pre_update: Stopping fast update batch after %sms: Fast update conditions no longer met.", duration)
                 break
             end
         end
@@ -444,9 +402,7 @@ local function on_post_update_load_screen()
         -- This update either entered or exited the options screen. This did not change the underlying screen and is not a relevant event for this script.
         return
     end
-    if options.debug_print_load then
-        print("on_post_update_load_screen: "..state.screen_last.." -> "..state.screen)
-    end
+    print_debug("screen_load", "on_post_update_load_screen: %s -> %s", state.screen_last, state.screen)
 
     if active_tas_session then
         active_tas_session:on_post_update_load_screen()
@@ -460,9 +416,7 @@ local function on_post_update_load_screen()
 
     if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not need_pause and options.transition_skip and not presentation_active then
         -- The screen couldn't be skipped entirely. The transition screen needed to be loaded in order for pet health to be applied to players. The spaceship screen is also handled in this way for simplicity, even though it doesn't affect pet health. Now the screen can be immediately unloaded.
-        if options.debug_print_load then
-            print("on_post_update_load_screen: Skipping transition/spaceship screen.")
-        end
+        print_debug("screen_load", "on_post_update_load_screen: Skipping transition/spaceship screen.")
         if state.screen == SCREEN.TRANSITION then
             state.screen_next = SCREEN.LEVEL
         else

@@ -150,13 +150,13 @@ default_options = {
             window_settings = { x = 0.0, y = 0.2, w = 0.4, h = 0.4 }
         }
     },
-    debug_print_load = false,
     debug_print_fast_update = false,
     debug_print_file = false,
-    debug_print_frame = false,
     debug_print_input = false,
+    debug_print_misc = false,
     debug_print_mode = false,
     debug_print_pause = false,
+    debug_print_screen_load = false,
     debug_print_snapshot = false
 }
 
@@ -165,6 +165,20 @@ active_tas_session = nil
 ---@type TasSession?
 ghost_tas_session = nil
 presentation_active = false
+
+function print_debug(category, format_string, ...)
+    if not presentation_active and options["debug_print_"..category] then
+        print("[Debug] "..string.format(format_string, ...))
+    end
+end
+
+function print_info(format_string, ...)
+    print("[Info] "..string.format(format_string, ...))
+end
+
+function print_warn(format_string, ...)
+    print("[Warning] "..string.format(format_string, ...))
+end
 
 local function save_script_data(save_ctx)
     local save_data = {
@@ -177,7 +191,7 @@ local function save_script_data(save_ctx)
         save_ctx:save(save_json)
     end)
     if not success then
-        print("Warning: Failed to save script data: "..err)
+        print_warn("Failed to save script data: %s", err)
     end
 end
 
@@ -188,12 +202,12 @@ local function load_script_data(load_ctx)
         load_json = load_ctx:load()
     end)
     if not success then
-        print("Warning: Failed to load script data: "..err)
+        print_warn("Failed to load script data: %s", err)
     else
         local result
         success, result = persistence.json_decode(load_json, true)
         if not success then
-            print("Warning: Failed to load script data: "..result)
+            print_warn("Failed to load script data: %s", result)
         elseif result then
             load_data = result
         end
