@@ -51,9 +51,13 @@ default_options = {
     frames_viewer_step_size = 10,
     active_path_visible = true,
     ghost_path_visible = true,
-    path_mark_visible = true,
-    path_mark_label_visible = true,
-    path_mark_increment = 30,
+    path_frame_mark_visible = true,
+    path_frame_mark_label_visible = true,
+    path_frame_mark_label_size = 20.0,
+    path_frame_mark_interval = 30,
+    path_frame_tag_visible = true,
+    path_frame_tag_label_visible = true,
+    path_frame_tag_label_size = 20.0,
     mode_watermark_visible = true,
     mode_watermark_x = 0.0,
     mode_watermark_y = -0.95,
@@ -84,12 +88,14 @@ default_options = {
             {
                 name = "Start",
                 screen = 1,
-                frame = 0
+                frame = 0,
+                show_on_path = false
             },
             {
                 name = "End",
                 screen = -1,
-                frame = -1
+                frame = -1,
+                show_on_path = false
             }
         },
         save_player_positions = true,

@@ -45,12 +45,22 @@ function module:draw_panel(ctx, is_window)
     ctx:win_text("Player paths show the recorded positions of each player.")
     options.active_path_visible = ctx:win_check("Show active TAS paths", options.active_path_visible)
     tool_guis.ghost:draw_ghost_path_visible_option(ctx)
-    options.path_mark_visible = ctx:win_check("Draw path marks", options.path_mark_visible)
-    options.path_mark_label_visible = ctx:win_check("Draw path mark labels", options.path_mark_label_visible)
-    options.path_mark_increment = ctx:win_input_int("Frames between path marks", options.path_mark_increment)
-    if options.path_mark_increment < 1 then
-        options.path_mark_increment = 1
+    options.path_frame_mark_visible = ctx:win_check("Draw frame marks", options.path_frame_mark_visible)
+    ctx:win_text("Draw frame marks on player paths at a periodic interval.")
+    ctx:win_indent(common_gui.INDENT_SUB_INPUT)
+    options.path_frame_mark_label_visible = ctx:win_check("Draw frame mark labels", options.path_frame_mark_label_visible)
+    options.path_frame_mark_label_size = common_gui.draw_drag_float_clamped(ctx, "Frame mark label size", options.path_frame_mark_label_size, 1.0, 100.0)
+    options.path_frame_mark_interval = ctx:win_input_int("Frame mark interval", options.path_frame_mark_interval)
+    if options.path_frame_mark_interval < 1 then
+        options.path_frame_mark_interval = 1
     end
+    ctx:win_indent(-common_gui.INDENT_SUB_INPUT)
+    options.path_frame_tag_visible = ctx:win_check("Draw frame tags", options.path_frame_tag_visible)
+    ctx:win_text("Draw TAS frame tags on player paths.")
+    ctx:win_indent(common_gui.INDENT_SUB_INPUT)
+    options.path_frame_tag_label_visible = ctx:win_check("Draw frame tag labels", options.path_frame_tag_label_visible)
+    options.path_frame_tag_label_size = common_gui.draw_drag_float_clamped(ctx, "Frame tag label size", options.path_frame_tag_label_size, 1.0, 100.0)
+    ctx:win_indent(-common_gui.INDENT_SUB_INPUT)
 
     ctx:win_separator_text("Mode watermark")
     ctx:win_text("A mode watermark can be shown on the screen to indicate that the TAS is in recording or playback mode.")

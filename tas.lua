@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 25
+local CURRENT_FORMAT = 26
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -455,7 +455,7 @@ local FORMAT_UPDATERS = {
         end
     },
     [24] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 25,
         update = function(o)
             for _, screen in ipairs(o.screens) do
                 if screen.players then
@@ -476,6 +476,14 @@ local FORMAT_UPDATERS = {
                         frame.players = nil
                     end
                 end
+            end
+        end
+    },
+    [25] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            for _, frame_tag in ipairs(o.frame_tags) do
+                frame_tag.show_on_path = frame_tag.frame ~= 0 and frame_tag.frame ~= -1
             end
         end
     }

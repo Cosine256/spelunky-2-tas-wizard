@@ -75,11 +75,15 @@ local function draw_point_mark(ctx, x, y, ucolor)
     ctx:draw_line(scr_x, scr_y - POINT_SCR_H_HALF, scr_x, scr_y + POINT_SCR_H_HALF, 2, ucolor)
 end
 
-local function draw_tas_path_mark(ctx, pos, label, ucolor)
+local function draw_tas_path_mark(ctx, pos, label, size, top_label, ucolor)
     draw_point_mark(ctx, pos.x, pos.y, ucolor)
-    if options.path_mark_label_visible then
+    if label then
         local x, y = screen_position(pos.x, pos.y)
-        ctx:draw_text(x, y, 0, label, ucolor)
+        if top_label then
+            local _, h = draw_text_size(size, "")
+            y = y - h
+        end
+        ctx:draw_text(x, y, size, label, ucolor)
     end
 end
 
@@ -104,15 +108,39 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
         end
         prev_frame_positions = frame.positions
     end
-    if options.path_mark_visible then
-        -- Draw path marks in this second iteration so that they always draw on top of the path.
-        for i = options.path_mark_increment, #screen.frames, options.path_mark_increment do
+    if options.path_frame_mark_visible then
+        -- Draw frame marks in this second iteration so that they always draw on top of the path.
+        for i = options.path_frame_mark_interval, #screen.frames, options.path_frame_mark_interval do
             local frame = screen.frames[i]
             if frame.positions then
                 for player_index, pos in ipairs(frame.positions) do
                     if pos.x then
-                        draw_tas_path_mark(ctx, pos, tostring(i),
+                        draw_tas_path_mark(ctx, pos, options.path_frame_mark_label_visible and tostring(i) or nil, options.path_frame_mark_label_size, false,
                             PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
+                    end
+                end
+            end
+        end
+    end
+    if options.path_frame_tag_visible then
+        for _, frame_tag in ipairs(tas_session.tas.frame_tags) do
+            if frame_tag.show_on_path and (frame_tag.screen == -1 and tas_session.tas:get_end_screen_index()
+                or frame_tag.screen) == tas_session.current_screen_index
+            then
+                local positions
+                if frame_tag.frame == -1 then
+                    positions = screen.frames[tas_session.tas:get_end_frame_index(tas_session.current_screen_index)].positions
+                elseif frame_tag.frame == 0 then
+                    positions = screen.start_positions
+                else
+                    positions = screen.frames[frame_tag.frame].positions
+                end
+                if positions then
+                    for player_index, pos in ipairs(positions) do
+                        if pos.x then
+                            draw_tas_path_mark(ctx, pos, options.path_frame_tag_label_visible and frame_tag.name or nil, options.path_frame_tag_label_size, true,
+                                PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
+                        end
                     end
                 end
             end

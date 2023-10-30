@@ -112,6 +112,8 @@ local function draw_frame_tag(ctx, frame_tag_index, screen_choices, screen_combo
             frame_tag.frame = use_end_frame and -1 or new_frame_index
         end
 
+        frame_tag.show_on_path = ctx:win_check("Show on path", frame_tag.show_on_path)
+
         if ctx:win_button("Move up") then
             frame_tag_move_index = frame_tag_index
             frame_tag_move_dir = -1
@@ -220,7 +222,8 @@ function module:draw_panel(ctx, is_window)
                 table.insert(tas.frame_tags, {
                     name = "New",
                     screen = active_tas_session.current_screen_index or 1,
-                    frame = active_tas_session.current_frame_index or 0
+                    frame = active_tas_session.current_frame_index or 0,
+                    show_on_path = true
                 })
                 table.insert(frame_tag_datas, {
                     id = next_frame_tag_data_id
