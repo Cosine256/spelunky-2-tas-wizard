@@ -99,8 +99,11 @@ default_options = {
                 show_on_path = false
             }
         },
-        save_player_positions = true,
-        save_screen_snapshots = true
+        save_player_positions_default = true,
+        save_screen_snapshot_defaults = {
+            [common_enums.TASABLE_SCREEN[SCREEN.CAMP].data_id] = true,
+            [common_enums.TASABLE_SCREEN[SCREEN.LEVEL].data_id] = true
+        }
     },
     tool_guis = {
         file = {

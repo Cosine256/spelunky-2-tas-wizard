@@ -33,7 +33,7 @@ end
 
 -- TODO: Reset format to 1 and remove these development updaters before the first release. 
 -- Note: These updaters don't cover some edge cases when I know that none of my test TASes contain that edge case. Post-release updaters will need to handle every possible edge case.
-local CURRENT_FORMAT = 28
+local CURRENT_FORMAT = 29
 local FORMAT_UPDATERS = {
     [1] = {
         output_format = 2,
@@ -497,11 +497,32 @@ local FORMAT_UPDATERS = {
         end
     },
     [27] = {
-        output_format = CURRENT_FORMAT,
+        output_format = 28,
         update = function(o)
             for _, screen in ipairs(o.screens) do
                 screen.metadata.skippable_intro_cutscene = screen.metadata.cutscene
                 screen.metadata.cutscene = nil
+            end
+        end
+    },
+    [28] = {
+        output_format = CURRENT_FORMAT,
+        update = function(o)
+            o.save_player_positions_default = o.save_player_positions
+            o.save_player_positions = nil
+            o.save_screen_snapshot_defaults = {
+                [common_enums.TASABLE_SCREEN[SCREEN.CAMP].data_id] = o.save_screen_snapshots,
+                [common_enums.TASABLE_SCREEN[SCREEN.LEVEL].data_id] = o.save_screen_snapshots
+            }
+            o.save_screen_snapshots = nil
+            for screen_index, screen in ipairs(o.screens) do
+                local tasable_screen = common_enums.TASABLE_SCREEN[screen.metadata.screen]
+                if tasable_screen.record_frames then
+                    screen.save_player_positions = o.save_player_positions_default
+                end
+                if tasable_screen.can_snapshot and screen_index > 1 then
+                    screen.save_screen_snapshot = o.save_screen_snapshot_defaults[tasable_screen.data_id]
+                end
             end
         end
     }
@@ -518,8 +539,8 @@ function Tas:to_raw(serial_mod)
         start_snapshot = common.deep_copy(self.start_snapshot),
         screens = {},
         frame_tags = common.deep_copy(self.frame_tags),
-        save_player_positions = self.save_player_positions,
-        save_screen_snapshots = self.save_screen_snapshots
+        save_player_positions_default = self.save_player_positions_default,
+        save_screen_snapshot_defaults = common.deep_copy(self.save_screen_snapshot_defaults)
     }
     if serial_mod ~= Tas.SERIAL_MODS.NONE then
         copy.format = CURRENT_FORMAT
@@ -556,13 +577,15 @@ function Tas:to_raw(serial_mod)
     for screen_index, self_screen in ipairs(self.screens) do
         local copy_screen = {
             metadata = common.deep_copy(self_screen.metadata),
-            transition_exit_frame = self_screen.transition_exit_frame
+            transition_exit_frame = self_screen.transition_exit_frame,
+            save_player_positions = self_screen.save_player_positions,
+            save_screen_snapshot = self_screen.save_screen_snapshot
         }
         copy.screens[screen_index] = copy_screen
-        if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions) and self_screen.start_positions then
+        if self_screen.start_positions and (serial_mod == Tas.SERIAL_MODS.NONE or self_screen.save_player_positions) then
             copy_screen.start_positions = common.deep_copy(self_screen.start_positions)
         end
-        if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_screen_snapshots) and self_screen.snapshot then
+        if self_screen.snapshot and (serial_mod == Tas.SERIAL_MODS.NONE or self_screen.save_screen_snapshot) then
             copy_screen.snapshot = common.deep_copy(self_screen.snapshot)
             if serial_mod ~= Tas.SERIAL_MODS.NONE and copy_screen.snapshot.adventure_seed then
                 copy_screen.snapshot.adventure_seed = common.adventure_seed_to_string(copy_screen.snapshot.adventure_seed)
@@ -575,7 +598,7 @@ function Tas:to_raw(serial_mod)
                     inputs = common.deep_copy(self_frame.inputs)
                 }
                 copy_screen.frames[frame_index] = copy_frame
-                if (serial_mod == Tas.SERIAL_MODS.NONE or self.save_player_positions) and self_frame.positions then
+                if self_frame.positions and (serial_mod == Tas.SERIAL_MODS.NONE or self_screen.save_player_positions) then
                     copy_frame.positions = common.deep_copy(self_frame.positions)
                 end
             end

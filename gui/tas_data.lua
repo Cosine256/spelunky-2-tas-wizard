@@ -180,6 +180,8 @@ function module:draw_panel(ctx, is_window)
                     ctx:win_pushid("player_positions")
                     ctx:win_separator_text("Player positions")
                     common_gui.draw_player_positions_more_info(ctx)
+                    screen.save_player_positions = ctx:win_check("Save player positions", screen.save_player_positions)
+                    ctx:win_text("Save this screen's player positions in the TAS file.")
                     if ctx:win_button("Clear player positions") then
                         tas:clear_player_positions(screen_index)
                     end
@@ -190,12 +192,14 @@ function module:draw_panel(ctx, is_window)
                     ctx:win_separator_text("Screen snapshot")
                     common_gui.draw_screen_snapshot_more_info(ctx)
                     if screen.snapshot then
-                        ctx:win_text("Screen snapshot captured.")
-                        if ctx:win_button("Clear screen snapshot") then
-                            tas:clear_screen_snapshot(screen_index)
-                        end
+                        ctx:win_text("Status: Screen snapshot captured.")
                     else
-                        ctx:win_text("No screen snapshot captured.")
+                        ctx:win_text("Status: No screen snapshot captured.")
+                    end
+                    screen.save_screen_snapshot = ctx:win_check("Save screen snapshot", screen.save_screen_snapshot)
+                    ctx:win_text("Save this screen's snapshot in the TAS file.")
+                    if screen.snapshot and ctx:win_button("Clear screen snapshot") then
+                        tas:clear_screen_snapshot(screen_index)
                     end
                     ctx:win_popid()
                 end

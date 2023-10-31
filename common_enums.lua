@@ -29,27 +29,32 @@ module.PLAYBACK_TARGET_MODE = OrderedTable:new({
 })
 
 ---@class TasableScreen Attributes for a TASable screen. A TASable screen is a screen which supports TAS recording and playback.
+---@field data_id string Data ID for this screen. Can be used as a key where the integer ID will not work, such as JSON.
 ---@field name string Display name for this screen.
 ---@field record_frames boolean Whether the screen supports recording data for individual frames and playback to specific frames. Frame data includes player inputs and positions.
 ---@field can_snapshot boolean Whether the screen supports capturing and applying screen snapshots. Snapshots are currently limited to screens that trigger the `PRE_LEVEL_GENERATION` callback due to the need for a mid-update callback to apply certain changes.
 ---@type { [SCREEN]: TasableScreen } Table of all TASable screens.
 module.TASABLE_SCREEN = {
     [SCREEN.CAMP] = {
+        data_id = "camp",
         name = "Base Camp",
         record_frames = true,
         can_snapshot = true
     },
     [SCREEN.LEVEL] = {
+        data_id = "level",
         name = "Level",
         record_frames = true,
         can_snapshot = true
     },
     [SCREEN.TRANSITION] = {
+        data_id = "transition",
         name = "Transition",
         record_frames = false,
         can_snapshot = false
     },
     [SCREEN.SPACESHIP] = {
+        data_id = "spaceship",
         name = "Spaceship Cutscene",
         record_frames = false,
         can_snapshot = false

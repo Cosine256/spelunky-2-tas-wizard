@@ -1,3 +1,4 @@
+local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
 local ToolGui = require("gui/tool_gui")
 
@@ -21,8 +22,8 @@ local function draw_tas_settings(ctx)
     ctx:win_pushid("player_positions")
     ctx:win_separator_text("Player positions")
     common_gui.draw_player_positions_more_info(ctx)
-    tas.save_player_positions = ctx:win_check("Save player positions", tas.save_player_positions)
-    ctx:win_text("Save player positions in the TAS file. This will greatly increase its file size.")
+    tas.save_player_positions_default = ctx:win_check("Save player positions (default)", tas.save_player_positions_default)
+    ctx:win_text("Save player positions in the TAS file by default for new screens.")
     if ctx:win_button("Clear player positions") then
         tas:clear_all_player_positions()
     end
@@ -32,8 +33,15 @@ local function draw_tas_settings(ctx)
     ctx:win_pushid("screen_snapshots")
     ctx:win_separator_text("Screen snapshots")
     common_gui.draw_screen_snapshot_more_info(ctx)
-    tas.save_screen_snapshots = ctx:win_check("Save screen snapshots", tas.save_screen_snapshots)
-    ctx:win_text("Save screen snapshots in the TAS file. This will greatly increase its file size.")
+    ctx:win_text("Save screen snapshots in the TAS file by default for new screens:")
+    ctx:win_indent(common_gui.INDENT_SUB_INPUT)
+    local tasable_screen_camp = common_enums.TASABLE_SCREEN[SCREEN.CAMP]
+    tas.save_screen_snapshot_defaults[tasable_screen_camp.data_id] =
+        ctx:win_check(tasable_screen_camp.name, tas.save_screen_snapshot_defaults[tasable_screen_camp.data_id])
+    local tasable_screen_level = common_enums.TASABLE_SCREEN[SCREEN.LEVEL]
+    tas.save_screen_snapshot_defaults[tasable_screen_level.data_id] =
+        ctx:win_check(tasable_screen_level.name, tas.save_screen_snapshot_defaults[tasable_screen_level.data_id])
+    ctx:win_indent(-common_gui.INDENT_SUB_INPUT)
     if ctx:win_button("Clear screen snapshots") then
         tas:clear_all_screen_snapshots()
     end

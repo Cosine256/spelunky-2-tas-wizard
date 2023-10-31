@@ -265,6 +265,10 @@ function TasSession:_create_end_screen()
     self.current_tasable_screen = common_enums.TASABLE_SCREEN[screen.metadata.screen]
     if self.current_tasable_screen.record_frames then
         screen.frames = {}
+        screen.save_player_positions = self.tas.save_player_positions_default
+    end
+    if self.current_tasable_screen.can_snapshot and self.current_screen_index > 1 then
+        screen.save_screen_snapshot = self.tas.save_screen_snapshot_defaults[self.current_tasable_screen.data_id]
     end
     if screen.metadata.screen == SCREEN.TRANSITION then
         screen.transition_exit_frame = common.TRANSITION_EXIT_FIRST_FRAME

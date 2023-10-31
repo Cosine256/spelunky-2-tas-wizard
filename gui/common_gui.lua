@@ -442,7 +442,7 @@ end
 function module.draw_player_positions_more_info(ctx)
     ctx:win_section("More info", function()
         ctx:win_indent(module.INDENT_SECTION)
-        ctx:win_text("Player positions are used to show player paths through each screen and to detect player position desync. They are stored in memory automatically while playing back or recording the TAS.")
+        ctx:win_text("Player positions are used to show player paths through each screen and to detect player position desync. They are stored in memory automatically while playing back or recording the TAS. Player positions will greatly increase the file size if saved in the TAS file.")
         ctx:win_indent(-module.INDENT_SECTION)
     end)
 end
@@ -450,7 +450,7 @@ end
 function module.draw_screen_snapshot_more_info(ctx)
     ctx:win_section("More info", function()
         ctx:win_indent(module.INDENT_SECTION)
-        ctx:win_text("Screen snapshots allow screen warping and playing back the TAS from the start of the nearest screen instead of the start of the run. They are stored in memory automatically while playing back or recording the TAS.")
+        ctx:win_text("Screen snapshots allow screen warping and playing back the TAS from the start of the nearest screen instead of the start of the run. They are stored in memory automatically while playing back or recording the TAS. Screen snapshots will greatly increase the file size if saved in the TAS file.")
         ctx:win_indent(-module.INDENT_SECTION)
     end)
 end
