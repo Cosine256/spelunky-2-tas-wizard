@@ -3,6 +3,16 @@ meta.version = "1.0.0"
 meta.description = "A mod for creating tool-assisted speedruns."
 meta.author = "Cosine"
 
+-- Check for the latest added feature needed by this mod to ensure that it's not being loaded in an outdated version of the script API.
+if not update_state then
+    local message = "ERROR: This is an outdated version of Playlunky or Overlunky that lacks features required by TAS Wizard! You might need the nightly version!"
+    print(message)
+    register_option_callback("", options, function(ctx)
+        ctx:win_text(message)
+    end)
+    return
+end
+
 local common = require("common")
 local common_enums = require("common_enums")
 local drawing = require("gui/drawing")
