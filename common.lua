@@ -2,7 +2,7 @@ local common_enums = require("common_enums")
 
 local module = {}
 
--- The earliest frame in which a boss cutscene can be skipped.
+-- The earliest frame in which an intro cutscene can be skipped.
 module.CUTSCENE_SKIP_FIRST_FRAME = 2
 -- The highest value of the Olmec cutscene logic timer before the cutscene ends.
 module.OLMEC_CUTSCENE_LAST_FRAME = 809

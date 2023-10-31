@@ -155,11 +155,11 @@ function module:draw_panel(ctx, is_window)
                 if screen.metadata.theme then
                     ctx:win_text("Theme: "..common.THEME_NAME[screen.metadata.theme])
                 end
-                if screen.metadata.cutscene ~= nil then
-                    ctx:win_text("Cutscene: "..(screen.metadata.cutscene and "Yes" or "No"))
+                if screen.metadata.skippable_intro_cutscene ~= nil then
+                    ctx:win_text("Skippable intro cutscene: "..(screen.metadata.skippable_intro_cutscene and "Yes" or "No"))
                 end
                 if screen.metadata.screen == SCREEN.LEVEL then
-                    if screen.metadata.cutscene then
+                    if screen.metadata.skippable_intro_cutscene then
                         ctx:win_pushid("cutscene")
                         ctx:win_separator_text("Cutscene")
                         ctx:win_section("Cutscene Skip Editor", function()

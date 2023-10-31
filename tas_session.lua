@@ -246,7 +246,7 @@ local function generate_screen_metadata()
         metadata.level = state.level
         metadata.theme = state.theme
         if metadata.screen == SCREEN.LEVEL and (metadata.theme == THEME.OLMEC or metadata.theme == THEME.TIAMAT) then
-            metadata.cutscene = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
+            metadata.skippable_intro_cutscene = state.logic.olmec_cutscene ~= nil or state.logic.tiamat_cutscene ~= nil
         end
     end
     return metadata
