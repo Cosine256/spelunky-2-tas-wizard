@@ -364,7 +364,7 @@ end
 
 local function can_fast_update()
     return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
-        and state.screen ~= SCREEN.OPTIONS and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
+        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
         and not post_update_engine_paused and not active_tas_session.suppress_screen_tas_inputs
 end
 
