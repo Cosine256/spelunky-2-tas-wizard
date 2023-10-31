@@ -154,14 +154,16 @@ default_options = {
             window_settings = { x = 0.0, y = 0.2, w = 0.4, h = 0.4 }
         }
     },
-    debug_print_fast_update = false,
-    debug_print_file = false,
-    debug_print_input = false,
-    debug_print_misc = false,
-    debug_print_mode = false,
-    debug_print_pause = false,
-    debug_print_screen_load = false,
-    debug_print_snapshot = false
+    debug_prints = {
+        fast_update = false,
+        file = false,
+        input = false,
+        misc = false,
+        mode = false,
+        pause = false,
+        screen_load = false,
+        snapshot = false
+    }
 }
 
 ---@type TasSession?
@@ -171,7 +173,7 @@ ghost_tas_session = nil
 presentation_active = false
 
 function print_debug(category, format_string, ...)
-    if not presentation_active and options["debug_print_"..category] then
+    if not presentation_active and options.debug_prints[category] then
         print("[Debug] "..string.format(format_string, ...))
     end
 end
