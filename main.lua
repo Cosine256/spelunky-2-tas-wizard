@@ -269,6 +269,14 @@ function set_ghost_tas(tas)
 end
 
 local function on_gui_frame(ctx)
+    -- Draw the windows before the background elements. The background elements should not throw any errors, but if they do, then the user will still be able to interact with the windows and save their TAS or disable whatever is causing the errors.
+    if not presentation_active then
+        ctx:draw_layer(DRAW_LAYER.WINDOW)
+        for _, tool_gui in pairs(tool_guis) do
+            tool_gui:draw_window(ctx)
+        end
+    end
+
     ctx:draw_layer(DRAW_LAYER.BACKGROUND)
     drawing.update_screen_vars()
     if not presentation_active then
@@ -284,13 +292,6 @@ local function on_gui_frame(ctx)
     end
     if active_tas_session then
         drawing.draw_mode_watermark(ctx)
-    end
-
-    if not presentation_active then
-        ctx:draw_layer(DRAW_LAYER.WINDOW)
-        for _, tool_gui in pairs(tool_guis) do
-            tool_gui:draw_window(ctx)
-        end
     end
 end
 
