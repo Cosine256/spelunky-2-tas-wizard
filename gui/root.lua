@@ -1,7 +1,7 @@
 local common_gui = require("gui/common_gui")
 local ToolGui = require("gui/tool_gui")
 
-local module = ToolGui:new("root", "TAS Tool")
+local module = ToolGui:new("root", "TAS Wizard")
 
 local ordered_tool_guis
 

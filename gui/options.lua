@@ -7,8 +7,8 @@ local module = ToolGui:new("options", "Options")
 
 function module:draw_panel(ctx, is_window)
     if not is_window then
-        -- TODO: Can't distinguish between whether this is embedded in the options dropdown or the TAS Tool window.
-        if ctx:win_button("Show TAS Tool window") then
+        -- TODO: Can't distinguish between whether this is embedded in the options dropdown or the root window.
+        if ctx:win_button("Show TAS Wizard window") then
             if presentation_active then
                 presentation_active = false
             end
@@ -72,7 +72,7 @@ function module:draw_panel(ctx, is_window)
     options.mode_watermark_size = common_gui.draw_drag_float_clamped(ctx, "Watermark size", options.mode_watermark_size, 1.0, 200.0)
 
     ctx:win_separator_text("Presentation mode")
-    ctx:win_text("Presentation mode hides the TAS Tool GUI and paths, disables speed tweaks, and disables debug printing.")
+    ctx:win_text("Presentation mode hides the TAS Wizard GUI and paths, disables speed tweaks, and disables debug printing.")
     options.presentation_start_on_playback = ctx:win_check("Activate on playback", options.presentation_start_on_playback)
     options.presentation_stop_after_playback = ctx:win_check("Deactivate after playback", options.presentation_stop_after_playback)
     options.presentation_mode_watermark_visible = ctx:win_check("Show mode watermark###presentation_mode_watermark_visible",
@@ -143,11 +143,11 @@ function module:draw_panel(ctx, is_window)
             print_info("Save occurred too recently. Wait a few seconds and try again.")
         end
     end
-    ctx:win_text("Immediately save the current TAS Tool options. Saves also happen automatically during screen changes.")
+    ctx:win_text("Immediately save the current TAS Wizard options. Saves also happen automatically during screen changes.")
     if ctx:win_button("Reset options") then
         options = common.deep_copy(default_options)
     end
-    ctx:win_text("Reset all TAS Tool options to their default values. This does not affect any loaded TAS data or saved TAS files.")
+    ctx:win_text("Reset all TAS Wizard options to their default values. This does not affect any loaded TAS data or saved TAS files.")
 end
 
 return module

@@ -1,6 +1,6 @@
-meta.name = "TAS Tool"
-meta.version = "0.0.0"
-meta.description = ""
+meta.name = "TAS Wizard"
+meta.version = "1.0.0"
+meta.description = "A mod for creating tool-assisted speedruns."
 meta.author = "Cosine"
 
 local common = require("common")
