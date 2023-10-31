@@ -1,9 +1,9 @@
 local common = require("common")
 local common_gui = require("gui/common_gui")
 local tas_persistence = require("tas_persistence")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("options", "Options")
+local module = ToolGui:new("options", "Options")
 
 function module:draw_panel(ctx, is_window)
     if not is_window then

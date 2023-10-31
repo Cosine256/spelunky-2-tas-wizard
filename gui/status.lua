@@ -1,10 +1,9 @@
 local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
-local game_controller = require("game_controller")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("status", "Status")
+local module = ToolGui:new("status", "Status")
 
 function module:draw_panel(ctx, is_window)
     if active_tas_session then

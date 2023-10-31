@@ -1,8 +1,8 @@
 local common_gui = require("gui/common_gui")
 local tas_persistence = require("tas_persistence")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("file", "New, Save, Load")
+local module = ToolGui:new("file", "New, Save, Load")
 
 local file_io_status
 

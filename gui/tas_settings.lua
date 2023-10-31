@@ -1,7 +1,7 @@
 local common_gui = require("gui/common_gui")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("tas_settings", "TAS Settings")
+local module = ToolGui:new("tas_settings", "TAS Settings")
 
 local function draw_tas_settings(ctx)
     local tas = active_tas_session.tas

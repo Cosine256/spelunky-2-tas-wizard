@@ -1,9 +1,9 @@
 local common = require("common")
 local ComboInput = require("gui/combo_input")
 local OrderedTable = require("ordered_table")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("warp", "Warp")
+local module = ToolGui:new("warp", "Warp")
 
 local warp_screen = 1
 

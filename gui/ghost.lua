@@ -1,6 +1,6 @@
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("ghost", "Ghost")
+local module = ToolGui:new("ghost", "Ghost")
 
 function module:draw_ghost_path_visible_option(ctx)
     options.ghost_path_visible = ctx:win_check("Show ghost TAS paths", options.ghost_path_visible)

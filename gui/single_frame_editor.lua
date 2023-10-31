@@ -1,8 +1,8 @@
 local common = require("common")
 local common_gui = require("gui/common_gui")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("single_frame_editor", "Edit Frame")
+local module = ToolGui:new("single_frame_editor", "Edit Frame")
 module.is_popup = true
 
 function module:reset_session_vars()

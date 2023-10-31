@@ -4,9 +4,9 @@ local common_enums = require("common_enums")
 local game_controller = require("game_controller")
 local common_gui = require("gui/common_gui")
 local OrderedTable = require("ordered_table")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("playback_record", "Playback & Recording")
+local module = ToolGui:new("playback_record", "Playback & Recording")
 
 local PLAYBACK_TARGET_MODE_COMBO = ComboInput:new(common_enums.PLAYBACK_TARGET_MODE)
 

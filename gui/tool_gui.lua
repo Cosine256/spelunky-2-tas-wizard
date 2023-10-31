@@ -1,7 +1,7 @@
-local Tool_GUI = {}
-Tool_GUI.__index = Tool_GUI
+local ToolGui = {}
+ToolGui.__index = ToolGui
 
-function Tool_GUI:new(id, name)
+function ToolGui:new(id, name)
     local o = {
         id = id,
         name = name,
@@ -14,7 +14,7 @@ function Tool_GUI:new(id, name)
     return o
 end
 
-function Tool_GUI:reset_window_position()
+function ToolGui:reset_window_position()
     local window_settings = options.tool_guis[self.id].window_settings
     local default_window_settings = default_options.tool_guis[self.id].window_settings
     window_settings.x, window_settings.y = default_window_settings.x, default_window_settings.y
@@ -24,7 +24,7 @@ function Tool_GUI:reset_window_position()
     end
 end
 
-function Tool_GUI:draw_window_options(ctx, is_window)
+function ToolGui:draw_window_options(ctx, is_window)
     if is_window then
         if ctx:win_button("Reset window position") then
             self:reset_window_position()
@@ -36,7 +36,7 @@ function Tool_GUI:draw_window_options(ctx, is_window)
     end
 end
 
-function Tool_GUI:draw_window(ctx)
+function ToolGui:draw_window(ctx)
     if self:is_window_open() then
         local window_settings = options.tool_guis[self.id].window_settings
         local movable = true
@@ -56,7 +56,7 @@ function Tool_GUI:draw_window(ctx)
     end
 end
 
-function Tool_GUI:is_window_open()
+function ToolGui:is_window_open()
     if self.is_popup then
         return self.is_popup_open
     else
@@ -64,7 +64,7 @@ function Tool_GUI:is_window_open()
     end
 end
 
-function Tool_GUI:set_window_open(open)
+function ToolGui:set_window_open(open)
     if self.is_popup then
         self.is_popup_open = open
     else
@@ -73,11 +73,11 @@ function Tool_GUI:set_window_open(open)
 end
 
 -- Called once when the script is loaded.
-function Tool_GUI:initialize()
+function ToolGui:initialize()
 end
 
 -- Called when the active TAS session is reset, replaced, or cleared, and once when the script is loaded.
-function Tool_GUI:reset_session_vars()
+function ToolGui:reset_session_vars()
 end
 
-return Tool_GUI
+return ToolGui

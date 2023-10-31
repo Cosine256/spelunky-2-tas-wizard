@@ -3,9 +3,9 @@ local common = require("common")
 local common_enums = require("common_enums")
 local common_gui = require("gui/common_gui")
 local OrderedTable = require("ordered_table")
-local Tool_GUI = require("gui/tool_gui")
+local ToolGui = require("gui/tool_gui")
 
-local module = Tool_GUI:new("frames", "Frames")
+local module = ToolGui:new("frames", "Frames")
 
 local BULK_OPERATION = OrderedTable:new({
     { id = "none", name = "None" },
