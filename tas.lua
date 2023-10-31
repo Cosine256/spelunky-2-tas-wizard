@@ -691,6 +691,19 @@ function Tas:delete_frames(screen_index, frame_start_index, frame_count)
     end
 end
 
+-- Clears player position data starting at (and including) the specified frame for the specified player within only the specified screen.
+function Tas:clear_player_positions_starting_at(screen_index, start_frame_index, player_index)
+    local screen = self.screens[screen_index]
+    if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then
+        for frame_index = start_frame_index, #screen.frames do
+            local frame = screen.frames[frame_index]
+            if frame.positions then
+                frame.positions[player_index] = {}
+            end
+        end
+    end
+end
+
 function Tas:clear_player_positions(screen_index)
     local screen = self.screens[screen_index]
     if common_enums.TASABLE_SCREEN[screen.metadata.screen].record_frames then

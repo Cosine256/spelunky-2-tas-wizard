@@ -250,6 +250,7 @@ function module:draw_panel(ctx, is_window)
                 if inputs_string ~= new_inputs_string then
                     inputs = common.string_to_inputs(new_inputs_string)
                     frames[frame_index].inputs[viewer_player_index] = inputs
+                    session.tas:clear_player_positions_starting_at(self.screen_index, frame_index, viewer_player_index)
                 end
                 ctx:win_inline()
                 if ctx:win_button("Edit") then

@@ -32,6 +32,7 @@ function module:draw_panel(ctx, is_window)
         -- TODO: This popup doesn't elegantly handle situations where the underlying TAS data changes after the popup is spawned. The popup should be closed automatically when this happens.
         if tas.screens[self.screen_index] and tas.screens[self.screen_index].frames[self.frame_index] and self.player_index <= tas:get_player_count() then
             tas.screens[self.screen_index].frames[self.frame_index].inputs[self.player_index] = self.new_inputs
+            tas:clear_player_positions_starting_at(self.screen_index, self.frame_index, self.player_index)
             self:close()
         else
             print_warn("Failed to edit frame %s-%s for player %s: Screen, frame, or player does not exist.", self.screen_index, self.frame_index, self.player_index)
