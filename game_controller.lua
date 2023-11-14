@@ -1,4 +1,4 @@
--- The game controller provides additional game engine controls and functionality. This includes snapshot capturing, snapshot warping, game engine pauses, and fast updates. All game update callbacks are handled here, with calls forwarded to TAS sessions as needed. The calls must always occur in a consistent order in order to work properly with TAS sessions and game controller features. The game controller is also the only module that directly modifies the game state.
+-- The game controller provides additional game engine controls and functionality. This includes snapshot capturing, snapshot warping, game engine pauses, and fast updates. All game update callbacks are handled here, with calls forwarded to TAS sessions as needed. The calls must always occur in a consistent order in order to work properly with TAS sessions and game controller features. This module can directly modify the game state.
 
 local module = {}
 
@@ -6,6 +6,7 @@ local common = require("common")
 local common_enums = require("common_enums")
 local introspection = require("introspection")
 local GAME_TYPES = introspection.register_types({}, require("raw_game_types"))
+local pause = require("pause")
 
 -- The maximum amount of time to spend executing one batch of fast updates, in milliseconds.
 local FAST_UPDATE_BATCH_DURATION = 100
@@ -63,7 +64,6 @@ do
     }
 end
 
-local need_pause = false
 local warp_screen_snapshot
 -- Whether a new screen is being warped to. This is cleared at the end of screen change updates.
 local is_warping = false
@@ -75,8 +75,6 @@ module.pre_update_executed_fast_update_batch = false
 
 local pre_update_loading
 local pre_update_pause
--- Whether the most recent post-update was engine paused.
-local post_update_engine_paused = false
 
 local screen_snapshot_requests = {}
 local screen_snapshot_request_count = 0
@@ -97,58 +95,6 @@ function module.clear_screen_snapshot_request(request_id)
         screen_snapshot_requests[request_id] = nil
         screen_snapshot_request_count = screen_snapshot_request_count - 1
         print_debug("snapshot", "clear_screen_snapshot_request: Cleared screen snapshot request %s.", request_id)
-    end
-end
-
--- Requests a game engine pause. The pause will be applied after a game update as soon as it's safe to do so.
-function module.request_pause(debug_message)
-    print_debug("pause", "request_pause: %s", debug_message)
-    need_pause = true
-end
-
--- Cancels a requested pause that hasn't be applied to the game engine yet. Does nothing if there is no requested pause. Does not unpause the game engine if it is already paused.
-function module.cancel_requested_pause()
-    print_debug("pause", "cancel_requested_pause")
-    need_pause = false
-end
-
--- Applies a game engine pause if one is needed and it's safe to do so. If a pause is needed but cannot be safely performed, then nothing will happen and this function can be called after the next game update to try again.
-local function try_pause()
-    if not need_pause then
-        return
-    end
-    if state.screen == SCREEN.OPTIONS and common_enums.TASABLE_SCREEN[state.screen_last] then
-        -- Don't pause in the options screen.
-        return
-    end
-    if not common_enums.TASABLE_SCREEN[state.screen] then
-        -- Cancel the pause entirely.
-        need_pause = false
-        return
-    end
-    if state.screen == SCREEN.TRANSITION and options.pause_suppress_transition_tas_inputs then
-        -- Suppress TAS inputs for the current transition screen instead of pausing.
-        need_pause = false
-        if active_tas_session then
-            active_tas_session.suppress_screen_tas_inputs = true
-        end
-        print_debug("pause", "try_pause: Suppressing TAS inputs for the current transition screen instead of pausing.")
-        return
-    end
-    if state.loading == 0 and (state.pause == 0 or state.pause == PAUSE.FADE) then
-        -- It's safe to pause now.
-        -- TODO: OL has an option to change its pause behavior. The FADE pause is the only one that is currently supported by this script. Need to handle the other ones, or instruct the user to only use the FADE pause.
-        -- TODO: Pausing is not safe during mixed or non-FADE pause states because OL FADE pauses currently handle them incorrectly and will erase the other pause flags. This causes problems such as level timer desync during cutscenes.
-        state.pause = PAUSE.FADE
-        need_pause = false
-        print_debug("pause", "try_pause: Paused")
-    end
-end
-
--- Immediately clears a game engine pause if one is active and it's safe to do so.
-function module.try_unpause()
-    if state.loading == 0 and state.pause == PAUSE.FADE then
-        state.pause = 0
     end
 end
 
@@ -365,7 +311,7 @@ end
 local function can_fast_update()
     return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
         and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
-        and not post_update_engine_paused and not active_tas_session.suppress_screen_tas_inputs
+        and not pause.post_update_engine_paused and not active_tas_session.suppress_screen_tas_inputs
 end
 
 local function on_pre_update()
@@ -421,7 +367,7 @@ local function on_post_update_load_screen()
 
     is_warping = false
 
-    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not need_pause and options.transition_skip and not presentation_active then
+    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not pause.pause_requested and options.transition_skip and not presentation_active then
         -- The screen couldn't be skipped entirely. The transition screen needed to be loaded in order for pet health to be applied to players. The spaceship screen is also handled in this way for simplicity, even though it doesn't affect pet health. Now the screen can be immediately unloaded.
         print_debug("screen_load", "on_post_update_load_screen: Skipping transition/spaceship screen.")
         if state.screen == SCREEN.TRANSITION then
@@ -457,9 +403,7 @@ local function on_post_update()
         active_tas_session:on_post_update()
     end
 
-    try_pause()
-
-    post_update_engine_paused = state.loading == 0 and state.pause & PAUSE.FADE > 0
+    pause.on_post_update()
 end
 
 function module.initialize()

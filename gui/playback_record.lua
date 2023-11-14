@@ -1,7 +1,7 @@
 local ComboInput = require("gui/combo_input")
 local common = require("common")
 local common_enums = require("common_enums")
-local game_controller = require("game_controller")
+local pause = require("pause")
 local common_gui = require("gui/common_gui")
 local OrderedTable = require("ordered_table")
 local ToolGui = require("gui/tool_gui")
@@ -136,7 +136,7 @@ end
 function module:draw_unpause_button(ctx)
     if state.loading == 0 and state.pause == PAUSE.FADE then
         if ctx:win_button("Unpause game engine") then
-            game_controller.try_unpause()
+            pause.try_unpause()
         end
         ctx:win_text("Clear the current game engine pause. Use this if you've accidentally triggered an engine pause and don't have a hotkey to clear it.")
     end

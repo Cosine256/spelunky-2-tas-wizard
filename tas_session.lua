@@ -1,6 +1,7 @@
 local common = require("common")
 local common_enums = require("common_enums")
 local game_controller = require("game_controller")
+local pause = require("pause")
 
 ---@class TasSession A TAS session encapsulates a TAS object and all of the state and functionality it needs in order to interact with the game engine and GUI.
     ---@field tas table The TAS data for this TAS session.
@@ -141,7 +142,7 @@ function TasSession:reset_tas(is_active_tas_session)
     self.desync = nil
     self.tas:reset_data()
     if is_active_tas_session then
-        game_controller.cancel_requested_pause()
+        pause.cancel_requested_pause()
         for _, tool_gui in pairs(tool_guis) do
             tool_gui:reset_session_vars()
         end
@@ -151,7 +152,7 @@ end
 function TasSession:_on_playback_invalid(message)
     print_warn("Invalid playback target (%s): %s Switching to freeplay mode.", self:get_playback_target_string(), message)
     self:set_mode_freeplay()
-    game_controller.request_pause("Invalid playback target.")
+    pause.request_pause("Invalid playback target.")
 end
 
 -- Checks the current playback status. If playback is invalid, then it is stopped. If playback is valid and the target matches the current screen and frame, then the target action is executed. If not in playback mode, or if none of the prior conditions are met, then nothing happens.
@@ -214,7 +215,7 @@ function TasSession:check_playback()
     end
 
     if options.playback_target_pause and (not self.playback_waiting_at_end or allow_waiting_pause) then
-        game_controller.request_pause("Reached playback target.")
+        pause.request_pause("Reached playback target.")
     end
 end
 
@@ -328,7 +329,7 @@ function TasSession:validate_current_frame()
     if message then
         print_warn("Invalid current frame (%s-%s): %s Switching to freeplay mode.", self.current_screen_index, self.current_frame_index, message)
         self:set_mode_freeplay()
-        game_controller.request_pause("Invalid current frame.")
+        pause.request_pause("Invalid current frame.")
         if unset_current_screen then
             self:unset_current_screen()
         end
@@ -486,7 +487,7 @@ function TasSession:on_post_update_load_screen()
                 if self.mode == common_enums.MODE.RECORD or not start_positions[player_index] or not start_positions[player_index].x then
                     start_positions[player_index] = actual_pos
                 elseif self:_check_position_desync(player_index, start_positions[player_index], actual_pos) and options.desync_pause then
-                    game_controller.request_pause("Detected start position desync.")
+                    pause.request_pause("Detected start position desync.")
                 end
             end
         end
@@ -497,7 +498,7 @@ function TasSession:on_post_update_load_screen()
         if (self.mode == common_enums.MODE.PLAYBACK and options.playback_screen_load_pause)
             or (self.mode == common_enums.MODE.RECORD and options.record_screen_load_pause)
         then
-            game_controller.request_pause("New screen loaded.")
+            pause.request_pause("New screen loaded.")
         end
         -- Check playback in case of a frame 0 playback target.
         self:check_playback()
@@ -574,7 +575,7 @@ function TasSession:on_post_update()
             if not self.desync and self.current_screen_index < self.tas:get_end_screen_index() then
                 self:_set_screen_end_desync()
                 if options.desync_pause then
-                    game_controller.request_pause("Detected screen end desync.")
+                    pause.request_pause("Detected screen end desync.")
                 end
             end
             print_debug("mode", "on_post_update: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
@@ -606,7 +607,7 @@ function TasSession:on_post_update()
                 local expected_pos = current_frame_data.positions[player_index]
                 if expected_pos and expected_pos.x then
                     if self:_check_position_desync(player_index, expected_pos, actual_pos) and options.desync_pause then
-                        game_controller.request_pause("Detected position desync.")
+                        pause.request_pause("Detected position desync.")
                     end
                 else
                     -- No player positions are stored for this frame. Store the current positions.

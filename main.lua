@@ -17,6 +17,7 @@ local common = require("common")
 local common_enums = require("common_enums")
 local drawing = require("gui/drawing")
 local game_controller = require("game_controller")
+local pause = require("pause")
 local persistence = require("persistence")
 local Tas = require("tas")
 local TasSession = require("tas_session")
@@ -252,7 +253,7 @@ end
 
 -- Set the TAS for a new active TAS session.
 function set_active_tas(tas)
-    game_controller.cancel_requested_pause()
+    pause.cancel_requested_pause()
     if active_tas_session then
         if active_tas_session.tas.screen_snapshot_request_id then
             game_controller.clear_screen_snapshot_request(active_tas_session.tas.screen_snapshot_request_id)
