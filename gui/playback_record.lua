@@ -133,15 +133,6 @@ local function draw_frame_tag(ctx, frame_tag_index, screen_choices, screen_combo
     ctx:win_popid()
 end
 
-function module:draw_unpause_button(ctx)
-    if state.loading == 0 and state.pause == PAUSE.FADE then
-        if ctx:win_button("Unpause game engine") then
-            pause.try_unpause()
-        end
-        ctx:win_text("Clear the current game engine pause. Use this if you've accidentally triggered an engine pause and don't have a hotkey to clear it.")
-    end
-end
-
 function module:draw_playback_screen_load_pause_option(ctx)
     options.playback_screen_load_pause = ctx:win_check("Pause after screen load during playback", options.playback_screen_load_pause)
 end
@@ -165,7 +156,6 @@ function module:draw_panel(ctx, is_window)
     ctx:win_section("More Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         self:draw_window_options(ctx, is_window)
-        self:draw_unpause_button(ctx)
         self:draw_playback_screen_load_pause_option(ctx)
         self:draw_record_screen_load_pause_option(ctx)
         ctx:win_indent(-common_gui.INDENT_SECTION)

@@ -1,4 +1,24 @@
--- The game controller provides additional game engine controls and functionality. This includes snapshot capturing, snapshot warping, game engine pauses, and fast updates. All game update callbacks are handled here, with calls forwarded to TAS sessions as needed. The calls must always occur in a consistent order in order to work properly with TAS sessions and game controller features. This module can directly modify the game state.
+-- The game controller provides additional game engine controls and functionality. This includes snapshot capturing, snapshot warping, and fast updates. All game update callbacks are handled here, with calls forwarded to TAS sessions and other modules as needed. The calls must always occur in a consistent order in order to work properly with TAS sessions and game controller features. This module can directly modify the game state.
+
+--[[ Order of callbacks and events during a typical mid-screen TAS frame:
+    PRE_PROCESS_INPUT
+        OL: If "freeze game loop" pause active, then skip to POST_PROCESS_INPUT.
+        Game: Update `game_manager.game_props` inputs.
+    POST_PROCESS_INPUT
+    PRE_GAME_LOOP
+        OL: If "freeze game loop" pause active, then skip to POST_GAME_LOOP.
+        Game: Apply `game_manager.game_props` inputs to `state.player_inputs`.
+        PRE_UPDATE
+            TASW: Overwrite `state.player_inputs` with TAS inputs if in playback mode.
+            Game: Update entities if required by game state.
+        POST_UPDATE
+        TASW: Advance frame index if TASable frame executed.
+        TASW: Record `state.player_inputs` if TASable frame executed in record mode.
+        Game: Apply `game_manager.game_props` inputs to menus.
+    POST_GAME_LOOP
+    GUIFRAME(s)
+        May execute more than once per game loop for frame rates greater than 60Hz, or be skipped sometimes for lower frame rates.
+]]
 
 local module = {}
 
@@ -70,8 +90,10 @@ local is_warping = false
 
 -- The start time of the current fast update batch. Any game updates that occur while this is set are fast updates initiated by `update_frame()`.
 local fast_update_start_time
--- Whether the most recent pre-update executed a fast update batch.
-module.pre_update_executed_fast_update_batch = false
+-- Whether the most recent game loop executed a fast update batch.
+module.game_loop_executed_fast_update_batch = false
+-- Whether to not skip the current screen even if it qualifies to be skipped. Does nothing if set outside `on_post_update_load_screen`.
+module.dont_skip_this_screen = false
 
 local pre_update_loading
 local pre_update_pause
@@ -212,6 +234,13 @@ function module.trigger_screen_snapshot_warp(screen_snapshot)
     return true
 end
 
+local function on_post_game_loop()
+    if pause.is_pausing_active() then
+        -- TODO: Can't check for this in `PRE_GAME_LOOP` because that callback doesn't execute reliably during OL pauses. The check is technically inaccurate here, since a fast update batch might have occurred and then pausing was activated within the same game loop.
+        module.game_loop_executed_fast_update_batch = false
+    end
+end
+
 -- Called right before an update which is going to load a screen. The screen value itself might not change since the game may be loading the same type of screen. For screens that include level generation, this is the last place to read or write the adventure seed. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level generation.
 local function on_pre_update_load_screen()
     print_debug("screen_load", "on_pre_update_load_screen: %s -> %s", state.screen, state.screen_next)
@@ -310,8 +339,8 @@ end
 
 local function can_fast_update()
     return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
-        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not (state.loading == 0 and state.pause & PAUSE.FADE > 0)
-        and not pause.post_update_engine_paused and not active_tas_session.suppress_screen_tas_inputs
+        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not pause.is_pausing_active()
+        and not active_tas_session.suppress_screen_tas_inputs
 end
 
 local function on_pre_update()
@@ -334,9 +363,9 @@ local function on_pre_update()
             end
         end
         fast_update_start_time = nil
-        module.pre_update_executed_fast_update_batch = true
+        module.game_loop_executed_fast_update_batch = true
     else
-        module.pre_update_executed_fast_update_batch = false
+        module.game_loop_executed_fast_update_batch = false
     end
 
     pre_update_loading = state.loading
@@ -357,6 +386,8 @@ local function on_post_update_load_screen()
     end
     print_debug("screen_load", "on_post_update_load_screen: %s -> %s", state.screen_last, state.screen)
 
+    module.dont_skip_this_screen = false
+
     if active_tas_session then
         active_tas_session:on_post_update_load_screen()
     end
@@ -367,7 +398,9 @@ local function on_post_update_load_screen()
 
     is_warping = false
 
-    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not pause.pause_requested and options.transition_skip and not presentation_active then
+    if (state.screen == SCREEN.TRANSITION or state.screen == SCREEN.SPACESHIP) and not module.dont_skip_this_screen
+        and options.transition_skip and not presentation_active
+    then
         -- The screen couldn't be skipped entirely. The transition screen needed to be loaded in order for pet health to be applied to players. The spaceship screen is also handled in this way for simplicity, even though it doesn't affect pet health. Now the screen can be immediately unloaded.
         print_debug("screen_load", "on_post_update_load_screen: Skipping transition/spaceship screen.")
         if state.screen == SCREEN.TRANSITION then
@@ -402,11 +435,10 @@ local function on_post_update()
     elseif active_tas_session then
         active_tas_session:on_post_update()
     end
-
-    pause.on_post_update()
 end
 
 function module.initialize()
+    set_callback(on_post_game_loop, ON.POST_GAME_LOOP)
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)
     set_callback(on_pre_level_gen, ON.PRE_LEVEL_GENERATION)

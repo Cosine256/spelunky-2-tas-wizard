@@ -253,7 +253,6 @@ end
 
 -- Set the TAS for a new active TAS session.
 function set_active_tas(tas)
-    pause.cancel_requested_pause()
     if active_tas_session then
         if active_tas_session.tas.screen_snapshot_request_id then
             game_controller.clear_screen_snapshot_request(active_tas_session.tas.screen_snapshot_request_id)
@@ -303,7 +302,7 @@ local function on_gui_frame(ctx)
             drawing.draw_tas_path(ctx, active_tas_session, false)
         end
     end
-    if options.fast_update_flash_prevention and game_controller.pre_update_executed_fast_update_batch then
+    if options.fast_update_flash_prevention and game_controller.game_loop_executed_fast_update_batch then
         drawing.draw_black_overlay(ctx)
     end
     if active_tas_session then
