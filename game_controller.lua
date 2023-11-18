@@ -235,6 +235,8 @@ function module.trigger_screen_snapshot_warp(screen_snapshot)
 end
 
 local function on_post_game_loop()
+    pause.on_post_game_loop()
+
     if pause.is_pausing_active() then
         -- TODO: Can't check for this in `PRE_GAME_LOOP` because that callback doesn't execute reliably during OL pauses. The check is technically inaccurate here, since a fast update batch might have occurred and then pausing was activated within the same game loop.
         module.game_loop_executed_fast_update_batch = false

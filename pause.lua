@@ -1,4 +1,4 @@
--- This module is an interface for Overlunky's game engine pauses. Unless specified otherwise, the term "pause" refers to an OL game engine pause, not the pause menu or `state.pause` flags.
+-- This module is an interface for Overlunky's game engine pauses. Unless specified otherwise, the term "pause" refers to an OL game engine pause, not the pause menu or `state.pause` flags. This module can directly modify the game state.
 
 local module = {}
 
@@ -32,6 +32,18 @@ function module.set_pausing_active(pausing_active, debug_message)
             end
         else
             ol.set_options.paused = false
+        end
+    end
+end
+
+function module.on_post_game_loop()
+    local ol = get_bucket().overlunky
+    if ol and state.loading == 0 and state.pause & PAUSE.FADE > 0 and ol.options.pause_type & PAUSE.FADE == 0 then
+        -- Replace the "pause on level start" fade pause with an OL pause.
+        print_debug("pause", "pause.on_post_game_loop: Replacing \"pause on level start\" fade pause with OL pause.")
+        state.pause = state.pause & ~PAUSE.FADE
+        if not ol.options.paused then
+            ol.set_options.paused = true
         end
     end
 end
