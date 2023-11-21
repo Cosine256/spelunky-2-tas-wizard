@@ -113,9 +113,15 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
             print_warn("Failed to warp to screen %s to reach playback target %s-%s.", best_screen_index, target_screen_index, target_frame_index)
             return
         end
+        if options.playback_from_warp_unpause then
+            pause.set_pausing_active(false, "Unpausing for playback from warp.")
+        end
     else
         -- Playback from the current frame to reach the playback target.
         print_debug("mode", "set_mode_playback: Playing back from current frame to reach playback target %s-%s.", target_screen_index, target_frame_index)
+        if options.playback_from_here_unpause then
+            pause.set_pausing_active(false, "Unpausing for playback from current frame.")
+        end
     end
 
     if self.set_mode_callback then

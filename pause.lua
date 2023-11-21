@@ -19,7 +19,7 @@ function module.set_pausing_active(pausing_active, debug_message)
         print_debug("pause", "pause.set_pausing_active(%s): Cannot change OL pause state: OL is not attached.", pausing_active)
         return
     end
-    if ol.options.paused ~= pausing_active then
+    if ol.options.paused ~= pausing_active or (ol.set_options.paused ~= nil and ol.set_options.paused ~= pausing_active) then
         if pausing_active then
             if not options.pause_suppress_transition_tas_inputs or state.screen ~= SCREEN.TRANSITION then
                 ol.set_options.paused = true

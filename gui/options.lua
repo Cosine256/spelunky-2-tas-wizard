@@ -35,6 +35,8 @@ function module:draw_panel(ctx, is_window)
 
     ctx:win_separator_text("Game engine pausing")
     ctx:win_text("These options control game engine pauses. This is the same system used by Overlunky for pausing and frame advancing. These pauses will not occur unless Overlunky is attached to the current game session.")
+    tool_guis.playback_record:draw_playback_from_here_unpause_option(ctx)
+    tool_guis.playback_record:draw_playback_from_warp_unpause_option(ctx)
     tool_guis.playback_record:draw_playback_target_pause_option(ctx)
     tool_guis.playback_record:draw_playback_screen_load_pause_option(ctx)
     tool_guis.playback_record:draw_record_screen_load_pause_option(ctx)

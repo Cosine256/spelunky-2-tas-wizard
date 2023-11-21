@@ -17,7 +17,6 @@ local common = require("common")
 local common_enums = require("common_enums")
 local drawing = require("gui/drawing")
 local game_controller = require("game_controller")
-local pause = require("pause")
 local persistence = require("persistence")
 local Tas = require("tas")
 local TasSession = require("tas_session")
@@ -48,6 +47,8 @@ default_options = {
     playback_target_pause = true,
     record_frame_clear_action = "remaining_tas",
     record_frame_write_type = "overwrite",
+    playback_from_here_unpause = true,
+    playback_from_warp_unpause = true,
     playback_screen_load_pause = false,
     record_screen_load_pause = true,
     desync_pause = true,
@@ -212,6 +213,18 @@ local function save_script_data(save_ctx)
     end
 end
 
+local function set_to_default_option_if_nil(options, option_id)
+    if options[option_id] == nil then
+        options[option_id] = common.deep_copy(default_options[option_id])
+    end
+end
+
+-- Perform a soft update on the script data. A "soft update" consists of minor changes to the data that don't break compatibility with older versions of the mod and don't require a change to the format number. This is mostly limited to adding new options which would be ignored by older versions, or new combo option choices that would fall back to valid choices in older versions. Soft updates allow for some forward compatibility in older versions, and they help to avoid long chains of format updaters containing only minor changes. When a format update is required, any current soft updates will be removed from here and added to the new format updater.
+local function soft_update_script_data(load_data)
+    set_to_default_option_if_nil(load_data.options, "playback_from_here_unpause")
+    set_to_default_option_if_nil(load_data.options, "playback_from_warp_unpause")
+end
+
 local function load_script_data(load_ctx)
     local load_json
     local load_data
@@ -231,6 +244,7 @@ local function load_script_data(load_ctx)
     end
     if load_data then
         persistence.update_format(load_data, CURRENT_SCRIPT_DATA_FORMAT, {})
+        soft_update_script_data(load_data)
         options = load_data.options
         options.new_tas = Tas:from_raw(options.new_tas, Tas.SERIAL_MODS.OPTIONS)
     else

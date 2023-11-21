@@ -1,7 +1,6 @@
 local ComboInput = require("gui/combo_input")
 local common = require("common")
 local common_enums = require("common_enums")
-local pause = require("pause")
 local common_gui = require("gui/common_gui")
 local OrderedTable = require("ordered_table")
 local ToolGui = require("gui/tool_gui")
@@ -133,6 +132,14 @@ local function draw_frame_tag(ctx, frame_tag_index, screen_choices, screen_combo
     ctx:win_popid()
 end
 
+function module:draw_playback_from_here_unpause_option(ctx)
+    options.playback_from_here_unpause = ctx:win_check("Unpause for playback from current frame", options.playback_from_here_unpause)
+end
+
+function module:draw_playback_from_warp_unpause_option(ctx)
+    options.playback_from_warp_unpause = ctx:win_check("Unpause for playback from warp", options.playback_from_warp_unpause)
+end
+
 function module:draw_playback_screen_load_pause_option(ctx)
     options.playback_screen_load_pause = ctx:win_check("Pause after screen load during playback", options.playback_screen_load_pause)
 end
@@ -156,6 +163,8 @@ function module:draw_panel(ctx, is_window)
     ctx:win_section("More Options", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
         self:draw_window_options(ctx, is_window)
+        self:draw_playback_from_here_unpause_option(ctx)
+        self:draw_playback_from_warp_unpause_option(ctx)
         self:draw_playback_screen_load_pause_option(ctx)
         self:draw_record_screen_load_pause_option(ctx)
         ctx:win_indent(-common_gui.INDENT_SECTION)
