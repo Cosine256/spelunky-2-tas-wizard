@@ -15,23 +15,31 @@ end
 function module.set_pausing_active(pausing_active, debug_message)
     print_debug("pause", "pause.set_pausing_active(%s): %s", pausing_active, debug_message)
     local ol = get_bucket().overlunky
-    if not ol then
-        print_debug("pause", "pause.set_pausing_active(%s): Cannot change OL pause state: OL is not attached.", pausing_active)
-        return
-    end
-    if ol.options.paused ~= pausing_active or (ol.set_options.paused ~= nil and ol.set_options.paused ~= pausing_active) then
-        if pausing_active then
-            if not options.pause_suppress_transition_tas_inputs or state.screen ~= SCREEN.TRANSITION then
-                ol.set_options.paused = true
-            else
-                -- Suppress TAS inputs for the current transition screen instead of pausing.
-                print_debug("pause", "pause.set_pausing_active(true): Suppressing TAS inputs for the current transition screen instead of activating OL pausing.")
-                if active_tas_session and not active_tas_session.suppress_screen_tas_inputs then
-                    active_tas_session.suppress_screen_tas_inputs = true
+    if ol then
+        if ol.options.paused ~= pausing_active or (ol.set_options.paused ~= nil and ol.set_options.paused ~= pausing_active) then
+            if pausing_active then
+                if not options.pause_suppress_transition_tas_inputs or state.screen ~= SCREEN.TRANSITION then
+                    ol.set_options.paused = true
+                else
+                    -- Suppress TAS inputs for the current transition screen instead of pausing.
+                    print_debug("pause", "pause.set_pausing_active(true): Suppressing TAS inputs for the current transition screen instead of activating OL pausing.")
+                    if active_tas_session and not active_tas_session.suppress_screen_tas_inputs then
+                        active_tas_session.suppress_screen_tas_inputs = true
+                    end
                 end
+            else
+                ol.set_options.paused = false
+            end
+        end
+    else
+        if pausing_active and options.pause_suppress_transition_tas_inputs and state.screen == SCREEN.TRANSITION then
+            -- Suppress TAS inputs for the current transition screen.
+            print_debug("pause", "pause.set_pausing_active(true): Suppressing TAS inputs for the current transition screen.")
+            if active_tas_session and not active_tas_session.suppress_screen_tas_inputs then
+                active_tas_session.suppress_screen_tas_inputs = true
             end
         else
-            ol.set_options.paused = false
+            print_debug("pause", "pause.set_pausing_active(%s): Cannot change OL pause state: OL is not attached.", pausing_active)
         end
     end
 end
