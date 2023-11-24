@@ -17,6 +17,7 @@ local common = require("common")
 local common_enums = require("common_enums")
 local drawing = require("gui/drawing")
 local game_controller = require("game_controller")
+local pause = require("pause")
 local persistence = require("persistence")
 local Tas = require("tas")
 local TasSession = require("tas_session")
@@ -51,9 +52,10 @@ default_options = {
     playback_from_warp_unpause = true,
     playback_screen_load_pause = false,
     record_screen_load_pause = true,
+    ol_pause_type_force_recommended = true,
     desync_pause = true,
-    pause_suppress_transition_tas_inputs = true,
     pause_on_level_start_fix = true,
+    pause_suppress_transition_tas_inputs = true,
     playback_fast_update = false,
     fast_update_flash_prevention = true,
     transition_skip = false,
@@ -224,6 +226,7 @@ end
 local function soft_update_script_data(load_data)
     set_to_default_option_if_nil(load_data.options, "playback_from_here_unpause")
     set_to_default_option_if_nil(load_data.options, "playback_from_warp_unpause")
+    set_to_default_option_if_nil(load_data.options, "ol_pause_type_force_recommended")
     set_to_default_option_if_nil(load_data.options, "pause_on_level_start_fix")
 end
 
@@ -324,6 +327,8 @@ local function on_gui_frame(ctx)
     if active_tas_session then
         drawing.draw_mode_watermark(ctx)
     end
+
+    pause.on_gui_frame()
 end
 
 set_callback(function(ctx)

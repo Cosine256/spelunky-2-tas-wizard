@@ -2,6 +2,11 @@
 
 local module = {}
 
+local OL_FREEZE_GAME_LOOP_PAUSE = 0x80
+
+-- Whether to suppress the OL pause type warning when the current value is not recommended.
+local suppress_ol_pause_type_warning = false
+
 -- Gets whether OL engine pausing is active.
 function module.is_pausing_active()
     local ol = get_bucket().overlunky
@@ -51,6 +56,21 @@ function module.on_post_game_loop()
         print_debug("pause", "pause.on_post_game_loop: Replacing \"Auto (fade) pause on level start\" fade pause with OL pause.")
         state.pause = state.pause & ~PAUSE.FADE
         module.set_pausing_active(true, "Fixing \"Auto (fade) pause on level start\" fade pause.")
+    end
+end
+
+function module.on_gui_frame()
+    local ol = get_bucket().overlunky
+    if ol and ol.options.pause_type ~= OL_FREEZE_GAME_LOOP_PAUSE then
+        if options.ol_pause_type_force_recommended then
+            print_debug("pause", "pause.on_gui_frame: Setting OL pause type to recommended value.")
+            ol.set_options.pause_type = OL_FREEZE_GAME_LOOP_PAUSE
+        elseif not suppress_ol_pause_type_warning then
+            print_warn("Overlunky pause type is set to a non-recommended value. The recommended pause type is \"Freeze game loop\" with no additional pause type flags.")
+            suppress_ol_pause_type_warning = true
+        end
+    elseif suppress_ol_pause_type_warning then
+        suppress_ol_pause_type_warning = false
     end
 end
 
