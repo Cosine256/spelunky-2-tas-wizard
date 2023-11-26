@@ -95,6 +95,7 @@ module.game_loop_executed_fast_update_batch = false
 -- Whether to not skip the current screen even if it qualifies to be skipped. Does nothing if set outside `on_post_update_load_screen`.
 module.dont_skip_this_screen = false
 
+local pre_update_skipped
 local pre_update_loading
 local pre_update_pause
 
@@ -234,10 +235,26 @@ function module.trigger_screen_snapshot_warp(screen_snapshot)
     return true
 end
 
+local function on_pre_process_input()
+    -- See `on_pre_game_loop` for info about why this check is here. Input processing must be skipped whenever the game loop is skipped.
+    if pause.is_pausing_pending() then
+        print_debug("pause", "pause.on_pre_process_input: Skipping input processing for pending OL pause.")
+        return true
+    end
+end
+
+local function on_pre_game_loop()
+    -- OL only checks for pause option changes during rendering. Rendering is not reliably tied to game loops and can be skipped during lag or speed hacking. If OL pausing has been set to activate, but OL hasn't checked it yet, then extra game loops may try to execute. As a workaround, skip game loops while an OL pause is pending until the pause is properly activated.
+    if pause.is_pausing_pending() then
+        print_debug("pause", "pause.on_pre_game_loop: Skipping game loop for pending OL pause.")
+        return true
+    end
+end
+
 local function on_post_game_loop()
     pause.on_post_game_loop()
 
-    if pause.is_pausing_active() then
+    if pause.is_pausing_pending_or_active() then
         -- TODO: Can't check for this in `PRE_GAME_LOOP` because that callback doesn't execute reliably during OL pauses. The check is technically inaccurate here, since a fast update batch might have occurred and then pausing was activated within the same game loop.
         module.game_loop_executed_fast_update_batch = false
     end
@@ -341,13 +358,13 @@ end
 
 local function can_fast_update()
     return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
-        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not pause.is_pausing_active()
+        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not pause.is_pausing_pending_or_active()
         and not active_tas_session.suppress_screen_tas_inputs
 end
 
 local function on_pre_update()
-    -- Before executing the upcoming normal update, check whether a batch of fast updates should occur. Fast updates are identical to normal updates as far the game state is concerned, and they trigger OL callbacks just like normal updates. However, they do not perform any rendering and are not locked to any frame rate, so fast updates can be executed as quickly as the computer is capable of doing so. This is usually significantly faster than the 60 FPS of normal updates.
-    -- Only a finite batch of fast updates will be executed. The batch will end once the maximum duration is reached, or if any checks stop the batch early. Once the batch ends, the pending normal update will be allowed to execute. Unlike the fast updates, rendering will occur after the normal update. This will allow pausing and GUI interactions to occur, although the performance will be very laggy. It will also let the user see the progress of fast playback rather than the game appearing to be frozen until fast playback stops, and it will prevent an uninterruptible infinite loop if fast playback fails to reach a stopping point for whatever reason. Before the next normal update, the script will check again whether another batch of fast updates should occur.
+    -- Before executing the upcoming normal update, check whether a batch of fast updates should occur instead. Fast updates are identical to normal updates as far as the game state is concerned, and they trigger OL callbacks just like normal updates. However, they do not perform any rendering and are not locked to any frame rate, so fast updates can be executed as quickly as the computer is capable of doing so. This is usually significantly faster than the 60 FPS of normal updates.
+    -- Only a finite batch of fast updates will be executed. The batch will end once the maximum duration is reached, or if any checks stop the batch early. Once the batch ends, the pending normal update is skipped to prevent an extra update from executing. Rendering will occur after this function returns, allowing input processing and GUI interactions to occur, although the performance will be very laggy. This will let the user see the progress of fast playback rather than the game appearing to be frozen until fast playback stops, and it will prevent an uninterruptible infinite loop if fast playback fails to reach a stopping point for whatever reason. Before the next normal update, the script will check again whether another batch of fast updates should occur.
     --  Note: `get_frame()` and `state.time_startup` are not incremented by fast updates, so they are not reliable update counters.
     if not fast_update_start_time and can_fast_update() then
         fast_update_start_time = get_ms()
@@ -366,10 +383,13 @@ local function on_pre_update()
         end
         fast_update_start_time = nil
         module.game_loop_executed_fast_update_batch = true
+        pre_update_skipped = true
+        return true
     else
         module.game_loop_executed_fast_update_batch = false
     end
 
+    pre_update_skipped = false
     pre_update_loading = state.loading
     pre_update_pause = state.pause
 
@@ -432,6 +452,9 @@ function module.did_entities_update()
 end
 
 local function on_post_update()
+    if pre_update_skipped then
+        return
+    end
     if pre_update_loading == 2 then
         on_post_update_load_screen()
     elseif active_tas_session then
@@ -440,6 +463,8 @@ local function on_post_update()
 end
 
 function module.initialize()
+    set_callback(on_pre_process_input, ON.PRE_PROCESS_INPUT)
+    set_callback(on_pre_game_loop, ON.PRE_GAME_LOOP)
     set_callback(on_post_game_loop, ON.POST_GAME_LOOP)
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)

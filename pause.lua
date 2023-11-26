@@ -7,13 +7,16 @@ local OL_FREEZE_GAME_LOOP_PAUSE = 0x80
 -- Whether to suppress the OL pause type warning when the current value is not recommended.
 local suppress_ol_pause_type_warning = false
 
--- Gets whether OL engine pausing is active.
-function module.is_pausing_active()
+-- Gets whether OL engine pausing is currently set to become active, but is not yet active.
+function module.is_pausing_pending()
     local ol = get_bucket().overlunky
-    if ol then
-        return ol.options.paused
-    end
-    return false
+    return ol and not ol.options.paused and ol.set_options.paused
+end
+
+-- Gets whether OL engine pausing is currently active or set to become active.
+function module.is_pausing_pending_or_active()
+    local ol = get_bucket().overlunky
+    return ol and (ol.options.paused or ol.set_options.paused)
 end
 
 -- Activate or deactivate OL engine pausing.
