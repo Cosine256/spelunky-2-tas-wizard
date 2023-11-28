@@ -1,5 +1,6 @@
 local common = require("common")
 local common_gui = require("gui/common_gui")
+local pause = require("pause")
 local tas_persistence = require("tas_persistence")
 local ToolGui = require("gui/tool_gui")
 
@@ -41,6 +42,14 @@ function module:draw_panel(ctx, is_window)
         ctx:win_text("Overlunky allows for many pause type combinations, but most of them do not work well for TASing. The recommended pause type for TAS Wizard is \"Freeze game loop\" with no additional pause type flags. Other pause types are not supported by TAS Wizard, and may fail to pause in certain situations or cause other problems. The other Overlunky pause options are safe to use, just not any of the other pause types.")
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
+    local ol = get_bucket().overlunky
+    if ol then
+        if ol.options.pause_type ~= pause.OL_FREEZE_GAME_LOOP_PAUSE then
+            ctx:win_text("Warning: Overlunky pause type is set to a non-recommended value. The recommended pause type is \"Freeze game loop\" with no additional pause type flags.")
+        end
+    else
+        ctx:win_text("Warning: Overlunky is not attached to the current game session. Game engine pauses will not occur.")
+    end
     options.ol_pause_type_force_recommended = ctx:win_check("Use recommended pause type", options.ol_pause_type_force_recommended)
     ctx:win_text("Automatically switch to the recommended Overlunky pause type (\"Freeze game loop\").")
     tool_guis.playback_record:draw_playback_from_here_unpause_option(ctx)
