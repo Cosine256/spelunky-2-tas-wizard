@@ -32,7 +32,7 @@ local pause = require("pause")
 local FAST_UPDATE_BATCH_DURATION = 100
 -- Vanilla frames used to fade into and out of the transition screen.
 local TRANSITION_FADE_FRAMES = 18
-local WARP_FADE_OUT_FRAMES = 5
+local WARP_FADE_OUT_FRAMES = 8
 
 local SCREEN_WARP_HANDLER
 do
@@ -145,6 +145,9 @@ local function trigger_warp_unload()
     state.pause = PAUSE.FADE
     state.fadeout = WARP_FADE_OUT_FRAMES
     state.fadein = WARP_FADE_OUT_FRAMES
+    state.fadevalue = 0.0
+    -- Note: The game normally sets this variable to 1 when it starts loading a non-menu screen. Its exact behavior is uncertain, but fade-ins don't work properly for TASable screens unless it's set to 1. Since warps currently only support TASable screens, it's safe to always set it to 1 here.
+    state.ingame = 1
 end
 
 -- Forces the game to warp to a screen initialized with the simple start settings of the given TAS. This sets the run reset flag, prepares the game state, and then triggers the game to start unloading the current screen. The reset flag handles the most of the process on its own. Returns whether the warp was triggered successfully.
@@ -438,6 +441,7 @@ local function on_post_update_load_screen()
         end
         state.fadeout = 1 -- The fade-out will finish on the next update and the screen will unload.
         state.fadein = TRANSITION_FADE_FRAMES
+        state.fadevalue = 1.0
         state.loading = 1
     end
 end
