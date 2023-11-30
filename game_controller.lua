@@ -30,9 +30,9 @@ local pause = require("pause")
 
 -- The maximum amount of time to spend executing one batch of fast updates, in milliseconds.
 local FAST_UPDATE_BATCH_DURATION = 100
--- Vanilla frames used to fade into and out of the transition screen.
-local TRANSITION_FADE_FRAMES = 18
-local WARP_FADE_OUT_FRAMES = 8
+-- Vanilla number of frames used to fade into and out of the transition screen.
+local TRANSITION_FADE_LENGTH = 18
+local WARP_FADE_OUT_LENGTH = 8
 
 local SCREEN_WARP_HANDLER
 do
@@ -143,9 +143,9 @@ end
 local function trigger_warp_unload()
     state.loading = 1
     state.pause = PAUSE.FADE
-    state.fadeout = WARP_FADE_OUT_FRAMES
-    state.fadein = WARP_FADE_OUT_FRAMES
-    state.fadevalue = 0.0
+    state.fade_timer = WARP_FADE_OUT_LENGTH
+    state.fade_length = WARP_FADE_OUT_LENGTH
+    state.fade_value = 0.0
     -- Note: The game normally sets this variable to 1 when it starts loading a non-menu screen. Its exact behavior is uncertain, but fade-ins don't work properly for TASable screens unless it's set to 1. Since warps currently only support TASable screens, it's safe to always set it to 1 here.
     state.ingame = 1
 end
@@ -439,9 +439,9 @@ local function on_post_update_load_screen()
             state.level_next = 1
             state.theme_next = THEME.SUNKEN_CITY
         end
-        state.fadeout = 1 -- The fade-out will finish on the next update and the screen will unload.
-        state.fadein = TRANSITION_FADE_FRAMES
-        state.fadevalue = 1.0
+        state.fade_timer = 1 -- The fade-out will finish on the next update and the screen will unload.
+        state.fade_length = TRANSITION_FADE_LENGTH
+        state.fade_value = 1.0
         state.loading = 1
     end
 end
