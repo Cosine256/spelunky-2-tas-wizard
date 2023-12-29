@@ -1,7 +1,7 @@
 local common = require("common")
 local common_enums = require("common_enums")
 local game_controller = require("game_controller")
-local pause = require("pause")
+local pause_lib = require("pause")
 
 ---@class TasSession A TAS session encapsulates a TAS object and all of the state and functionality it needs in order to interact with the game engine and GUI.
     ---@field tas table The TAS data for this TAS session.
@@ -114,13 +114,13 @@ function TasSession:set_mode_playback(target_screen_index, target_frame_index, f
             return
         end
         if options.playback_from_warp_unpause then
-            pause.set_pausing_active(false, "Unpausing for playback from warp.")
+            pause_lib.set_pausing_active(false, "Unpausing for playback from warp.")
         end
     else
         -- Playback from the current frame to reach the playback target.
         print_debug("mode", "set_mode_playback: Playing back from current frame to reach playback target %s-%s.", target_screen_index, target_frame_index)
         if options.playback_from_here_unpause then
-            pause.set_pausing_active(false, "Unpausing for playback from current frame.")
+            pause_lib.set_pausing_active(false, "Unpausing for playback from current frame.")
         end
     end
 
@@ -157,7 +157,7 @@ end
 function TasSession:_on_playback_invalid(message)
     print_warn("Invalid playback target (%s): %s Switching to freeplay mode.", self:get_playback_target_string(), message)
     self:set_mode_freeplay()
-    pause.set_pausing_active(true, "Invalid playback target.")
+    pause_lib.set_pausing_active(true, "Invalid playback target.")
 end
 
 -- Checks the current playback status. If playback is invalid, then it is stopped. If playback is valid and the target matches the current screen and frame, then the target action is executed. If not in playback mode, or if none of the prior conditions are met, then nothing happens.
@@ -220,7 +220,7 @@ function TasSession:check_playback()
     end
 
     if options.playback_target_pause and (not self.playback_waiting_at_end or allow_waiting_pause) then
-        pause.set_pausing_active(true, "Reached playback target.")
+        pause_lib.set_pausing_active(true, "Reached playback target.")
     end
 end
 
@@ -334,7 +334,7 @@ function TasSession:validate_current_frame()
     if message then
         print_warn("Invalid current frame (%s-%s): %s Switching to freeplay mode.", self.current_screen_index, self.current_frame_index, message)
         self:set_mode_freeplay()
-        pause.set_pausing_active(true, "Invalid current frame.")
+        pause_lib.set_pausing_active(true, "Invalid current frame.")
         if unset_current_screen then
             self:unset_current_screen()
         end
@@ -494,7 +494,7 @@ function TasSession:on_post_update_load_screen()
                 if self.mode == common_enums.MODE.RECORD or not start_positions[player_index] or not start_positions[player_index].x then
                     start_positions[player_index] = actual_pos
                 elseif self:_check_position_desync(player_index, start_positions[player_index], actual_pos) and options.desync_pause then
-                    pause.set_pausing_active(true, "Detected start position desync.")
+                    pause_lib.set_pausing_active(true, "Detected start position desync.")
                 end
             end
         end
@@ -505,7 +505,7 @@ function TasSession:on_post_update_load_screen()
         if (self.mode == common_enums.MODE.PLAYBACK and options.playback_screen_load_pause)
             or (self.mode == common_enums.MODE.RECORD and options.record_screen_load_pause)
         then
-            pause.set_pausing_active(true, "New screen loaded.")
+            pause_lib.set_pausing_active(true, "New screen loaded.")
         end
         if self.mode == common_enums.MODE.PLAYBACK and self.current_screen_index == self.playback_target_screen then
             game_controller.dont_skip_this_screen = true
@@ -584,7 +584,7 @@ function TasSession:on_post_update()
             if not self.desync and self.current_screen_index < self.tas:get_end_screen_index() then
                 self:_set_screen_end_desync()
                 if options.desync_pause then
-                    pause.set_pausing_active(true, "Detected screen end desync.")
+                    pause_lib.set_pausing_active(true, "Detected screen end desync.")
                 end
             end
             print_debug("mode", "on_post_update: Executed TASable frame during playback without frame data. Switching to freeplay mode.")
@@ -616,7 +616,7 @@ function TasSession:on_post_update()
                 local expected_pos = current_frame_data.positions[player_index]
                 if expected_pos and expected_pos.x then
                     if self:_check_position_desync(player_index, expected_pos, actual_pos) and options.desync_pause then
-                        pause.set_pausing_active(true, "Detected position desync.")
+                        pause_lib.set_pausing_active(true, "Detected position desync.")
                     end
                 else
                     -- No player positions are stored for this frame. Store the current positions.

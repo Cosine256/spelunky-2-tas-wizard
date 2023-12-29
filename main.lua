@@ -4,7 +4,7 @@ meta.description = "A mod for creating tool-assisted speedruns."
 meta.author = "Cosine"
 
 -- Check for the latest added feature needed by this mod to ensure that it's not being loaded in an outdated version of the script API.
-if not update_state then
+if type(pause) ~= "userdata" then
     local message = "ERROR: This is an outdated version of Playlunky or Overlunky that lacks features required by TAS Wizard! You might need the nightly version!"
     print(message)
     register_option_callback("", options, function(ctx)
@@ -17,7 +17,7 @@ local common = require("common")
 local common_enums = require("common_enums")
 local drawing = require("gui/drawing")
 local game_controller = require("game_controller")
-local pause = require("pause")
+local pause_lib = require("pause")
 local persistence = require("persistence")
 local Tas = require("tas")
 local TasSession = require("tas_session")
@@ -52,9 +52,8 @@ default_options = {
     playback_from_warp_unpause = true,
     playback_screen_load_pause = false,
     record_screen_load_pause = true,
-    ol_pause_type_force_recommended = true,
+    pause_type_force_recommended = true,
     desync_pause = true,
-    pause_on_level_start_fix = true,
     pause_suppress_transition_tas_inputs = true,
     playback_fast_update = false,
     fast_update_flash_prevention = true,
@@ -226,8 +225,7 @@ end
 local function soft_update_script_data(load_data)
     set_to_default_option_if_nil(load_data.options, "playback_from_here_unpause")
     set_to_default_option_if_nil(load_data.options, "playback_from_warp_unpause")
-    set_to_default_option_if_nil(load_data.options, "ol_pause_type_force_recommended")
-    set_to_default_option_if_nil(load_data.options, "pause_on_level_start_fix")
+    set_to_default_option_if_nil(load_data.options, "pause_type_force_recommended")
 end
 
 local function load_script_data(load_ctx)
@@ -328,7 +326,7 @@ local function on_gui_frame(ctx)
         drawing.draw_mode_watermark(ctx)
     end
 
-    pause.on_gui_frame()
+    pause_lib.on_gui_frame()
 end
 
 set_callback(function(ctx)

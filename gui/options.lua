@@ -1,6 +1,6 @@
 local common = require("common")
 local common_gui = require("gui/common_gui")
-local pause = require("pause")
+local pause_lib = require("pause")
 local tas_persistence = require("tas_persistence")
 local ToolGui = require("gui/tool_gui")
 
@@ -38,30 +38,25 @@ function module:draw_panel(ctx, is_window)
     ctx:win_text("These options control game engine pauses.")
     ctx:win_section("More info", function()
         ctx:win_indent(common_gui.INDENT_SECTION)
-        ctx:win_text("Game engine pauses are the system used by TAS Wizard and Overlunky for pausing and frame advancing. The term \"pause\" here refers to game engine pauses, not the game's pause menu. Game engine pauses will not occur unless Overlunky is attached to the current game session.")
-        ctx:win_text("Overlunky allows for many pause type combinations, but most of them do not work well for TASing. The recommended pause type for TAS Wizard is \"Freeze game loop\" with no additional pause type flags. Other pause types are not supported by TAS Wizard, and may fail to pause in certain situations or cause other problems. The other Overlunky pause options are safe to use, just not any of the other pause types.")
+        ctx:win_text("Game engine pauses are the system used by TAS Wizard and the script API for pausing and frame advancing. The term \"pause\" here refers to game engine pauses, not the game's pause menu.")
+        ctx:win_text("The script API offers many pause flag combinations, but most of them do not work well for TASing. The recommended pause flags for TAS Wizard are "..pause_lib.RECOMMENDED_PAUSE_TYPE..". In Overlunky, these pause flags are shown as \"Freeze updates\", \"Freeze game loop\", and \"Freeze input\" together. Other pause flag combinations are not supported by TAS Wizard, and may fail to pause in certain situations or cause other problems.")
+        ctx:win_text("The other pause API options are generally safe to use, but some of them can still interfere with TAS Wizard pausing. For example, if you set the pause API to ignore freezing on level screens, then TAS Wizard will be unable to pause on that screen type.")
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
-    local ol = get_bucket().overlunky
-    if ol then
-        if ol.options.pause_type ~= pause.OL_FREEZE_GAME_LOOP_PAUSE then
-            ctx:win_text("Warning: Overlunky pause type is set to a non-recommended value. The recommended pause type is \"Freeze game loop\" with no additional pause type flags.")
-        end
-    else
-        ctx:win_text("Warning: Overlunky is not attached to the current game session. Game engine pauses will not occur.")
+    if pause.pause_type ~= pause_lib.RECOMMENDED_PAUSE_TYPE then
+        ctx:win_text("Warning: Engine pause flags are set to a non-recommended value ("..pause.pause_type..").")
     end
-    options.ol_pause_type_force_recommended = ctx:win_check("Use recommended pause type", options.ol_pause_type_force_recommended)
-    ctx:win_text("Automatically switch to the recommended Overlunky pause type (\"Freeze game loop\").")
+    options.pause_type_force_recommended = ctx:win_check("Use recommended pause flags", options.pause_type_force_recommended)
+    ctx:win_text("Automatically switch to the recommended engine pause flags ("..pause_lib.RECOMMENDED_PAUSE_TYPE..").")
     tool_guis.playback_record:draw_playback_from_here_unpause_option(ctx)
     tool_guis.playback_record:draw_playback_from_warp_unpause_option(ctx)
     tool_guis.playback_record:draw_playback_target_pause_option(ctx)
     tool_guis.playback_record:draw_playback_screen_load_pause_option(ctx)
     tool_guis.playback_record:draw_record_screen_load_pause_option(ctx)
     options.desync_pause = ctx:win_check("Pause when desync is detected", options.desync_pause)
-    options.pause_on_level_start_fix = ctx:win_check("Convert \"pause on level start\" fade pauses", options.pause_on_level_start_fix)
-    ctx:win_text("Convert the fade pause caused by the \"Auto (fade) pause on level start\" Overlunky option into a usable pause state.")
     options.pause_suppress_transition_tas_inputs = ctx:win_check("Suppress transition TAS inputs instead of pausing", options.pause_suppress_transition_tas_inputs)
-    ctx:win_text("Instead of automatically performing an engine pause in a transition screen, temporarily suppress TAS inputs and wait for the user to exit the transition manually. This only affects automatic TAS Wizard pauses. This does not affect automatic Overlunky pauses, manual pauses, and entering a transition while already paused.")
+    ctx:win_text("Instead of automatically performing an engine pause in a transition screen, temporarily suppress TAS inputs and wait for the user to exit the transition manually. This only affects automatic TAS Wizard pauses. This does not affect other sources of engine pauses, the pause menu, and entering a transition while already paused.")
+    tool_guis.playback_record:draw_pause_controls(ctx)
 
     ctx:win_separator_text("Player paths")
     ctx:win_text("Player paths show the recorded positions of each player.")

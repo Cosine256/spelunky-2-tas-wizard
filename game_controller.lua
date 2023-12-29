@@ -2,20 +2,24 @@
 
 --[[ Order of callbacks and events during a typical mid-screen TAS frame:
     PRE_PROCESS_INPUT
-        OL: If "freeze game loop" pause active, then skip to POST_PROCESS_INPUT.
-        Game: Update `game_manager.game_props` inputs.
+        Pause API: If PRE_PROCESS_INPUT pause active, then skip to BLOCKED_PROCESS_INPUT.
+    Game: Update `game_manager.game_props` inputs.
     POST_PROCESS_INPUT
+    BLOCKED_PROCESS_INPUT (only if input processing skipped)
     PRE_GAME_LOOP
-        OL: If "freeze game loop" pause active, then skip to POST_GAME_LOOP.
-        Game: Apply `game_manager.game_props` inputs to `state.player_inputs`.
-        PRE_UPDATE
-            TASW: Overwrite `state.player_inputs` with TAS inputs if in playback mode.
-            Game: Update entities if required by game state.
-        POST_UPDATE
+        Pause API: If PRE_GAME_LOOP pause active, then skip to BLOCKED_GAME_LOOP.
+    Game: Apply `game_manager.game_props` inputs to `state.player_inputs`.
+    PRE_UPDATE
+        TASW: Overwrite `state.player_inputs` with TAS inputs if in playback mode.
+        Pause API: If PRE_UPDATE pause active, then skip to BLOCKED_UPDATE.
+    Game: Update entities if required by game state.
+    POST_UPDATE
         TASW: Advance frame index if TASable frame executed.
         TASW: Record `state.player_inputs` if TASable frame executed in record mode.
-        Game: Apply `game_manager.game_props` inputs to menus.
+    BLOCKED_UPDATE (only if update skipped)
+    Game: Apply `game_manager.game_props` inputs to menus.
     POST_GAME_LOOP
+    BLOCKED_GAME_LOOP (only if game loop skipped)
     GUIFRAME(s)
         May execute more than once per game loop for frame rates greater than 60Hz, or be skipped sometimes for lower frame rates.
 ]]
@@ -26,7 +30,6 @@ local common = require("common")
 local common_enums = require("common_enums")
 local introspection = require("introspection")
 local GAME_TYPES = introspection.register_types({}, require("raw_game_types"))
-local pause = require("pause")
 
 -- The maximum amount of time to spend executing one batch of fast updates, in milliseconds.
 local FAST_UPDATE_BATCH_DURATION = 100
@@ -95,7 +98,6 @@ module.game_loop_executed_fast_update_batch = false
 -- Whether to not skip the current screen even if it qualifies to be skipped. Does nothing if set outside `on_post_update_load_screen`.
 module.dont_skip_this_screen = false
 
-local pre_update_skipped
 local pre_update_loading
 local pre_update_pause
 
@@ -238,29 +240,8 @@ function module.trigger_screen_snapshot_warp(screen_snapshot)
     return true
 end
 
-local function on_pre_process_input()
-    -- See `on_pre_game_loop` for info about why this check is here. Input processing must be skipped whenever the game loop is skipped.
-    if pause.is_pausing_pending() then
-        print_debug("pause", "pause.on_pre_process_input: Skipping input processing for pending OL pause.")
-        return true
-    end
-end
-
 local function on_pre_game_loop()
-    -- OL only checks for pause option changes during rendering. Rendering is not reliably tied to game loops and can be skipped during lag or speed hacking. If OL pausing has been set to activate, but OL hasn't checked it yet, then extra game loops may try to execute. As a workaround, skip game loops while an OL pause is pending until the pause is properly activated.
-    if pause.is_pausing_pending() then
-        print_debug("pause", "pause.on_pre_game_loop: Skipping game loop for pending OL pause.")
-        return true
-    end
-end
-
-local function on_post_game_loop()
-    pause.on_post_game_loop()
-
-    if pause.is_pausing_pending_or_active() then
-        -- TODO: Can't check for this in `PRE_GAME_LOOP` because that callback doesn't execute reliably during OL pauses. The check is technically inaccurate here, since a fast update batch might have occurred and then pausing was activated within the same game loop.
-        module.game_loop_executed_fast_update_batch = false
-    end
+    module.game_loop_executed_fast_update_batch = false
 end
 
 -- Called right before an update which is going to load a screen. The screen value itself might not change since the game may be loading the same type of screen. For screens that include level generation, this is the last place to read or write the adventure seed. Between this function and `on_pre_level_gen`, the game will unload the current screen and increment the adventure seed to generate PRNG for the upcoming level generation.
@@ -361,7 +342,7 @@ end
 
 local function can_fast_update()
     return options.playback_fast_update and not presentation_active and active_tas_session and active_tas_session.mode == common_enums.MODE.PLAYBACK
-        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not pause.is_pausing_pending_or_active()
+        and common_enums.TASABLE_SCREEN[state.screen] and state.pause & PAUSE.MENU == 0 and not (pause:paused() and (pause.blocked or pause.skip))
         and not active_tas_session.suppress_screen_tas_inputs
 end
 
@@ -386,13 +367,9 @@ local function on_pre_update()
         end
         fast_update_start_time = nil
         module.game_loop_executed_fast_update_batch = true
-        pre_update_skipped = true
         return true
-    else
-        module.game_loop_executed_fast_update_batch = false
     end
 
-    pre_update_skipped = false
     pre_update_loading = state.loading
     pre_update_pause = state.pause
 
@@ -448,7 +425,7 @@ end
 
 -- Gets whether entity state machines were executed during the most recent non-screen-change update.
 function module.did_entities_update()
-    -- TODO: This logic is only guessing whether entities were updated based on the state memory before and after the update. This seems to work for vanilla game behavior, but it doesn't properly handle OL freeze pauses and other scripted scenarios. It would be better if it could check whether the entities were actually updated. Is there a way to do this for any screen capable of having entities, even if it has 0 entities in it?
+    -- TODO: This logic is only guessing whether entities were updated based on the state memory before and after the update. This seems to work for vanilla game behavior, but it doesn't properly handle engine pauses and other scripted scenarios. It would be better if it could check whether the entities were actually updated. Is there a way to do this for any screen capable of having entities, even if it has 0 entities in it?
     -- TODO: There is an entity update that seems to occur when loading screens that generate entities. Does it always happen for these screens? It should count as an entity update here even if it isn't a TASable frame.
     return ((pre_update_loading == 3 and (state.loading == 0 or state.loading == 1)) or (pre_update_loading == 0 and (state.loading == 0 or state.loading == 1)))
         -- Within an update, the vanilla game sets specific pause flags either before or after entities are updated. A pause flag that prevents entity updating will only have an effect if it's set before the game starts the entity updates. This means that this logic needs to check the pre-update value for some pause flags instead of the post-update value depending on when the game sets them. Some pause flags are not checked here because they either don't prevent entity updates or they have an unknown purpose.
@@ -456,9 +433,6 @@ function module.did_entities_update()
 end
 
 local function on_post_update()
-    if pre_update_skipped then
-        return
-    end
     if pre_update_loading == 2 then
         on_post_update_load_screen()
     elseif active_tas_session then
@@ -467,9 +441,7 @@ local function on_post_update()
 end
 
 function module.initialize()
-    set_callback(on_pre_process_input, ON.PRE_PROCESS_INPUT)
     set_callback(on_pre_game_loop, ON.PRE_GAME_LOOP)
-    set_callback(on_post_game_loop, ON.POST_GAME_LOOP)
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)
     set_callback(on_pre_level_gen, ON.PRE_LEVEL_GENERATION)

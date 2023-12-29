@@ -132,6 +132,23 @@ local function draw_frame_tag(ctx, frame_tag_index, screen_choices, screen_combo
     ctx:win_popid()
 end
 
+function module:draw_pause_controls(ctx)
+    if pause:paused() then
+        if ctx:win_button("Unpause") then
+            pause:set_paused(false)
+        end
+        ctx:win_inline()
+        if ctx:win_button("Frame advance") then
+            pause:frame_advance()
+        end
+    else
+        if ctx:win_button("Pause") then
+            pause:set_paused(true)
+        end
+    end
+    ctx:win_text("These are basic manual controls for engine pauses. Using Overlunky's engine pause controls instead is highly recommended.")
+end
+
 function module:draw_playback_from_here_unpause_option(ctx)
     options.playback_from_here_unpause = ctx:win_check("Unpause for playback from current frame", options.playback_from_here_unpause)
 end
@@ -167,6 +184,7 @@ function module:draw_panel(ctx, is_window)
         self:draw_playback_from_warp_unpause_option(ctx)
         self:draw_playback_screen_load_pause_option(ctx)
         self:draw_record_screen_load_pause_option(ctx)
+        self:draw_pause_controls(ctx)
         ctx:win_indent(-common_gui.INDENT_SECTION)
     end)
 
