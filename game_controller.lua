@@ -440,10 +440,18 @@ local function on_post_update()
     end
 end
 
+local function on_blocked_update()
+    if captured_screen_snapshot then
+        print_debug("snapshot", "on_blocked_update: Cancelling capture of screen snapshot due to blocked update.")
+        captured_screen_snapshot = nil
+    end
+end
+
 function module.initialize()
     set_callback(on_pre_game_loop, ON.PRE_GAME_LOOP)
     set_callback(on_pre_update, ON.PRE_UPDATE)
     set_callback(on_post_update, ON.POST_UPDATE)
+    set_callback(on_blocked_update, ON.BLOCKED_UPDATE)
     set_callback(on_pre_level_gen, ON.PRE_LEVEL_GENERATION)
 end
 
