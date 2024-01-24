@@ -145,11 +145,10 @@ end
 local function trigger_warp_unload()
     state.loading = 1
     state.pause = PAUSE.FADE
+    state.fade_enabled = true
     state.fade_timer = WARP_FADE_OUT_LENGTH
     state.fade_length = WARP_FADE_OUT_LENGTH
     state.fade_value = 0.0
-    -- Note: The game normally sets this variable to 1 when it starts loading a non-menu screen. Its exact behavior is uncertain, but fade-ins don't work properly for TASable screens unless it's set to 1. Since warps currently only support TASable screens, it's safe to always set it to 1 here.
-    state.ingame = 1
 end
 
 -- Forces the game to warp to a screen initialized with the simple start settings of the given TAS. This sets the run reset flag, prepares the game state, and then triggers the game to start unloading the current screen. The reset flag handles the most of the process on its own. Returns whether the warp was triggered successfully.
