@@ -52,7 +52,7 @@ default_options = {
     playback_from_warp_unpause = true,
     playback_screen_load_pause = false,
     record_screen_load_pause = true,
-    pause_type_force_recommended = true,
+    pause_type_force_supported = true,
     desync_pause = true,
     pause_suppress_transition_tas_inputs = true,
     playback_fast_update = false,
@@ -225,7 +225,7 @@ end
 local function soft_update_script_data(load_data)
     set_to_default_option_if_nil(load_data.options, "playback_from_here_unpause")
     set_to_default_option_if_nil(load_data.options, "playback_from_warp_unpause")
-    set_to_default_option_if_nil(load_data.options, "pause_type_force_recommended")
+    set_to_default_option_if_nil(load_data.options, "pause_type_force_supported")
 end
 
 local function load_script_data(load_ctx)

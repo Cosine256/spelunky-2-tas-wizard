@@ -139,7 +139,7 @@ function module:draw_panel(ctx, is_window)
                     player_inputs = common_gui.draw_inputs_editor(ctx, player_inputs)
                     player_inputs = common.string_to_inputs(ctx:win_input_text("Inputs", common.inputs_to_string(player_inputs)))
                 else
-                    ctx:win_section("Player "..player_index.." inputs", function()
+                    ctx:win_section("Player "..player_index.." Inputs", function()
                         ctx:win_pushid(player_index)
                         ctx:win_indent(common_gui.INDENT_SECTION)
                         player_inputs = common_gui.draw_inputs_editor(ctx, player_inputs)

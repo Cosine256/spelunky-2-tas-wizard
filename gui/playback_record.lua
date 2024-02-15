@@ -146,7 +146,7 @@ function module:draw_pause_controls(ctx)
             pause:set_paused(true)
         end
     end
-    ctx:win_text("These are basic manual controls for engine pauses. Using Overlunky's engine pause controls instead is highly recommended.")
+    ctx:win_text("These are basic manual controls for pauses. Using Overlunky's pause controls instead is highly recommended.")
 end
 
 function module:draw_playback_from_here_unpause_option(ctx)

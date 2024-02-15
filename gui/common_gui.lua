@@ -364,7 +364,7 @@ end
 
 local function draw_tas_start_snapshot_settings(ctx, session, tas, is_options_tas)
     ctx:win_text(START_TYPE:value_by_id("snapshot").name..": The run is initialized by applying a screen snapshot.")
-    ctx:win_section("More info", function()
+    ctx:win_section("More Info", function()
         ctx:win_indent(module.INDENT_SECTION)
         ctx:win_text("A snapshot start is configured by playing the game (with or without cheating) up to right before the desired starting screen, and then capturing a snapshot of the game state while loading that screen. Runs will then start on a screen with initial conditions that are identical to the game state at the time that the snapshot was captured.")
         ctx:win_text("Snapshot starts only support levels and the camp. A snapshot start cannot be used for other screens, such as transitions and menus.")
@@ -440,7 +440,7 @@ function module.draw_tas_start_settings(ctx, session, tas, is_options_tas)
 end
 
 function module.draw_player_positions_more_info(ctx)
-    ctx:win_section("More info", function()
+    ctx:win_section("More Info", function()
         ctx:win_indent(module.INDENT_SECTION)
         ctx:win_text("Player positions are used to show player paths through each screen and to detect player position desync. They are stored in memory automatically while playing back or recording the TAS. Player positions will greatly increase the file size if saved in the TAS file.")
         ctx:win_indent(-module.INDENT_SECTION)
@@ -448,7 +448,7 @@ function module.draw_player_positions_more_info(ctx)
 end
 
 function module.draw_screen_snapshot_more_info(ctx)
-    ctx:win_section("More info", function()
+    ctx:win_section("More Info", function()
         ctx:win_indent(module.INDENT_SECTION)
         ctx:win_text("Screen snapshots allow screen warping and playing back the TAS from the start of the nearest screen instead of the start of the run. They are stored in memory automatically while playing back or recording the TAS. Screen snapshots will greatly increase the file size if saved in the TAS file.")
         ctx:win_indent(-module.INDENT_SECTION)
