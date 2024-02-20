@@ -26,7 +26,7 @@ Load via Playlunky, then attach Overlunky:
 4. Disable the *Speedrun Mode* option.
 5. Set the *Playlunky Version* to "nightly".
 6. Press the big *Play* button.
-7. TAS Wizard is now loaded and active. You can always access its options via the *Mod Options* panel. The default shortcut to open the *Mod Options* at any time is **Ctrl+F4**. Do not also load TAS Wizard as an Overlunky script. You don't want two copies of the mod loaded at once.
+7. TAS Wizard is now loaded and active. You can always access its options via the Playlunky *Mod Options* panel. The default shortcut to open the *Mod Options* at any time is **Ctrl+F4**. Do not also load TAS Wizard as an Overlunky script. You don't want two copies of the mod loaded at once.
 
 Load via Overlunky:
 
@@ -34,14 +34,9 @@ Load via Overlunky:
 2. Either launch Spelunky 2 normally and attach Overlunky with *Inject to running game process*, or use the *Launch vanilla game with Overlunky* button. You can also use Playlunky, but do not enable TAS Wizard as a Playlunky mod. You don't want two copies of the mod loaded at once.
 3. Once the game is running, open the Overlunky *Scripts* menu.
 4. Enable the *Load scripts from Mods/Packs* options.
-5. Find "TAS Wizard" in the list of scripts and enable it. It's usually near the bottom of the list.
-6. TAS Wizard is now loaded and active. You can always access its options via the *Scripts* menu.
-
-TAS Wizard's engine pauses are only compatible with Overlunky's *Fade* pauses. You must ensure that Overlunky is using the correct pause type:
-
-1. Open the Overlunky *Options* menu.
-2. Open *Frame advance / Engine pause type*.
-3. Select *2: Fade* and deselect all of the other choices.
+5. Use the *Search* input to find "TAS Wizard" in the list of scripts.
+6. Enable the TAS Wizard script.
+7. TAS Wizard is now loaded and active. You can always access its options via the Overlunky *Scripts* menu.
 
 ## Compatibility
 
@@ -63,7 +58,7 @@ TAS Wizard only supports the Steam release of Spelunky 2. It will never work on 
 
 ## Known Issues and Limitations
 
-These are the significant known issues, bugs, and limitations with TAS Wizard. I intend to eventually fix these issues, but a lot of them are quite complicated or require changes to Overlunky.
+These are the significant known issues, bugs, and limitations with TAS Wizard. I intend to eventually fix these issues, but a lot of them are quite complicated or require changes to the script API.
 
 ### Bug: PRNG Desynchronization In Camp
 
@@ -76,23 +71,6 @@ The user interface is clunky, takes up a lot of space, and can be difficult to u
 ### No Confirmation Prompts or Undos
 
 The GUI does not prompt for confirmation when changing most TAS settings or editing frames. It's easy to accidentally delete TAS data or modify it in unintended ways, and there is no feature to undo these changes. Be careful and make frequent backups of your TAS files so you don't risk losing your hard work.
-
-### Engine Pause Limitations
-
-TAS Wizard can only be used with Overlunky's *fade* pauses. Game engine pauses and frame advancing can only be performed under limited circumstances. There are issues such as the game pausing one frame later than the start of the screen, being unable to pause after the frame where the screen ends, and being unable to pause during cutscenes. This system needs an overhaul that might also involve some Overlunky changes.
-
-### Boss Cutscene Skips Are Confusing
-
-Due to the engine pause limitations, it's difficult to skip boss cutscenes at the correct time. There is a *Cutscene Skip Editor* in the *TAS Data* panel to help work around this issue. The editor will appear when viewing a screen with a boss cutscene. I recommend the following steps when first recording into a boss cutscene screen:
-
-1. Let the cutscene start playing.
-2. While the cutscene runs, hold down the inputs you want to execute when the cutscene ends.
-3. Quickly press and release the input you want to use to skip the cutscene (either jump or bomb). It needs to not be one of the inputs you're holding.
-4. Pause and switch to freeplay mode.
-5. Open the *Cutscene Skip Editor*. It should have identified the frame you skipped on, and the input you used.
-6. Set your desired cutscene skip frame and input, and then press *Apply*.
-7. Verify in the *Frames* viewer that the cutscene is skipped on the correct frame and is immediately followed by your desired inputs.
-8. Play back to your new cutscene skip frame, and continue your recording from there.
 
 ### Difficult To Record Complex Inputs
 
@@ -109,6 +87,10 @@ TAS Wizard cannot save or load the user's game progression, and may not work cor
 ### Pet Choice
 
 The choice of pet is not part of the start settings in a TAS, so playback will always use the game's current pet setting. Although the pet shouldn't have any effect on PRNG, it will affect constellations.
+
+### Save States Not Supported
+
+The script API offers save state functionality, but these save states currently have a lot of technical limitations and are not supported by TAS Wizard. TAS Wizard also can't detect when these save states are loaded and will desynchronize if they are used during recording or playback. TAS Wizard currently only supports [screen snapshots](#screen-snapshot), which are similar to save states, but are limited to screen loads.
 
 ### Large TAS File Size
 
@@ -128,11 +110,23 @@ A "TAS screen" is a collection of inputs and data separated by loading events. E
 
 ### Screen Snapshot
 
-A "screen snapshot", often just called a "snapshot", is a copy of the game state at the time that a screen is being loaded. It contains all of the necessary information for TAS Wizard to restore the exact state of the game when it first loaded that screen. Snapshots can be loaded to quickly skip to a particular part of the TAS, and a snapshot can also be used as the starting state for a TAS. Screen snapshots are conceptually similar to the "save states" that are available in some games and TAS tools, but are limited to screen loads. It is not currently possible to create save states at any arbitrary point between screen loads.
+A "screen snapshot", often just called a "snapshot", is a copy of the game state at the time that a screen is being loaded. It contains all of the necessary information for TAS Wizard to restore the exact state of the game when it first loaded that screen. Snapshots can be loaded to quickly skip to a particular part of the TAS, and a snapshot can also be used as the starting state for a TAS. Screen snapshots are conceptually similar to the "save states" that are available in some games and TAS tools, but are limited to screen loads. Save states are not currently supported by TAS Wizard ([more info](#save-states-not-supported)).
 
 ### PRNG and Seed
 
 Every time something "random" needs to to happen in Spelunky 2, the game engine uses something called "PRNG", which stands for pseudorandom number generation. The PRNG is initialized with a "seed", which is a large number that is used as the starting point for the sequence of seemingly random numbers that the game will generate. The algorithm for this is complicated and the numbers are extremely hard to predict, but the important part is that it's deterministic. This means that if a run is initialized with the same PRNG seed and starting conditions, and you play through the run with the same sequence of inputs, then the game will produce the exact same sequence of "random" numbers every time. This means the same level generation, same enemy AI, same item drops, same everything. This mechanic is what allows a TAS to play back the same way every time in a procedurally generated game like Spelunky 2. Every TAS includes a PRNG seed with its starting conditions. Although "PRNG" is not the same thing as true "RNG", the terms are basically interchangable in the context of Spelunky 2.
+
+### Pause and Frame Advance
+
+The term "pause" can have multiple meanings. Spelunky 2 has a pause menu, and a few other situations (such as fades and cutscenes) where only some parts of the game engine are paused. However, when creating a TAS, it's important that the entire game engine can be paused at any specific frame. During a full game engine pause, absolutely nothing in the game state will change. For the rest of this section, the term "pause" refers to full game engine pauses.
+
+A "frame advance" is the act of briefly unpausing the game engine to allow exactly one frame to execute.
+
+Since a frame is the smallest unit of time in the game engine, recording a TAS by frame advancing allows for maximally precise inputs. Recording while frame advancing works the same way as recording in real time. Whenever a game frame is executed, TAS Wizard will record the inputs that were held during that frame, regardless of whether or not a frame advance was used. You can create a TAS without pausing or frame advancing at all, but you will be recording it in real time and it will be much more difficult to perform precise inputs.
+
+Using Overlunky for pausing and frame advancing is highly recommended. Overlunky provides hotkeys and a GUI with pause options that aren't exposed by TAS Wizard. TAS Wizard only has rudimentary buttons in its GUI to pause and frame advance.
+
+Note that Overlunky also exposes some pause options that are not supported by TAS Wizard. In particular, TAS Wizard only supports a specific pause type. The supported pause type is shown in Overlunky as the following "Toggled pause flags": "Freeze updates", "Freeze game loop", and "Freeze input". By default, TAS Wizard has an option enabled that will automatically switch to the supported pause type. Other pause types may fail to pause in certain situations or cause other problems while working on a TAS. The other pause options in Overlunky are generally safe to use, but some of them can still interfere with TAS Wizard pausing. For example, if you enable the pause option to ignore freezing on level screens, then TAS Wizard will be unable to pause on that screen type.
 
 ### TAS Wizard Mode
 
@@ -152,7 +146,7 @@ If a ghost TAS is loaded, then it is interally locked to freeplay mode. It will 
 
 ### Desynchronization
 
-TAS Wizard doesn't actually understand how Spelunky 2 is supposed to be played. All it's doing is recording inputs and screen changes, and then playing back those exact same inputs and expecting screen changes to occur at the exact same times. If you mess with the game state in an unexpected way during recording, such as teleporting the player or warping to a new level, then TAS Wizard is going to record it as though that's what was supposed to happen. If you record a TAS with godmode enabled and it prevents a player from taking damage, then TAS Wizard is expecting the player to also not take that damage during playback. If those events don't happen the same way during playback, then "desynchronization" (or just "desync") has occurred. This means that the game state during recording was different from the game state during playback.
+TAS Wizard doesn't actually understand how Spelunky 2 is supposed to be played. All it's doing is recording inputs and screen changes, and then playing back those exact same inputs and expecting screen changes to occur at the exact same times. If you mess with the game state in an unexpected way during recording, such as using Overlunky to move the player or warp to a new level, then TAS Wizard is going to record it as though that's what was supposed to happen. If you record a TAS with godmode enabled and it prevents a player from taking damage, then TAS Wizard is expecting the player to also not take that damage during playback. If those events don't happen the same way during playback, then "desynchronization" (or just "desync") has occurred. This means that the game state during recording was different from the game state during playback.
 
 TAS Wizard has some basic systems in place to detect and warn about potential desync, but it doesn't cover every situation. It can currently detect when players deviate from the positions they had during recording, and it can detect if a screen fails to unload on the frame where it was expected to do so. Other desync scenarios will not be automatically detected, although they might eventually trigger one of the detectable desync scenarios as a side effect.
 
