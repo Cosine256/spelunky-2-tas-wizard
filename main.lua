@@ -1,5 +1,5 @@
 meta.name = "TAS Wizard"
-meta.version = "1.0.0"
+meta.version = "1.1.0"
 meta.description = "A mod for creating tool-assisted speedruns."
 meta.author = "Cosine"
 
