@@ -18,9 +18,9 @@ Documentation for TAS Wizard is maintained on the [TAS Wizard readme](https://gi
 
 ## I Need Your Feedback
 
-TAS Wizard is a brand new mod. Up until the release, I was the only person who had ever used it. It's a very complicated mod, and although I've tried my best to make it robust and usable, I doubt that I got everything right on the first try. I need your help with testing it. I want to know about any bugs or other issues you encounter while using TAS Wizard. If I don't know that an issue exists, then I can't fix it.
+TAS Wizard is a complicated mod. Although I've tried my best to make it robust and suitable for public use, most of its functionality is based on my own personal needs and preferences, and I can't be sure I've tested every possible edge case. I want to know about any bugs or other issues you encounter while using TAS Wizard. If I don't know that an issue exists, then I can't fix it.
 
-Before submitting an issue, check the [Known Issues and Limitations](https://github.com/Cosine256/spelunky-2-tas-wizard#known-issues-and-limitations) on Github to see whether I already know about a particular issue. Please submit your issues and feedback in the #tas-wizard channel on [my Discord server](https://discord.gg/ZMBXuGRPt4). If you know how to submit issues on the Github project, then that is also acceptable, but is not required. Please do not privately message me about TAS Wizard issues, as this prevents other people from seeing whether a problem has already been reported or is being discussed. The following are examples of things I would like to know about:
+Before submitting an issue, check the [Known Issues and Limitations](https://github.com/Cosine256/spelunky-2-tas-wizard#known-issues-and-limitations) on Github to see whether I already know about a particular issue. Please submit your issues and feedback in the `#tas-wizard` channel on [my Discord server](https://discord.gg/ZMBXuGRPt4). If you know how to submit issues on the Github project, then that is also acceptable, but is not required. Please do not privately message me about TAS Wizard issues, as this prevents other people from seeing whether a problem has already been reported or is being discussed. The following are examples of things I would like to know about:
 
 - Errors or bugs. Please provide thorough steps on how the reproduce the issue.
 - Desync issues. If you have a TAS file that does not play back consistently despite always using the same settings, then I want to look into it.
@@ -38,12 +38,18 @@ Q: *Why is my run timer inconsistent?*
 A: The run timer increases while the pause menu is open, even during playback, and tabbing out automatically opens the pause menu.
 
 Q: *Is this really all of the Q&A?*
-A: This mod just released and its documentation is still a work-in-progress. I'll be improving the documentation over time, possibly including a more thorough Q&A section.
+A: This mod's documentation is still a work-in-progress. I'll be improving the documentation over time, possibly including a more thorough Q&A section.
 
 Q: *On the Itchy & Scratchy CD-ROM, is there a way to get out of the dungeon without using the Wizard Key?*
 A: What the hell are you talking about?
 
 ## Changelog
+
+### 1.1.0 (2024-02-28)
+
+- Upgraded to new freeze pause system in the script API. Pausing works on any frame now.
+- Removed cutscene skip editor. You can now record cutscene inputs while pausing and frame advancing just like any other part of the TAS.
+- Fixed janky fades when warping.
 
 ### 1.0.0 (2023-10-31)
 
@@ -51,11 +57,12 @@ A: What the hell are you talking about?
 
 ## Special Thanks
 
-The TAS Tool example script in Overlunky: For being my inspiration to start working on this mod.
-The script API team: For providing such a powerful modding API and adding various things I needed for this mod.
-My Twitch followers: For putting up with me teasing this mod for 8 months before finally releasing it.
+- **TAS Tool example script in Overlunky**: For being my inspiration to start working on this mod.
+- **Script API team**: For providing such a powerful modding API and adding various things I needed for this mod.
+- **My Twitch followers**: For putting up with me teasing this mod for 8 months before finally releasing it.
 
 ## Social
 
-My Twitch channel: <https://www.twitch.tv/cosine256>
-My Discord server: <https://discord.gg/ZMBXuGRPt4>
+- [My Discord server](https://discord.gg/ZMBXuGRPt4)
+- [My Twitch channel](https://www.twitch.tv/cosine256)
+- [My YouTube channel](https://www.youtube.com/channel/UCxqWmMm9iYJXq_92PZVETnQ)
