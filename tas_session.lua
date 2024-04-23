@@ -346,7 +346,7 @@ end
 
 -- Checks whether a player's expected position matches their actual position and sets position desync if they do not match. Does nothing if there is already desync. Returns whether desync was detected.
 function TasSession:_check_position_desync(player_index, expected_pos, actual_pos)
-    if self.desync or (actual_pos and math.abs(expected_pos.x - actual_pos.x) <= POSITION_DESYNC_EPSILON
+    if self.desync or (actual_pos.x and math.abs(expected_pos.x - actual_pos.x) <= POSITION_DESYNC_EPSILON
         and math.abs(expected_pos.y - actual_pos.y) <= POSITION_DESYNC_EPSILON)
     then
         return false
@@ -359,11 +359,11 @@ function TasSession:_check_position_desync(player_index, expected_pos, actual_po
     }
     print_warn("Desynchronized on frame %s-%s: %s", self.desync.screen_index, self.desync.frame_index, self.desync.desc)
     print_warn("    Expected: x=%s y=%s", expected_pos.x, expected_pos.y)
-    if actual_pos then
+    if actual_pos.x then
         print_warn("    Actual: x=%s y=%s", actual_pos.x, actual_pos.y)
         print_warn("    Diff: dx=%s dy=%s", actual_pos.x - expected_pos.x, actual_pos.y - expected_pos.y)
     else
-        print_warn("    Actual: nil")
+        print_warn("    Actual: undefined")
     end
     return true
 end
@@ -490,6 +490,8 @@ function TasSession:on_post_update_load_screen()
                 if player_ent then
                     local x, y, l = get_position(player_ent.uid)
                     actual_pos = { x = x, y = y, l = l }
+                else
+                    actual_pos = {}
                 end
                 if self.mode == common_enums.MODE.RECORD or not start_positions[player_index] or not start_positions[player_index].x then
                     start_positions[player_index] = actual_pos
@@ -601,6 +603,8 @@ function TasSession:on_post_update()
             if player_ent then
                 local x, y, l = get_position(player_ent.uid)
                 actual_pos = { x = x, y = y, l = l }
+            else
+                actual_pos = {}
             end
             if self.mode == common_enums.MODE.RECORD then
                 -- Record the current player inputs for the frame that just executed.
