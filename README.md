@@ -92,6 +92,12 @@ The choice of pet is not part of the start settings in a TAS, so playback will a
 
 The script API offers save state functionality, but these save states currently have a lot of technical limitations and are not supported by TAS Wizard. TAS Wizard also can't detect when these save states are loaded and will desynchronize if they are used during recording or playback. TAS Wizard currently only supports [screen snapshots](#screen-snapshot), which are similar to save states, but are limited to screen loads.
 
+### Large Player Paths Cause Lag
+
+TAS screens with very large player paths may cause lag when player paths are enabled. This lag varies between computers, but it can start mildly around 10,000 frames and will worsen as more frames are added to the screen. Runs with multiple players will cause lag sooner due to each player having their own path. The lag only occurs while a TAS screen with large player paths is loaded in the game. Other screens with shorter paths will cause no problems. You can have a TAS with far more than 10,000 frames without any issues if those frames are distributed among multiple screens.
+
+The lag is purely visual and will not affect the actual behavior of the game during TAS recording or playback. It will not occur when player paths are turned off in the options or disabled by presentation mode, so you can capture a video of your TAS without path lag even in very long screens.
+
 ### Large TAS File Size
 
 TAS files are quite a bit larger than the amount of raw data they actually store, mostly due to their bulky human-readable JSON format. Saved screen snapshots significantly increase this size, and saved player positions increase it even more. Note that TAS files do compress fairly efficiently, although TAS Wizard itself is not capable of file compression. A two minute singleplayer TAS with snapshots and player positions is about 1MB in size, and standard ZIP compression reduces it to roughly 10% of its original size.
