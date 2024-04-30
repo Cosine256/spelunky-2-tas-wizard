@@ -90,17 +90,25 @@ local function draw_tas_path_mark(ctx, pos, label, size, top_label, ucolor)
 end
 
 function module.draw_tas_path(ctx, tas_session, is_ghost)
+    -- Note: Screens with large numbers of player path segments (~10,000 or more) can cause significant framerate drops. This function must be optimized for performance.
+
     if state.screen == SCREEN.OPTIONS or not tas_session.current_screen_data or not tas_session.current_tasable_screen.record_frames then
         return
     end
+
     local screen = tas_session.current_screen_data
     local color_type = is_ghost and "ghost" or "normal"
+    local player_count = tas_session.tas:get_player_count()
+
     local prev_frame_positions = screen.start_positions
-    for i, frame in ipairs(screen.frames) do
+    for i = 1, #screen.frames do
+        local frame = screen.frames[i]
         if prev_frame_positions and frame.positions then
-            for player_index, this_pos in ipairs(frame.positions) do
+            for player_index = 1, player_count do
                 local prev_pos = prev_frame_positions[player_index]
-                if prev_pos.x and this_pos.x then
+                local this_pos = frame.positions[player_index]
+                -- Skip 0-length segments. There is a minor performance cost for the comparison, but a large benefit if the segment can be skipped.
+                if prev_pos.x and this_pos.x and (prev_pos.x ~= this_pos.x or prev_pos.y ~= this_pos.y) then
                     local x1, y1 = screen_position(prev_pos.x, prev_pos.y)
                     local x2, y2 = screen_position(this_pos.x, this_pos.y)
                     ctx:draw_line(x1, y1, x2, y2, 2,
@@ -110,12 +118,14 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
         end
         prev_frame_positions = frame.positions
     end
+
     if options.path_frame_mark_visible then
         -- Draw frame marks in this second iteration so that they always draw on top of the path.
         for i = options.path_frame_mark_interval, #screen.frames, options.path_frame_mark_interval do
             local frame = screen.frames[i]
             if frame.positions then
-                for player_index, pos in ipairs(frame.positions) do
+                for player_index = 1, player_count do
+                    local pos = frame.positions[player_index]
                     if pos.x then
                         draw_tas_path_mark(ctx, pos, options.path_frame_mark_label_visible and tostring(i) or nil, options.path_frame_mark_label_size, false,
                             PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
@@ -124,6 +134,7 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
             end
         end
     end
+
     if options.path_frame_tag_visible then
         for _, frame_tag in ipairs(tas_session.tas.frame_tags) do
             if frame_tag.show_on_path and (frame_tag.screen == -1 and tas_session.tas:get_end_screen_index()
@@ -139,7 +150,8 @@ function module.draw_tas_path(ctx, tas_session, is_ghost)
                     end
                 end
                 if positions then
-                    for player_index, pos in ipairs(positions) do
+                    for player_index = 1, player_count do
+                        local pos = positions[player_index]
                         if pos.x then
                             draw_tas_path_mark(ctx, pos, options.path_frame_tag_label_visible and frame_tag.name or nil, options.path_frame_tag_label_size, true,
                                 PATH_COLORS[player_index][color_type][pos.l == state.camera_layer and "same_layer" or "other_layer"][1])
