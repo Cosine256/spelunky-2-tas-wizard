@@ -295,10 +295,14 @@ local function on_pre_level_gen()
 
     if warp_screen_snapshot then
         if warp_screen_snapshot.state_memory then
-            -- The `player_inventory` array is applied pre-update, but it may be modified by the game when the previous screen is unloaded. Reapply it here.
-            print_debug("snapshot", "on_pre_level_gen: Reapplying player inventory array snapshot.")
+            -- Player inventories and Waddler's storage were applied pre-update, but they may have been modified by the game when the previous screen was unloaded. Reapply them here.
+            print_debug("snapshot", "on_pre_level_gen: Reapplying late fields from screen snapshot.")
             introspection.apply_snapshot(state.items.player_inventory, warp_screen_snapshot.state_memory.items.player_inventory,
                 GAME_TYPES.Items.fields_by_name["player_inventory"].type)
+            introspection.apply_snapshot(state.waddler_storage, warp_screen_snapshot.state_memory.waddler_storage,
+                GAME_TYPES.StateMemory_ScreenSnapshot.fields_by_name["waddler_storage"].type)
+            introspection.apply_snapshot(state.waddler_metadata, warp_screen_snapshot.state_memory.waddler_metadata,
+                GAME_TYPES.StateMemory_ScreenSnapshot.fields_by_name["waddler_metadata"].type)
         end
         if warp_screen_snapshot.pre_level_gen_screen_last then
             state.screen_last = warp_screen_snapshot.pre_level_gen_screen_last
@@ -308,10 +312,14 @@ local function on_pre_level_gen()
     end
 
     if captured_screen_snapshot then
-        -- Recapture the `player_inventory` array in the state memory. Earlier in this update, the game may have modified the player inventories based on the player entities that were unloaded in the previous screen. Assuming that updates are not affected by the contents of the `player_inventory` array before level generation, it should be safe to overwrite the `player_inventory` array that was captured pre-update.
-        print_debug("snapshot", "on_pre_level_gen: Recapturing player inventory array snapshot.")
+        -- Recapture the player inventories and Waddler's storage for the snapshot. Earlier in this update, the game may have modified them based on entities that were unloaded in the previous screen. Assuming that updates are not affected by the contents of these fields before level generation, it should be safe to overwrite the values that were captured pre-update.
+        print_debug("snapshot", "on_pre_level_gen: Recapturing late fields for screen snapshot.")
         captured_screen_snapshot.state_memory.items.player_inventory =
             introspection.create_snapshot(state.items.player_inventory, GAME_TYPES.Items.fields_by_name["player_inventory"].type)
+        captured_screen_snapshot.state_memory.waddler_storage =
+            introspection.create_snapshot(state.waddler_storage, GAME_TYPES.StateMemory_ScreenSnapshot.fields_by_name["waddler_storage"].type)
+        captured_screen_snapshot.state_memory.waddler_metadata =
+            introspection.create_snapshot(state.waddler_metadata, GAME_TYPES.StateMemory_ScreenSnapshot.fields_by_name["waddler_metadata"].type)
         if state.screen == SCREEN.CAMP then
             -- Capture the previous screen value. It affects how the player spawns into the camp.
             captured_screen_snapshot.pre_level_gen_screen_last = state.screen_last
