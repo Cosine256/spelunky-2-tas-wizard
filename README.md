@@ -2,9 +2,9 @@
 
 TAS Wizard is a mod for creating tool-assisted speedruns of Spelunky 2.
 
-TAS Wizard is meant to be used in combination with [Overlunky](https://github.com/spelunky-fyi/overlunky). You will need a reasonable understanding of how to install and use Overlunky. Many of the tools needed to create a good TAS are part of Overlunky itself, such as frame advancing and camera hacks. TAS Wizard provides the ability to record and play back TASes, and offers supplementary features that are not already available in Overlunky.
+TAS Wizard is meant to be used in combination with [Overlunky](https://github.com/spelunky-fyi/overlunky#readme). Many of the tools needed to create a good TAS are part of Overlunky itself, such as frame advancing and camera hacks. TAS Wizard provides the ability to record and play back TASes, and offers supplementary features that are not already available in Overlunky.
 
-This is **not** a simple mod to use. It is a complicated tool with a lot of features. Unfortunately, this readme is still a work-in-progress. It covers several concepts about TAS Wizard, but does not yet have a comprehensive tutorial about how to use it.
+This is **not** a simple mod to use. It is a complicated tool with a lot of features. This readme is still a work-in-progress. It covers several concepts about TAS Wizard, but does not yet have a comprehensive tutorial about how to use it.
 
 ## What is a TAS?
 
@@ -16,27 +16,48 @@ Creating a TAS can be a slow and complicated process. Depending on how "perfect"
 
 ## Installation and Loading
 
-You will need to understand how to install and use a Spelunky 2 mod via [Modlunky](https://github.com/spelunky-fyi/Playlunky/wiki#installing-mods). TAS Wizard is using fairly new features and probably only works on the latest nightly versions of Playlunky and Overlunky. Make sure your installation of Overlunky is up-to-date, and that Playlunky is set to use the "nightly" version. Once you have TAS Wizard installed, two ways to load it are listed below.
+### Installing Modlunky and TAS Wizard
 
-Load via Playlunky, then attach Overlunky:
+You will need to understand how to install mods and run Spelunky 2 via [Modlunky](https://github.com/spelunky-fyi/modlunky2#readme). If you are already familiar with modding Spelunky 2, then just install [TAS Wizard](https://spelunky.fyi/mods/m/tas-wizard/) like any other mod and then skip ahead to the [Nightly Builds](#nightly-builds) section. If Modlunky is new to you, then refer to the [Modlunky documentation](https://github.com/spelunky-fyi/modlunky2/wiki#quick-start) for instructions. The Modlunky instructions also explain how to install individual mods like TAS Wizard. TAS Wizard's mod download page and install code are located [here](https://spelunky.fyi/mods/m/tas-wizard/). [Overlunky](https://github.com/spelunky-fyi/overlunky#readme) and [Playlunky](https://github.com/spelunky-fyi/Playlunky#readme) are included with Modlunky and do not need to be installed separately.
+
+All of this can be confusing if you have never modded Spelunky 2 before. If you are having problems with Modlunky, Overlunky, or Playlunky, or if you don't understand what you need to do, then seek assistance in the Spelunky 2 modding help channel in the [Spelunky Community Discord](https://discord.gg/spelunky-community).
+
+### Nightly Builds
+
+TAS Wizard is using fairly new script API features. TAS Wizard will fail to load with a descriptive error message if it detects that your current version of Overlunky or Playlunky is incompatible with it. If this error message is shown, then you need to update to the latest nightly builds of Overlunky and/or Playlunky, depending on which method you use to load TAS Wizard. The "nightly" build (sometimes called the "WHIP" build for Overlunky) is the most recent release of Overlunky or Playlunky and may include features that are not available yet in the stable build. Note that the nightly builds may be unstable and more likely to have bugs. If you encounter crashes or unusual problems even after TAS Wizard loads properly, then there might be a newer nightly build that fixes it. Be sure to also check whether TAS Wizard has a newer release. If this still doesn't solve the problem and you're not sure what the root cause is, then you can report it as a TAS Wizard issue and I can determine whether it's a problem with TAS Wizard or the nightly build.
+
+### Loading TAS Wizard
+
+Two different ways to load TAS Wizard are listed below.
+
+#### Load via Overlunky
+
+**This is the recommended method for loading TAS Wizard.** It will have clean interactions between TAS Wizard and Overlunky.
+
+1. Use one of the following choices to launch the game.
+    * Go to the *Overlunky* tab in Modlunky and use the *Launch vanilla game with Overlunky* button.
+    * ... or launch vanilla Spelunky 2, then go to the *Overlunky* tab in Modlunky and attach Overlunky with *Inject to running game process*.
+    * ... or launch Playlunky with the *Load Overlunky* option enabled. **Do not** enable TAS Wizard as a Playlunky mod. You don't want two copies of the mod loaded at once.
+    * ... or launch Playlunky, then go to the *Overlunky* tab in Modlunky and attach Overlunky with *Inject to running game process*. **Do not** enable TAS Wizard as a Playlunky mod. You don't want two copies of the mod loaded at once.
+2. In the game, open the Overlunky *Scripts* menu.
+3. Enable the *Load scripts from Mods/Packs* option.
+4. Use the *Search* input to find "TAS Wizard" in the list of scripts.
+5. Enable the TAS Wizard script.
+
+TAS Wizard is now loaded and active. You can always access its options via the Overlunky *Scripts* menu.
+
+#### Load via Playlunky, then attach Overlunky
+
+**This method is not recommended.** There are some buggy interactions between Playlunky and Overlunky caused by using two instances of the script API at the same time. This is not usually a problem for cosmetic mods such as custom skins, but TAS Wizard is a script mod and you may encounter some issues.
 
 1. Go to the *Playlunky* tab in Modlunky.
-2. Select the "TAS Wizard" mod.
+2. Enable the "TAS Wizard" mod.
 3. Enable the *Load Overlunky* option. Alternately, you can leave this disabled and inject Overlunky separately via the *Overlunky* tab after step 6.
 4. Disable the *Speedrun Mode* option.
-5. Set the *Playlunky Version* to "nightly".
+5. Ensure you are using the correct *Playlunky Version*. You will probably need "nightly".
 6. Press the big *Play* button.
-7. TAS Wizard is now loaded and active. You can always access its options via the Playlunky *Mod Options* panel. The default shortcut to open the *Mod Options* at any time is **Ctrl+F4**. Do not also load TAS Wizard as an Overlunky script. You don't want two copies of the mod loaded at once.
 
-Load via Overlunky:
-
-1. Go to the *Overlunky* tab in Modlunky.
-2. Either launch Spelunky 2 normally and attach Overlunky with *Inject to running game process*, or use the *Launch vanilla game with Overlunky* button. You can also use Playlunky, but do not enable TAS Wizard as a Playlunky mod. You don't want two copies of the mod loaded at once.
-3. Once the game is running, open the Overlunky *Scripts* menu.
-4. Enable the *Load scripts from Mods/Packs* options.
-5. Use the *Search* input to find "TAS Wizard" in the list of scripts.
-6. Enable the TAS Wizard script.
-7. TAS Wizard is now loaded and active. You can always access its options via the Overlunky *Scripts* menu.
+TAS Wizard is now loaded and active. You can always access its options via the Playlunky *Mod Options* panel. The default shortcut to open the *Mod Options* at any time is **Ctrl+F4**. Do not also load TAS Wizard as an Overlunky script. You don't want two copies of the mod loaded at once.
 
 ## Compatibility
 
