@@ -1,6 +1,7 @@
 -- The game controller provides additional game engine controls and functionality. This includes snapshot capturing, snapshot warping, and fast updates. All game update callbacks are handled here, with calls forwarded to TAS sessions and other modules as needed. The calls must always occur in a consistent order in order to work properly with TAS sessions and game controller features. This module can directly modify the game state.
 
---[[ Order of callbacks and events during a typical mid-screen TAS frame:
+--[[
+Order of callbacks and events during a typical mid-screen TAS frame:
     PRE_PROCESS_INPUT
         Pause API: If PRE_PROCESS_INPUT pause active, then skip to BLOCKED_PROCESS_INPUT.
     Game: Update `game_manager.game_props` inputs.
@@ -22,6 +23,15 @@
     BLOCKED_GAME_LOOP (only if game loop skipped)
     GUIFRAME(s)
         May execute more than once per game loop for frame rates greater than 60Hz, or be skipped sometimes for lower frame rates.
+]]
+
+--[[
+Screen snapshots are mostly captured and applied in the PRE_UPDATE before a screen change. However, some fields get modified by the game in the middle of the update when the previous screen is unloaded. These fields are referred to as "late" snapshot fields. The late fields need to be captured and applied in PRE_LEVEL_GENERATION, after the game has had its chance to write to them. This solution is hacky, but should work as long as the game only writes to these fields and is not affected by their contents before PRE_LEVEL_GENERATION.
+These are the known late fields:
+    `state.merchant_aggro`: May be decremented depending on `state.level_flags`.
+    `state.items.player_inventory`: Some fields are updated based on player entities.
+    `state.waddler_storage`: Updated based on items on storage floor.
+    `state.waddler_metadata`: Updated based on items on storage floor.
 ]]
 
 local module = {}
@@ -295,8 +305,8 @@ local function on_pre_level_gen()
 
     if warp_screen_snapshot then
         if warp_screen_snapshot.state_memory then
-            -- Player inventories and Waddler's storage were applied pre-update, but they may have been modified by the game when the previous screen was unloaded. Reapply them here.
             print_debug("snapshot", "on_pre_level_gen: Reapplying late fields from screen snapshot.")
+            state.merchant_aggro = warp_screen_snapshot.state_memory.merchant_aggro
             introspection.apply_snapshot(state.items.player_inventory, warp_screen_snapshot.state_memory.items.player_inventory,
                 GAME_TYPES.Items.fields_by_name["player_inventory"].type)
             introspection.apply_snapshot(state.waddler_storage, warp_screen_snapshot.state_memory.waddler_storage,
@@ -312,8 +322,8 @@ local function on_pre_level_gen()
     end
 
     if captured_screen_snapshot then
-        -- Recapture the player inventories and Waddler's storage for the snapshot. Earlier in this update, the game may have modified them based on entities that were unloaded in the previous screen. Assuming that updates are not affected by the contents of these fields before level generation, it should be safe to overwrite the values that were captured pre-update.
         print_debug("snapshot", "on_pre_level_gen: Recapturing late fields for screen snapshot.")
+        captured_screen_snapshot.state_memory.merchant_aggro = state.merchant_aggro
         captured_screen_snapshot.state_memory.items.player_inventory =
             introspection.create_snapshot(state.items.player_inventory, GAME_TYPES.Items.fields_by_name["player_inventory"].type)
         captured_screen_snapshot.state_memory.waddler_storage =
