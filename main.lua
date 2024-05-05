@@ -311,16 +311,15 @@ local function on_gui_frame(ctx)
 
     ctx:draw_layer(DRAW_LAYER.BACKGROUND)
     drawing.update_screen_vars()
-    if not presentation_active then
+    if options.fast_update_flash_prevention and game_controller.game_loop_executed_fast_update_batch then
+        drawing.draw_black_overlay(ctx)
+    elseif not presentation_active then
         if ghost_tas_session and options.ghost_path_visible then
             drawing.draw_tas_path(ctx, ghost_tas_session, true)
         end
         if active_tas_session and options.active_path_visible then
             drawing.draw_tas_path(ctx, active_tas_session, false)
         end
-    end
-    if options.fast_update_flash_prevention and game_controller.game_loop_executed_fast_update_batch then
-        drawing.draw_black_overlay(ctx)
     end
     if active_tas_session then
         drawing.draw_mode_watermark(ctx)
